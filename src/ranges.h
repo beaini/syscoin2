@@ -2,7 +2,6 @@
 #define RANGES_H
 #include "script/script.h"
 #include "serialize.h"
-#include "graph.h"
 
 // An range has start and end index
 class CRange {
@@ -47,4 +46,5 @@ unsigned int validateRangesAndGetCount(const std::vector<CRange> &arr);
 bool compareRange(const CRange &i1, const CRange &i2);
 void mergeRanges(std::vector<CRange> &arr, std::vector<CRange> &output);
 void subtractRanges(std::vector<CRange> &arr, const std::vector<CRange> &del, std::vector<CRange> &output);
+bool doesRangeContain(const vector<CRange> &parent, const vector<CRange> &child);
 #endif // RANGES_H
