@@ -608,7 +608,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 					return true;
 				}
 				for (unsigned int i = 0; i < theAssetAllocation.listSendingAllocationInputs.size(); i++) {
-					const InputRanges &input = theAssetAllocation.listSendingAllocationInputs[i];
+					InputRanges &input = theAssetAllocation.listSendingAllocationInputs[i];
 					CAssetAllocation receiverAllocation;
 					if (input.first == vvchAlias) {
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Cannot send an asset allocation to yourself");
