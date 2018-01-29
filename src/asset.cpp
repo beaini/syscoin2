@@ -611,7 +611,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				for (unsigned int i = 0; i < theAssetAllocation.listSendingAllocationInputs.size(); i++) {
 					InputRanges &input = theAssetAllocation.listSendingAllocationInputs[i];
 					CAssetAllocation receiverAllocation;
-					if (input.first == vchAlias) {
+					if (input.first == vvchAlias) {
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Cannot send an asset allocation to yourself");
 						return true;
 					}
@@ -1047,16 +1047,12 @@ UniValue assetsend(const UniValue& params, bool fHelp) {
 					throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "end range not found for an input");
 				vectorOfRanges.push_back(CRange(startRangeObj.get_int(), endRangeObj.get_int()));
 			}
-			if (theAssetAllocation.listSendingAllocationInputs.find(vchAliasTo) != theAssetAllocation.listSendingAllocationInputs.end())
-				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "duplicate receiver");
 			theAssetAllocation.listSendingAllocationInputs.push_back(make_pair(vchAliasTo, vectorOfRanges));
 		}
 		else if (amountObj.isNum()){
 			const CAmount &amount = AmountFromValue(amountObj);
 			if (amount < 0)
 				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "amount must be positive");
-			if (theAssetAllocation.listSendingAllocationAmounts.find(vchAliasTo) != theAssetAllocation.listSendingAllocationAmounts.end())
-				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "duplicate receiver");
 			theAssetAllocation.listSendingAllocationAmounts.push_back(make_pair(vchAliasTo, amount));
 		}
 		else
