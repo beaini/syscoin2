@@ -918,8 +918,8 @@ bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const boo
 		UniValue oAssetAllocationInputsArray(UniValue::VARR);
 		for (auto& input : assetallocation.listAllocationInputs) {
 			UniValue oAssetAllocationInputObj(UniValue::VOBJ);
-			oAssetAllocationInputObj.push_back(Pair("start", input.start));
-			oAssetAllocationInputObj.push_back(Pair("end", input.end));
+			oAssetAllocationInputObj.push_back(Pair("start", (int)input.start));
+			oAssetAllocationInputObj.push_back(Pair("end", (int)input.end));
 			oAssetAllocationInputsArray.push_back(oAssetAllocationInputObj);
 		}
 		entry.push_back(Pair("inputs", oAssetAllocationInputsArray));
@@ -961,8 +961,8 @@ void AssetAllocationTxToJSON(const int op, const std::vector<unsigned char> &vch
 			UniValue oAssetAllocationReceiversObj(UniValue::VOBJ);
 			oAssetAllocationReceiversObj.push_back(Pair("alias", stringFromVch(inputTuple.first)));
 			for (auto& inputRange : inputTuple.second) {
-				oAssetAllocationReceiversObj.push_back(Pair("start", inputRange.start));
-				oAssetAllocationReceiversObj.push_back(Pair("end", inputRange.end));
+				oAssetAllocationReceiversObj.push_back(Pair("start", (int)inputRange.start));
+				oAssetAllocationReceiversObj.push_back(Pair("end", (int)inputRange.end));
 			}
 			oAssetAllocationReceiversArray.push_back(oAssetAllocationReceiversObj);
 		}
