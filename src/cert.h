@@ -48,6 +48,7 @@ public:
 		vchPubData.clear();
 		vchTitle.clear();
 		sCategory.clear();
+		vchAlias.clear();
 	}
 	ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>

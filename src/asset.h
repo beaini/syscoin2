@@ -54,6 +54,7 @@ public:
 		vchPubData.clear();
 		sCategory.clear();
 		listAllocationInputs.clear();
+		vchAlias.clear();
 
 	}
 	ADD_SERIALIZE_METHODS;

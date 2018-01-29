@@ -155,26 +155,56 @@ bool GetTimeToPrune(const CScript& scriptPubKey, uint64_t &nTime)
 	}
 	else if(offer.UnserializeFromData(vchData, vchHash))
 	{
+		if (!pofferdb || !pofferdb->ReadOffer(offer.vchOffer, offer))
+		{
+			// setting to the tip means we don't prune this data, we keep it
+			nTime = chainActive.Tip()->GetMedianTimePast() + 1;
+			return true;
+		}
 		nTime = GetOfferExpiration(offer);
 		return true; 
 	}
 	else if(cert.UnserializeFromData(vchData, vchHash))
 	{
+		if (!pcertdb || !pcertdb->ReadCert(cert.vchCert, cert))
+		{
+			// setting to the tip means we don't prune this data, we keep it
+			nTime = chainActive.Tip()->GetMedianTimePast() + 1;
+			return true;
+		}
 		nTime = GetCertExpiration(cert);
 		return true; 
 	}
 	else if(escrow.UnserializeFromData(vchData, vchHash))
 	{
+		if (!pescrowdb || !pescrowdb->ReadEscrow(escrow.vchEscrow, escrow))
+		{
+			// setting to the tip means we don't prune this data, we keep it
+			nTime = chainActive.Tip()->GetMedianTimePast() + 1;
+			return true;
+		}
 		nTime = GetEscrowExpiration(escrow);
 		return true;
 	}
 	else if (asset.UnserializeFromData(vchData, vchHash))
 	{
+		if (!passetdb || !passetdb->ReadAsset(asset.vchAsset, asset))
+		{
+			// setting to the tip means we don't prune this data, we keep it
+			nTime = chainActive.Tip()->GetMedianTimePast() + 1;
+			return true;
+		}
 		nTime = GetAssetExpiration(asset);
 		return true;
 	}
 	else if (assetallocation.UnserializeFromData(vchData, vchHash))
 	{
+		if (!passetallocationdb || !passetallocationdb->ReadAssetAllocation(CAssetAllocationTuple(assetallocation.vchAsset, assetallocation.vchAlias), assetallocation))
+		{
+			// setting to the tip means we don't prune this data, we keep it
+			nTime = chainActive.Tip()->GetMedianTimePast() + 1;
+			return true;
+		}
 		nTime = GetAssetAllocationExpiration(assetallocation);
 		return true;
 	}
