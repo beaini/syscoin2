@@ -918,11 +918,11 @@ bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const boo
 		UniValue oAssetAllocationInputsArray(UniValue::VARR);
 		for (auto& input : assetallocation.listAllocationInputs) {
 			UniValue oAssetAllocationInputObj(UniValue::VOBJ);
-			oAssetAllocationReceiversObj.push_back(Pair("start", input.start));
-			oAssetAllocationReceiversObj.push_back(Pair("end", input.end));
-			oAssetAllocationReceiversArray.push_back(oAssetAllocationReceiversObj);
+			oAssetAllocationInputObj.push_back(Pair("start", input.start));
+			oAssetAllocationInputObj.push_back(Pair("end", input.end));
+			oAssetAllocationInputsArray.push_back(oAssetAllocationInputObj);
 		}
-		entry.push_back(Pair("inputs", UniValue oAssetAllocationInputsArray(UniValue::VARR);
+		entry.push_back(Pair("inputs", oAssetAllocationInputsArray));
 	}
 	return true;
 }
