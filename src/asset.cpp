@@ -1124,22 +1124,23 @@ UniValue assetsend(const UniValue& params, bool fHelp) {
 }
 
 UniValue assetinfo(const UniValue& params, bool fHelp) {
-    if (fHelp || 1 > params.size())
-        throw runtime_error("assetinfo <asset>\n"
-                "Show stored values of a single asset and its .\n");
+    if (fHelp || 2 != params.size())
+        throw runtime_error("assetinfo <asset> <getinputs>\n"
+                "Show stored values of a single asset and its. Set getinputs to true if you want to get the allocation inputs, if applicable.\n");
 
     vector<unsigned char> vchAsset = vchFromValue(params[0]);
+	bool bGetInputs = params[1].get_bool();
 	UniValue oAsset(UniValue::VOBJ);
 
 	CAsset txPos;
 	if (!passetdb || !passetdb->ReadAsset(vchAsset, txPos))
 		throw runtime_error("SYSCOIN_ASSET_RPC_ERROR: ERRCODE: 5536 - " + _("Failed to read from asset DB"));
 
-	if(!BuildAssetJson(txPos, oAsset))
+	if(!BuildAssetJson(txPos, bGetInputs, oAsset))
 		oAsset.clear();
     return oAsset;
 }
-bool BuildAssetJson(const CAsset& asset, UniValue& oAsset)
+bool BuildAssetJson(const CAsset& asset, const bool bGetInputs, UniValue& oAsset)
 {
     oAsset.push_back(Pair("_id", stringFromVch(asset.vchAsset)));
     oAsset.push_back(Pair("txid", asset.txHash.GetHex()));
@@ -1166,6 +1167,16 @@ bool BuildAssetJson(const CAsset& asset, UniValue& oAsset)
 
 	oAsset.push_back(Pair("expires_on", expired_time));
 	oAsset.push_back(Pair("expired", expired));
+	if (bGetInputs) {
+		UniValue oAssetAllocationInputsArray(UniValue::VARR);
+		for (auto& input : asset.listAllocationInputs) {
+			UniValue oAssetAllocationInputObj(UniValue::VOBJ);
+			oAssetAllocationInputObj.push_back(Pair("start", (int)input.start));
+			oAssetAllocationInputObj.push_back(Pair("end", (int)input.end));
+			oAssetAllocationInputsArray.push_back(oAssetAllocationInputObj);
+		}
+		oAsset.push_back(Pair("inputs", oAssetAllocationInputsArray));
+	}
 	return true;
 }
 bool BuildAssetIndexerHistoryJson(const CAsset& asset, UniValue& oAsset)
@@ -1214,6 +1225,19 @@ void AssetTxToJSON(const int op, const std::vector<unsigned char> &vchData, cons
 	if(!asset.vchAlias.empty() && asset.vchAlias != dbAsset.vchAlias)
 		entry.push_back(Pair("alias", stringFromVch(asset.vchAlias)));
 
+	UniValue oAssetAllocationReceiversArray(UniValue::VARR);
+	if (!asset.listAllocationInputs.empty()) {
+		for (auto& inputTuple : asset.listAllocationInputs) {
+			UniValue oAssetAllocationReceiversObj(UniValue::VOBJ);
+			oAssetAllocationReceiversObj.push_back(Pair("alias", stringFromVch(inputTuple.first)));
+			for (auto& inputRange : inputTuple.second) {
+				oAssetAllocationReceiversObj.push_back(Pair("start", (int)inputRange.start));
+				oAssetAllocationReceiversObj.push_back(Pair("end", (int)inputRange.end));
+			}
+			oAssetAllocationReceiversArray.push_back(oAssetAllocationReceiversObj);
+		}
+	}
+	entry.push_back(Pair("allocations", oAssetAllocationReceiversArray));
 
 }
 

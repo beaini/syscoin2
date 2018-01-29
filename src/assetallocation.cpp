@@ -922,7 +922,7 @@ bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const boo
 			oAssetAllocationInputObj.push_back(Pair("end", (int)input.end));
 			oAssetAllocationInputsArray.push_back(oAssetAllocationInputObj);
 		}
-		entry.push_back(Pair("inputs", oAssetAllocationInputsArray));
+		oAssetAllocation.push_back(Pair("inputs", oAssetAllocationInputsArray));
 	}
 	return true;
 }
