@@ -77,6 +77,7 @@ typedef std::vector<InputRanges> RangeInputArrayTuples;
 typedef std::vector<std::pair<std::vector<unsigned char>, CAmount > > RangeAmountTuples;
 typedef std::map<uint256, int64_t> ArrivalTimesMap;
 static const int ZDAG_MINIMUM_LATENCY_SECONDS = 10;
+static sorted_vector<CAssetAllocationTuple> assetAllocationConflicts;
 enum {
 	ZDAG_STATUS_OK = 0,
 	ZDAG_MINOR_CONFLICT_OK,
