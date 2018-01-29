@@ -4,6 +4,7 @@
 
 #include "asset.h"
 #include "assetallocation.h"
+#include "ranges.h"
 #include "alias.h"
 #include "init.h"
 #include "validation.h"
