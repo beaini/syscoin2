@@ -441,9 +441,6 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			return error(errorMessage.c_str());
 		}
 	}
-	// masternodes are high through-put relays
-	if (fMasterNode)
-		return true;
 	if (!fJustCheck) {
 		const string &user1 = stringFromVch(vvchAlias);
 		string user2 = "";

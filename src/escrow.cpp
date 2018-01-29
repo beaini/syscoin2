@@ -751,9 +751,6 @@ bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<ve
 				return error(errorMessage.c_str());
 		}
 	}
-	// masternodes are high through-put relays
-	if (fMasterNode)
-		return true;
 	if (!fJustCheck) {
 		if (op == OP_ESCROW_ACTIVATE)
 		{

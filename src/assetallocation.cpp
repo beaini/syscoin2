@@ -366,9 +366,6 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 			return error(errorMessage.c_str());
 		}
 	}
-	// masternodes are high through-put relays
-	if (fMasterNode)
-		return true;
 	const CAssetAllocationTuple assetAllocationTuple(theAssetAllocation.vchAsset, vchAlias);
 	const string &user3 = "";
 	const string &user2 = "";
