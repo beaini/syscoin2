@@ -679,7 +679,7 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 			"<asset> Asset name.\n"
 			"<aliasfrom> alias to transfer from.\n"
 			"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
-			"The second parameter can be either an array of alias and amounts if sending amount pairs or an array of alias and array of start/end pairs of indexes for input ranges.\n"
+			"The third parameter can be either an array of alias and amounts if sending amount pairs or an array of alias and array of start/end pairs of indexes for input ranges.\n"
 			+ HelpRequiringPassphrase());
 
 	// gather & validate inputs

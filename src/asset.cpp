@@ -828,7 +828,7 @@ UniValue assetupdate(const UniValue& params, bool fHelp) {
 						"<asset> Asset name.\n"
                         "<public> Public data, 256 characters max.\n"                
 						"<category> Category, 256 characters max. Defaults to assets\n"
-						"<supply> New supply of asset. Can mint more supply up to total_supply amount or if total_supply is - 1 then minting is uncapped.\n"
+						"<supply> New supply of asset. Can mint more supply up to total_supply amount or if max_supply is - 1 then minting is uncapped.\n"
 						"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
 						+ HelpRequiringPassphrase());
 	vector<unsigned char> vchAsset = vchFromValue(params[0]);
@@ -988,23 +988,24 @@ UniValue assettransfer(const UniValue& params, bool fHelp) {
 	return res;
 }
 UniValue assetsend(const UniValue& params, bool fHelp) {
-	if (fHelp || params.size() != 5)
+	if (fHelp || params.size() != 4)
 		throw runtime_error(
-			"assetsend [asset] [alias] [aliasto] [amount] [witness]\n"
+			"assetsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",[{\"start\":index,\"end\":index},...]},...] ) [witness]\n"
 			"Send an asset allocation you own to another alias.\n"
 			"<asset> Asset name.\n"
 			"<aliasfrom> alias to transfer from.\n"
 			"<aliasto> alias to transfer to.\n"
 			"<amount> quantity of asset to send.\n"
 			"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
+			"The third parameter can be either an array of alias and amounts if sending amount pairs or an array of alias and array of start/end pairs of indexes for input ranges.\n"
 			+ HelpRequiringPassphrase());
 
 	// gather & validate inputs
 	vector<unsigned char> vchAsset = vchFromValue(params[0]);
 	vector<unsigned char> vchAliasFrom = vchFromValue(params[1]);
-	vector<unsigned char> vchAliasTo = vchFromValue(params[2]);
+	UniValue valueTo = params[2];
 	vector<unsigned char> vchWitness;
-	vchWitness = vchFromValue(params[4]);
+	vchWitness = vchFromValue(params[3]);
 	// check for alias existence in DB
 	CAliasIndex fromAlias;
 	if (!GetAlias(vchAliasFrom, fromAlias))
@@ -1014,6 +1015,51 @@ UniValue assetsend(const UniValue& params, bool fHelp) {
 	CWalletTx wtx;
 	CScript scriptPubKeyFromOrig;
 
+	CAssetAllocation theAssetAllocation;
+	theAssetAllocation.vchAsset = vchAsset;
+
+	UniValue receivers = valueTo.get_array();
+	for (unsigned int idx = 0; idx < receivers.size(); idx++) {
+		const UniValue& receiver = receivers[idx];
+		if (!receiver.isObject())
+			throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "expected object with {\"alias'\",\"inputranges\" or \"amount\"}");
+
+		UniValue receiverObj = receiver.get_obj();
+		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "alias"));
+		UniValue inputRangeObj = find_value(receiverObj, "inputranges");
+		UniValue amountObj = find_value(receiverObj, "amount");
+		if (inputRangeObj == UniValue::VARR) {
+			UniValue inputRanges = inputRangeObj.get_array();
+			vector<CRange> vectorOfRanges;
+			for (unsigned int rangeIndex = 0; rangeIndex < inputRanges.size(); rangeIndex++) {
+				const UniValue& inputRangeObj = inputRanges[rangeIndex];
+				if (!inputRangeObj.isObject())
+					throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "expected object with {\"start'\",\"end\"}");
+				UniValue startRangeObj = find_value(inputRangeObj, "start");
+				UniValue endRangeObj = find_value(inputRangeObj, "end");
+				if (!startRangeObj.isNum())
+					throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "start range not found for an input");
+				if (!endRangeObj.isNum())
+					throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "end range not found for an input");
+				vectorOfRanges.push_back(CRange(startRangeObj.get_int(), endRangeObj.get_int()));
+			}
+			if (theAssetAllocation.listSendingAllocationInputs.find(vchAliasTo) != theAssetAllocation.listSendingAllocationInputs.end())
+				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "duplicate receiver");
+			theAssetAllocation.listSendingAllocationInputs.push_back(make_pair(vchAliasTo, vectorOfRanges));
+		}
+		else if (amountObj == UniValue::VNUM) {
+			const CAmount &amount = AmountFromValue(amountObj);
+			if (amount < 0)
+				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "amount must be positive");
+			if (theAssetAllocation.listSendingAllocationAmounts.find(vchAliasTo) != theAssetAllocation.listSendingAllocationAmounts.end())
+				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "duplicate receiver");
+			theAssetAllocation.listSendingAllocationAmounts.push_back(make_pair(vchAliasTo, amount));
+		}
+		else
+			throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "expected inputrange as string or amount as number in receiver array");
+
+	}
+
 	CAsset theAsset;
 	if (!GetAsset(vchAsset, theAsset))
 		throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2510 - " + _("Could not find a asset with this key"));
@@ -1022,9 +1068,23 @@ UniValue assetsend(const UniValue& params, bool fHelp) {
 	GetAddress(fromAlias, &fromAddr, scriptPubKeyFromOrig);
 
 	CScript scriptPubKey;
-	CAssetAllocation theAssetAllocation;
-	theAssetAllocation.vchAsset = vchAsset;
-	theAssetAllocation.listSendingAllocationAmounts.push_back(make_pair(vchAliasTo, AmountFromValue(params[3])));
+
+	CAssetAllocationTuple assetAllocationTuple(vchAsset, vchAliasFrom);
+	if (!GetBoolArg("-unittest", false)) {
+		// check to see if a transaction for this asset/alias tuple has arrived before minimum latency period
+		ArrivalTimesMap arrivalTimes;
+		passetallocationdb->ReadISArrivalTimes(assetAllocationTuple, arrivalTimes);
+		const int64_t & nNow = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+		for (auto& arrivalTime : arrivalTimes) {
+			// if this tx arrived within the minimum latency period flag it as potentially conflicting
+			if ((nNow - (arrivalTime.second / 1000)) < ZDAG_MINIMUM_LATENCY_SECONDS) {
+				throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2510 - " + _("Please wait a few more seconds and try again..."));
+			}
+		}
+	}
+	if (assetAllocationConflicts.find(assetAllocationTuple) != assetAllocationConflicts.end())
+		throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2510 - " + _("This asset allocation is involved in a conflict which must be resolved with Proof-Of-Work. Please wait for a block confirmation and try again..."));
+
 
 	vector<unsigned char> data;
 	theAssetAllocation.Serialize(data);
