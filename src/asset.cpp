@@ -430,12 +430,20 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Asset send must send an input or transfer balance");
 				return error(errorMessage.c_str());
 			}
+			if (theAssetAllocation.listSendingAllocationInputs.size() > 50 && theAssetAllocation.listSendingAllocationAmounts.size() > 50)
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Too many receivers in one allocation send, maximum of 50 is allowed at once");
+				return error(errorMessage.c_str());
+			}
 			break;
 		default:
 			errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Asset transaction has unknown op");
 			return error(errorMessage.c_str());
 		}
 	}
+	// masternodes are high through-put relays
+	if (fMasterNode)
+		return true;
 	if (!fJustCheck) {
 		const string &user1 = stringFromVch(vvchAlias);
 		string user2 = "";
@@ -463,7 +471,27 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			}
 		}
 		if (op == OP_ASSET_UPDATE) {
-			theAsset.nBalance = dbAsset.nBalance + theAsset.nBalance;
+			if (!theAsset.listAllocationInputs.empty()) {
+				// ensure the new inputs being added are greator than the last input
+				for (auto&input : theAsset.listAllocationInputs) {
+					if(input.start <= dbAsset.nLastInput)
+					{
+						errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Cannot edit this asset. New asset inputs must be added to the end of the supply");
+						return true;
+					}
+				}
+				vector<CRange> outputMerge;
+				dbAsset.listAllocationInputs.insert(std::end(dbAsset.listAllocationInputs), std::begin(theAsset.listAllocationInputs), std::end(theAsset.listAllocationInputs));
+				mergeRanges(dbAsset.listAllocationInputs, outputMerge);
+				theAsset.listAllocationInputs = outputMerge;
+				theAsset.nBalance = validateRangesAndGetCount(theAsset.listAllocationInputs);
+				if (theAsset.nBalance <= dbAsset.nBalance)
+				{
+					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Invalid allocation inputs");
+					return true;
+				}
+				theAsset.nLastInput = theAsset.listAllocationInputs[theAsset.listAllocationInputs.size() - 1].end;
+			}
 			if (theAsset.nTotalSupply > 0 && theAsset.nBalance > theAsset.nTotalSupply)
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Balance cannot exceed total supply");

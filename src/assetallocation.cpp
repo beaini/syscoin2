@@ -355,6 +355,11 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Asset send must send an input or transfer balance");
 				return error(errorMessage.c_str());
 			}
+			if (theAssetAllocation.listSendingAllocationInputs.size() > 50 && theAssetAllocation.listSendingAllocationAmounts.size() > 50)
+			{
+				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Too many receivers in one allocation send, maximum of 50 is allowed at once");
+				return error(errorMessage.c_str());
+			}
 			break;
 
 		default:
@@ -362,6 +367,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 			return error(errorMessage.c_str());
 		}
 	}
+	// masternodes are high through-put relays
+	if (fMasterNode)
+		return true;
 	const CAssetAllocationTuple assetAllocationTuple(theAssetAllocation.vchAsset, vchAlias);
 	const string &user3 = "";
 	const string &user2 = "";
@@ -462,7 +470,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				CAssetAllocation receiverAllocation;
 				if (amountTuple.first == vchAlias) {
 					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Cannot send an asset allocation to yourself");
-					continue;
+					return true;
 				}
 				const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, amountTuple.first);
 				if (fJustCheck) {
@@ -470,20 +478,20 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 					if (!GetAlias(amountTuple.first, alias))
 					{
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
-						continue;
+						return true;
 					}
 					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
 					{
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
-						continue;
+						return true;
 					}
 					if (bAddAllReceiversToConflictList || bBalanceOverrun) {
 						LogPrintf("CheckAssetAllocationInputs: adding recver %s to conflict list\n", receiverAllocationTuple.ToString().c_str());
 						assetAllocationConflicts.insert(receiverAllocationTuple);
 					}
-					
+
 				}
-				
+
 				if (!dontaddtodb) {
 					if (!GetAssetAllocation(receiverAllocationTuple, receiverAllocation)) {
 						receiverAllocation.SetNull();
@@ -496,13 +504,131 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						receiverAllocation.nBalance += amountTuple.second;
 						theAssetAllocation.nBalance -= amountTuple.second;
 					}
-					
+
 					if (!passetallocationdb->WriteAssetAllocation(receiverAllocation, INT64_MAX, fJustCheck))
 					{
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to write to asset allocation DB");
 						return error(errorMessage.c_str());
 					}
-					
+
+					if (fJustCheck) {
+						if (strResponse != "") {
+							paliasdb->WriteAliasIndexTxHistory(user1, stringFromVch(receiverAllocation.vchAlias), user3, tx.GetHash(), nHeight, strResponseEnglish, receiverAllocationTuple.ToString());
+						}
+					}
+				}
+			}
+		}
+		else if (theAssetAllocation.listSendingAllocationAmounts.empty()) {
+			if (dbAssetAllocation.listAllocationInputs.empty()) {
+				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, request sending with inputs but sender has no inputs in its allocation list");
+				return true;
+			}
+			if (theAssetAllocation.listSendingAllocationInputs.empty()) {
+				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, expected allocation input ranges");
+				return true;
+			}
+			// check balance is sufficient on sender
+			CAmount nTotal = 0;
+			for (auto& inputTuple : theAssetAllocation.listSendingAllocationInputs) {
+				const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, inputTuple.first);
+				// one of the first things we do per receiver is revert it to last pow state on the pow(!fJustCheck)
+				if (bRevert) {
+					if (!RevertAssetAllocation(receiverAllocationTuple, tx.GetHash(), revertedAssetAllocations))
+					{
+						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to revert asset allocation");
+						return error(errorMessage.c_str());
+					}
+				}
+				int rangeTotal = validateRangesAndGetCount(inputTuple.second);
+				if(rangeTotal <= 0)
+				{
+					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid range or duplicate input");
+					return true;
+				}
+				nTotal += rangeTotal;
+			}
+			if (dbAssetAllocation.nBalance < nTotal) {
+				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender balance is insufficient");
+				if (fJustCheck && !dontaddtodb) {
+					// add conflicting sender
+					assetAllocationConflicts.insert(assetAllocationTuple);
+					bBalanceOverrun = true;
+					LogPrintf("CheckAssetAllocationInputs: input balance overrun dbAssetAllocation.nBalance %llu vs nTotal %llu\n", dbAssetAllocation.nBalance, nTotal);
+				}
+			}
+			else if (fJustCheck && !dontaddtodb) {
+				// if sender was is flagged as conflicting, add all receivers to conflict list
+				if (assetAllocationConflicts.find(assetAllocationTuple) != assetAllocationConflicts.end())
+				{
+					bAddAllReceiversToConflictList = true;
+					LogPrintf("CheckAssetAllocationInputs: found input conflict on %s\n", assetAllocationTuple.ToString().c_str());
+				}
+			}
+			for (unsigned int i = 0; i < theAssetAllocation.listSendingAllocationInputs.size();i++) {
+				InputRanges &input = theAssetAllocation.listSendingAllocationInputs[i];
+				CAssetAllocation receiverAllocation;
+				if (input.first == vchAlias) {
+					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Cannot send an asset allocation to yourself");
+					return true;
+				}
+				const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, input.first);
+				if (fJustCheck) {
+					// check receiver alias
+					if (!GetAlias(input.first, alias))
+					{
+						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
+						return true;
+					}
+					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
+					{
+						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
+						return true;
+					}
+					if (bAddAllReceiversToConflictList || bBalanceOverrun) {
+						LogPrintf("CheckAssetAllocationInputs: adding recver %s to conflict list\n", receiverAllocationTuple.ToString().c_str());
+						assetAllocationConflicts.insert(receiverAllocationTuple);
+					}
+
+				}
+
+				if (!dontaddtodb) {
+					if (!GetAssetAllocation(receiverAllocationTuple, receiverAllocation)) {
+						receiverAllocation.SetNull();
+						receiverAllocation.vchAlias = receiverAllocationTuple.vchAlias;
+						receiverAllocation.vchAsset = receiverAllocationTuple.vchAsset;
+					}
+					if (!bBalanceOverrun) {
+						receiverAllocation.txHash = tx.GetHash();
+						receiverAllocation.nHeight = nHeight;
+						// figure out receivers added ranges and balance
+
+
+						// ensure entire allocation range being subtracted exists on sender (full inclusion check)
+						if (!doesRangeContain(dbAssetAllocation.listAllocationInputs, input.second))
+						{
+							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender input list does not contain this input range");
+							return true;
+						}
+						vector<CRange> outputMerge;
+						receiverAllocation.listAllocationInputs.insert(std::end(receiverAllocation.listAllocationInputs), std::begin(input.second), std::end(input.second));
+						mergeRanges(receiverAllocation.listAllocationInputs, outputMerge);
+						receiverAllocation.listAllocationInputs = outputMerge;
+						receiverAllocation.nBalance = getRangeCount(receiverAllocation.listAllocationInputs);
+
+						// figure out senders subtracted ranges and balance
+						vector<CRange> outputSubtract;
+						subtractRanges(dbAssetAllocation.listAllocationInputs, input.second, outputSubtract);
+						theAssetAllocation.listAllocationInputs = outputSubtract;
+						theAssetAllocation.nBalance = getRangeCount(theAssetAllocation.listAllocationInputs);
+					}
+
+					if (!passetallocationdb->WriteAssetAllocation(receiverAllocation, INT64_MAX, fJustCheck))
+					{
+						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to write to asset allocation DB");
+						return error(errorMessage.c_str());
+					}
+
 					if (fJustCheck) {
 						if (strResponse != "") {
 							paliasdb->WriteAliasIndexTxHistory(user1, stringFromVch(receiverAllocation.vchAlias), user3, tx.GetHash(), nHeight, strResponseEnglish, receiverAllocationTuple.ToString());
@@ -542,23 +668,69 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
     return true;
 }
 UniValue assetallocationsend(const UniValue& params, bool fHelp) {
-	if (fHelp || params.size() != 5)
+	if (fHelp || params.size() != 4)
 		throw runtime_error(
-			"assetallocationsend [asset] [aliasfrom] [aliasto] [amount] [witness]\n"
+			"assetallocationsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",[{\"start\":index,\"end\":index},...]},...] ) [witness]\n"
 			"Send an asset allocation you own to another alias.\n"
 			"<asset> Asset name.\n"
 			"<aliasfrom> alias to transfer from.\n"
-			"<aliasto> alias to transfer to.\n"
-			"<amount> quantity of the asset to transfer.\n"
 			"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
+			"The second parameter can be either an array of alias and amounts if sending amount pairs or an array of alias and array of start/end pairs of indexes for input ranges.\n"
 			+ HelpRequiringPassphrase());
 
 	// gather & validate inputs
 	vector<unsigned char> vchAsset = vchFromValue(params[0]);
 	vector<unsigned char> vchAliasFrom = vchFromValue(params[1]);
-	vector<unsigned char> vchAliasTo = vchFromValue(params[2]);
+	UniValue valueTo = params[2];
 	vector<unsigned char> vchWitness;
-	vchWitness = vchFromValue(params[4]);
+	vchWitness = vchFromValue(params[3]);
+	if (valueTo.type() != UniValue::VARR)
+		throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Array of receivers not found");
+
+	CAssetAllocation theAssetAllocation;
+	theAssetAllocation.vchAsset = vchAsset;
+
+	UniValue receivers = valueTo.get_array();
+	for (unsigned int idx = 0; idx < receivers.size(); idx++) {
+		const UniValue& receiver = receivers[idx];
+		if (!receiver.isObject())
+			throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "expected object with {\"alias'\",\"inputranges\" or \"amount\"}");
+
+		UniValue receiverObj = receiver.get_obj();
+		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "alias"));
+		UniValue inputRangeObj = find_value(receiverObj, "inputranges");
+		UniValue amountObj = find_value(receiverObj, "amount");
+		if (inputRangeObj == UniValue::VARR) {
+			UniValue inputRanges = inputRangeObj.get_array();
+			vector<CRange> vectorOfRanges;
+			for (unsigned int rangeIndex = 0; rangeIndex < inputRanges.size(); rangeIndex++) {
+				const UniValue& inputRangeObj = inputRanges[rangeIndex];
+				if(!inputRangeObj.isObject())
+					throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "expected object with {\"start'\",\"end\"}");
+				UniValue startRangeObj = find_value(inputRangeObj, "start");
+				UniValue endRangeObj = find_value(inputRangeObj, "end");
+				if(!startRangeObj.isNum())
+					throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "start range not found for an input");
+				if(!endRangeObj.isNum())
+					throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "end range not found for an input");
+				vectorOfRanges.push_back(CRange(startRangeObj.get_int(), endRangeObj.get_int()));
+			}
+			if(theAssetAllocation.listSendingAllocationInputs.find(vchAliasTo) != theAssetAllocation.listSendingAllocationInputs.end())
+				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "duplicate receiver");
+			theAssetAllocation.listSendingAllocationInputs.push_back(make_pair(vchAliasTo, vectorOfRanges));
+		}
+		else if (amountObj == UniValue::VNUM) {
+			const CAmount &amount = AmountFromValue(amountObj);
+			if (amount < 0)
+				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "amount must be positive");
+			if (theAssetAllocation.listSendingAllocationAmounts.find(vchAliasTo) != theAssetAllocation.listSendingAllocationAmounts.end())
+				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "duplicate receiver");
+			theAssetAllocation.listSendingAllocationAmounts.push_back(make_pair(vchAliasTo, amount));
+		}
+		else
+			throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "expected inputrange as string or amount as number in receiver array");
+
+	}
 	// check for alias existence in DB
 	CAliasIndex fromAlias;
 	if (!GetAlias(vchAliasFrom, fromAlias))
@@ -576,9 +748,6 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	GetAddress(fromAlias, &fromAddr, scriptPubKeyFromOrig);
 
 	CScript scriptPubKey;
-	CAssetAllocation theAssetAllocation;
-	theAssetAllocation.vchAsset = vchAsset;
-	theAssetAllocation.listSendingAllocationAmounts.push_back(make_pair(vchAliasTo, AmountFromValue(params[3])));
 
 	CAssetAllocationTuple assetAllocationTuple(vchAsset, vchAliasFrom);
 	if (!GetBoolArg("-unittest", false)) {
@@ -634,19 +803,20 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 }
 
 UniValue assetallocationinfo(const UniValue& params, bool fHelp) {
-    if (fHelp || 2 != params.size())
-        throw runtime_error("assetallocationinfo <asset> <alias>\n"
-                "Show stored values of a single asset allocation.\n");
+    if (fHelp || 3 != params.size())
+        throw runtime_error("assetallocationinfo <asset> <alias> <getinputs>\n"
+                "Show stored values of a single asset allocation. Set getinputs to true if you want to get the allocation inputs, if applicable.\n");
 
     vector<unsigned char> vchAsset = vchFromValue(params[0]);
 	vector<unsigned char> vchAlias = vchFromValue(params[1]);
+	bool bGetInputs = params[2].get_bool();
 	UniValue oAssetAllocation(UniValue::VOBJ);
 
 	CAssetAllocation txPos;
 	if (!passetallocationdb || !passetallocationdb->ReadAssetAllocation(CAssetAllocationTuple(vchAsset, vchAlias), txPos))
 		throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 5536 - " + _("Failed to read from assetallocation DB"));
 
-	if(!BuildAssetAllocationJson(txPos, oAssetAllocation))
+	if(!BuildAssetAllocationJson(txPos, bGetInputs, oAssetAllocation))
 		oAssetAllocation.clear();
     return oAssetAllocation;
 }
@@ -678,12 +848,23 @@ bool DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& 
 		if (assetallocation.IsNull())
 			continue;
 
-		if (assetallocation.listSendingAllocationInputs.empty()) {
+		if (!assetallocation.listSendingAllocationAmounts.empty()) {
 			for (auto& amountTuple : assetallocation.listSendingAllocationAmounts) {
 				nRealtimeBalanceRequired += amountTuple.second;
 				// if running balance overruns the stored balance then we have a potential conflict
 				// only if nRealtimeBalanceRequired != amountTuple.second meaning we are processing multiple realtime balance requirements before next block
 				if (nRealtimeBalanceRequired != amountTuple.second && nRealtimeBalanceRequired > dbAssetAllocation.nBalance) {
+					return true;
+				}
+			}
+		}
+		else if (!assetallocation.listSendingAllocationInputs.empty()) {
+			for (auto& inputTuple : assetallocation.listSendingAllocationInputs) {
+				const int rangeCount = getRangeCount(inputTuple.second);
+				nRealtimeBalanceRequired += rangeCount;
+				// if running balance overruns the stored balance then we have a potential conflict
+				// only if nRealtimeBalanceRequired != amountTuple.second meaning we are processing multiple realtime balance requirements before next block
+				if (nRealtimeBalanceRequired != rangeCount && nRealtimeBalanceRequired > dbAssetAllocation.nBalance) {
 					return true;
 				}
 			}
@@ -714,20 +895,13 @@ UniValue assetallocationsenderstatus(const UniValue& params, bool fHelp) {
 	oAssetAllocationStatus.push_back(Pair("status", nStatus));
 	return oAssetAllocationStatus;
 }
-bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, UniValue& oAssetAllocation)
+bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const bool bGetInputs, UniValue& oAssetAllocation)
 {
 	CAssetAllocationTuple assetAllocationTuple(assetallocation.vchAsset, assetallocation.vchAlias);
     oAssetAllocation.push_back(Pair("_id", assetAllocationTuple.ToString()));
 	oAssetAllocation.push_back(Pair("asset", stringFromVch(assetallocation.vchAsset)));
     oAssetAllocation.push_back(Pair("txid", assetallocation.txHash.GetHex()));
     oAssetAllocation.push_back(Pair("height", (int)assetallocation.nHeight));
-	ArrivalTimesMap arrivalTimes;
-	passetallocationdb->ReadISArrivalTimes(assetAllocationTuple, arrivalTimes);
-	ArrivalTimesMap::iterator it = arrivalTimes.find(assetallocation.txHash);
-	int64_t nArrivalTime = INT64_MAX;
-	if (it != arrivalTimes.end())
-		nArrivalTime = (*it).second;
-	oAssetAllocation.push_back(Pair("time", nArrivalTime));
 	oAssetAllocation.push_back(Pair("alias", stringFromVch(assetallocation.vchAlias)));
 	oAssetAllocation.push_back(Pair("balance", ValueFromAmount(assetallocation.nBalance)));
 	int64_t expired_time = GetAssetAllocationExpiration(assetallocation);
@@ -738,6 +912,16 @@ bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, UniValue&
 	}
 	oAssetAllocation.push_back(Pair("expires_on", expired_time));
 	oAssetAllocation.push_back(Pair("expired", expired));
+	if (bGetInputs) {
+		UniValue oAssetAllocationInputsArray(UniValue::VARR);
+		for (auto& input : assetallocation.listAllocationInputs) {
+			UniValue oAssetAllocationInputObj(UniValue::VOBJ);
+			oAssetAllocationReceiversObj.push_back(Pair("start", input.start));
+			oAssetAllocationReceiversObj.push_back(Pair("end", input.end));
+			oAssetAllocationReceiversArray.push_back(oAssetAllocationReceiversObj);
+		}
+		entry.push_back(Pair("inputs", UniValue oAssetAllocationInputsArray(UniValue::VARR);
+	}
 	return true;
 }
 bool BuildAssetAllocationIndexerJson(const CAssetAllocation& assetallocation, UniValue& oAssetAllocation)
@@ -771,9 +955,17 @@ void AssetAllocationTxToJSON(const int op, const std::vector<unsigned char> &vch
 		
 	}
 	else if (!assetallocation.listSendingAllocationInputs.empty()) {
-
+		for (auto& inputTuple : assetallocation.listSendingAllocationInputs) {
+			UniValue oAssetAllocationReceiversObj(UniValue::VOBJ);
+			oAssetAllocationReceiversObj.push_back(Pair("alias", stringFromVch(inputTuple.first)));
+			for (auto& inputRange : inputTuple.second) {
+				oAssetAllocationReceiversObj.push_back(Pair("start", inputRange.start));
+				oAssetAllocationReceiversObj.push_back(Pair("end", inputRange.end));
+			}
+			oAssetAllocationReceiversArray.push_back(oAssetAllocationReceiversObj);
+		}
 	}
-	entry.push_back(Pair("allocation_amounts", oAssetAllocationReceiversArray));
+	entry.push_back(Pair("allocations", oAssetAllocationReceiversArray));
 
 
 }

@@ -470,6 +470,9 @@ bool CheckCertInputs(const CTransaction &tx, int op, int nOut, const vector<vect
 			return error(errorMessage.c_str());
 		}
 	}
+	// masternodes are high through-put relays
+	if (fMasterNode)
+		return true;
 	if (!fJustCheck && !dontaddtodb) {
 		if (!RevertCert(theCert.vchCert, op, tx.GetHash(), revertedCerts))
 		{

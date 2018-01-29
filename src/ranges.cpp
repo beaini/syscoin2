@@ -1,6 +1,6 @@
 // A C++ program for merging overlapping ranges
 #include "ranges.h"
-
+using namespace std;
 // Compares two ranges according to their starting range index.
 bool compareRange(const CRange &i1, const CRange &i2)
 {
@@ -8,7 +8,7 @@ bool compareRange(const CRange &i1, const CRange &i2)
 }
 
 // The main function that takes a set of ranges, merges
-// overlapping ranges and prints the result
+// overlapping ranges and put the result in output
 void mergeRanges(vector<CRange>& arr, vector<CRange>& output)
 {
 	if (arr.empty())
@@ -128,6 +128,47 @@ void subtractRanges(vector<CRange> &arr, vector<CRange> &del, vector<CRange> &ou
 			continue;
 		}
 	}
+}
+// just get range count, assume valid
+int getRangeCount(const std::vector<CRange> &arr) {
+	int total = 0;
+	for (auto& range : arr) {
+		total += (arr.end - arr.start) + 1;
+	}
+	return total;
+}
+// validate and get count of range at same time. RangeCount > 0 is valid otherwise invalid
+int validateRangesAndGetCount(const vector<CRange> &arr) {
+	int total = 0;
+	unsigned int nLastEnd = 0;
+	for (auto& range : arr) {
+		// ensure range is well formed
+		if (range.end < range.start || range.end < 0 || range.start < 0)
+			return 0;
+		if (range.start <= nLastEnd)
+			return 0;
+		total += (range.end - range.start) + 1;
+		nLastEnd = range.end;
+	}
+	return total;
+}
+// does child ranges exist fully in the parent ranges
+bool doesRangeContain(const vector<CRange> &parent, const vector<CRange> &child) {
+	if (parent.empty() || child.empty())
+		return false;
+	// we just need to prove that a single child doesn't exist in parent range's to prove this false, otherwise it must be true
+	for (auto& childRange : child) {
+		bool found = false;
+		for (auto& parentRange : parent) {
+			if (childRange.start >= parentRange.start && childRange.end <= parentRange.end)
+				found = true;
+			if (found)
+				break;
+		}
+		if (!found)
+			return false;
+	}
+	return true;
 }
 /*
 int main()
