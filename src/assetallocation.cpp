@@ -688,7 +688,7 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	UniValue valueTo = params[2];
 	vector<unsigned char> vchWitness;
 	vchWitness = vchFromValue(params[3]);
-	if (valueTo.type() != UniValue::VARR)
+	if (!valueTo.isArray())
 		throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Array of receivers not found");
 
 	CAssetAllocation theAssetAllocation;
@@ -704,7 +704,7 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "alias"));
 		UniValue inputRangeObj = find_value(receiverObj, "inputranges");
 		UniValue amountObj = find_value(receiverObj, "amount");
-		if (inputRangeObj == UniValue::VARR) {
+		if (inputRangeObj.isArray()) {
 			UniValue inputRanges = inputRangeObj.get_array();
 			vector<CRange> vectorOfRanges;
 			for (unsigned int rangeIndex = 0; rangeIndex < inputRanges.size(); rangeIndex++) {
@@ -723,7 +723,7 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "duplicate receiver");
 			theAssetAllocation.listSendingAllocationInputs.push_back(make_pair(vchAliasTo, vectorOfRanges));
 		}
-		else if (amountObj == UniValue::VNUM) {
+		else if (amountObj.isNum()) {
 			const CAmount &amount = AmountFromValue(amountObj);
 			if (amount < 0)
 				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "amount must be positive");
