@@ -433,6 +433,11 @@ bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5015 - " + _("Guid in data output doesn't match guid in transaction");
 						return error(errorMessage.c_str());
 					}
+					if (vvchArgs.size() <= 1 || theAlias.vchGUID != vvchArgs[1])
+					{
+						errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5010 - " + _("Alias input guid mismatch");
+						return error(errorMessage.c_str());
+					}
 				}
 				break;
 		default:

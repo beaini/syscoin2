@@ -191,7 +191,6 @@ public:
 		vchEncryptionPublicKey.clear();
 		vchEncryptionPrivateKey.clear();
 		vchPublicValue.clear();
-		vchGUID.clear();
 		vchAddress.clear();
 		offerWhitelist.SetNull();
 	}
