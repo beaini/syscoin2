@@ -41,6 +41,7 @@ public:
 	std::vector<unsigned char> sCategory;
 	CAmount nBalance;
 	CAmount nTotalSupply;
+	CAmount nMaxSupply;
     CAsset() {
         SetNull();
     }
@@ -68,6 +69,7 @@ public:
 		READWRITE(listAllocationInputs);
 		READWRITE(nBalance);
 		READWRITE(nTotalSupply);
+		READWRITE(nMaxSupply);
 	}
     inline friend bool operator==(const CAsset &a, const CAsset &b) {
         return (
@@ -85,13 +87,14 @@ public:
 		listAllocationInputs = b.listAllocationInputs;
 		nBalance = b.nBalance;
 		nTotalSupply = b.nTotalSupply;
+		nMaxSupply = b.nMaxSupply;
         return *this;
     }
 
     inline friend bool operator!=(const CAsset &a, const CAsset &b) {
         return !(a == b);
     }
-	inline void SetNull() { nTotalSupply = 0; nBalance = 0; listAllocationInputs.clear(); sCategory.clear(); vchAsset.clear(); nHeight = 0; txHash.SetNull(); vchAlias.clear(); vchPubData.clear(); }
+	inline void SetNull() { nMaxSupply = 0; nTotalSupply = 0; nBalance = 0; listAllocationInputs.clear(); sCategory.clear(); vchAsset.clear(); nHeight = 0; txHash.SetNull(); vchAlias.clear(); vchPubData.clear(); }
     inline bool IsNull() const { return (vchAsset.empty()); }
     bool UnserializeFromTx(const CTransaction &tx);
 	bool UnserializeFromData(const std::vector<unsigned char> &vchData, const std::vector<unsigned char> &vchHash);

@@ -471,9 +471,6 @@ bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 		}
 
 	}
-	// masternodes are high through-put relays
-	if (fMasterNode)
-		return true;
 	if (!fJustCheck) {
 		CAliasIndex dbAlias;
 		string strName = stringFromVch(vvchArgs[0]);

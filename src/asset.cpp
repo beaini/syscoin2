@@ -474,27 +474,30 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			if (!theAsset.listAllocationInputs.empty()) {
 				// ensure the new inputs being added are greator than the last input
 				for (auto&input : theAsset.listAllocationInputs) {
-					if(input.start <= dbAsset.nLastInput)
+					if(input.start <= dbAsset.nTotalSupply)
 					{
 						errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Cannot edit this asset. New asset inputs must be added to the end of the supply");
 						return true;
 					}
 				}
 				vector<CRange> outputMerge;
+				const unsigned int newInputCount = validateRangesAndGetCount(theAsset.listAllocationInputs);
+
 				dbAsset.listAllocationInputs.insert(std::end(dbAsset.listAllocationInputs), std::begin(theAsset.listAllocationInputs), std::end(theAsset.listAllocationInputs));
 				mergeRanges(dbAsset.listAllocationInputs, outputMerge);
 				theAsset.listAllocationInputs = outputMerge;
-				theAsset.nBalance = validateRangesAndGetCount(theAsset.listAllocationInputs);
-				if (theAsset.nBalance <= dbAsset.nBalance)
-				{
-					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Invalid allocation inputs");
-					return true;
-				}
-				theAsset.nLastInput = theAsset.listAllocationInputs[theAsset.listAllocationInputs.size() - 1].end;
+				theAsset.nBalance += newInputCount*COIN;
 			}
-			if (theAsset.nTotalSupply > 0 && theAsset.nBalance > theAsset.nTotalSupply)
+			if (theAsset.nBalance <= dbAsset.nBalance)
 			{
-				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Balance cannot exceed total supply");
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("New balance must increase upon the old balance");
+				return true;
+			}
+			// increase total supply
+			theAsset.nTotalSupply += theAsset.nBalance;
+			if (theAsset.nMaxSupply > 0 && theAsset.nTotalSupply > theAsset.nMaxSupply)
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Total supply cannot exceed maximum supply");
 				return true;
 			}
 		}
@@ -583,7 +586,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			if (theAsset.sCategory.empty())
 				theAsset.sCategory = dbAsset.sCategory;
 
-			theAsset.nTotalSupply = dbAsset.nTotalSupply;
+			theAsset.nMaxSupply = dbAsset.nMaxSupply;
 
 			if (op == OP_ASSET_TRANSFER)
 			{
@@ -607,6 +610,8 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2027 - " + _("Asset already exists");
 				return true;
 			}
+			// starting supply is the supplied balance upon init
+			theAsset.nTotalSupply = theAsset.nBalance;
 		}
 		if (!dontaddtodb) {
 			if (strResponse != "") {
@@ -639,13 +644,13 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 UniValue assetnew(const UniValue& params, bool fHelp) {
     if (fHelp || params.size() != 7)
         throw runtime_error(
-			"assetnew [name] [alias] [public] [category=assets] [supply] [total_supply] [witness]\n"
+			"assetnew [name] [alias] [public] [category=assets] [supply] [max_supply] [witness]\n"
 						"<name> name, 20 characters max.\n"
 						"<alias> An alias you own.\n"
                         "<public> public data, 256 characters max.\n"
 						"<category> category, 256 characters max. Defaults to assets\n"
 						"<supply> Initial supply of asset. Can mint more supply up to total_supply amount or if total_supply is -1 then minting is uncapped.\n"
-						"<total_supply> Total supply of this asset.\n"
+						"<max_supply> Maximum supply of this asset. Set to -1 for uncapped.\n"
 						"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
 						+ HelpRequiringPassphrase());
     vector<unsigned char> vchName = vchFromString(params[0].get_str());
@@ -655,7 +660,7 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 	strCategory = params[3].get_str();
 	vector<unsigned char> vchWitness;
 	CAmount nBalance = AmountFromValue(params[4]);
-	CAmount nTotalSupply = AmountFromValue(params[5]);
+	CAmount nMaxSupply = AmountFromValue(params[5]);
 	vchWitness = vchFromValue(params[6]);
 	// check for alias existence in DB
 	CAliasIndex theAlias;
@@ -682,7 +687,7 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 	newAsset.vchPubData = vchPubData;
 	newAsset.vchAlias = vchAlias;
 	newAsset.nBalance = nBalance;
-	newAsset.nTotalSupply = nTotalSupply;
+	newAsset.nMaxSupply = nMaxSupply;
 
 	vector<unsigned char> data;
 	newAsset.Serialize(data);

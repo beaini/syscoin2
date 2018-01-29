@@ -43,8 +43,7 @@ public:
 	void SetNull() { start = 0; end = 0;}
 	bool IsNull() const { return (start == 0 && end == 0); }
 };
-int validateRangesAndGetCount(const std::vector<CRange> &arr, sorted_vector<int> &vecSeen);
-int getRangeCount(const std::vector<CRange> &arr);
+unsigned int validateRangesAndGetCount(const std::vector<CRange> &arr);
 bool compareRange(const CRange &i1, const CRange &i2);
 void mergeRanges(std::vector<CRange> &arr, std::vector<CRange> &output);
 void subtractRanges(std::vector<CRange> &arr, const std::vector<CRange> &del, std::vector<CRange> &output);

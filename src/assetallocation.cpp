@@ -530,6 +530,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 			}
 			// check balance is sufficient on sender
 			CAmount nTotal = 0;
+			vector<CAmount> rangeTotals;
 			for (auto& inputTuple : theAssetAllocation.listSendingAllocationInputs) {
 				const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, inputTuple.first);
 				// one of the first things we do per receiver is revert it to last pow state on the pow(!fJustCheck)
@@ -540,13 +541,15 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						return error(errorMessage.c_str());
 					}
 				}
-				int rangeTotal = validateRangesAndGetCount(inputTuple.second);
+				const unsigned int rangeTotal = validateRangesAndGetCount(inputTuple.second);
 				if(rangeTotal <= 0)
 				{
 					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid range or duplicate input");
 					return true;
 				}
-				nTotal += rangeTotal;
+				const CAmount rangeTotalAmount = rangeTotal*COIN;
+				rangeTotals.push_back(rangeTotalAmount);
+				nTotal += rangeTotalAmount;
 			}
 			if (dbAssetAllocation.nBalance < nTotal) {
 				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender balance is insufficient");
@@ -602,25 +605,36 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						receiverAllocation.txHash = tx.GetHash();
 						receiverAllocation.nHeight = nHeight;
 						// figure out receivers added ranges and balance
-
-
+						vector<CRange> outputMerge;
+						receiverAllocation.listAllocationInputs.insert(std::end(receiverAllocation.listAllocationInputs), std::begin(input.second), std::end(input.second));
+						mergeRanges(receiverAllocation.listAllocationInputs, outputMerge);
+						receiverAllocation.listAllocationInputs = outputMerge;
+						CAmount prevBalance= receiverAllocation.nBalance;
+						receiverAllocation.nBalance += rangeTotals[i];
+						if(receiverAllocation.nBalance <= prevBalance)
+						{
+							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Receiver balance was unchanged");
+							return true;
+						}
 						// ensure entire allocation range being subtracted exists on sender (full inclusion check)
 						if (!doesRangeContain(dbAssetAllocation.listAllocationInputs, input.second))
 						{
 							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender input list does not contain this input range");
 							return true;
 						}
-						vector<CRange> outputMerge;
-						receiverAllocation.listAllocationInputs.insert(std::end(receiverAllocation.listAllocationInputs), std::begin(input.second), std::end(input.second));
-						mergeRanges(receiverAllocation.listAllocationInputs, outputMerge);
-						receiverAllocation.listAllocationInputs = outputMerge;
-						receiverAllocation.nBalance = getRangeCount(receiverAllocation.listAllocationInputs);
 
 						// figure out senders subtracted ranges and balance
 						vector<CRange> outputSubtract;
 						subtractRanges(dbAssetAllocation.listAllocationInputs, input.second, outputSubtract);
 						theAssetAllocation.listAllocationInputs = outputSubtract;
-						theAssetAllocation.nBalance = getRangeCount(theAssetAllocation.listAllocationInputs);
+						prevBalance = theAssetAllocation.nBalance;
+						theAssetAllocation.nBalance -= rangeTotals[i];
+						if (theAssetAllocation.nBalance >= prevBalance || theAssetAllocation.nBalance == 0)
+						{
+							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender balance was unchanged");
+							return true;
+						}
+
 					}
 
 					if (!passetallocationdb->WriteAssetAllocation(receiverAllocation, INT64_MAX, fJustCheck))
@@ -860,8 +874,10 @@ bool DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& 
 		}
 		else if (!assetallocation.listSendingAllocationInputs.empty()) {
 			for (auto& inputTuple : assetallocation.listSendingAllocationInputs) {
-				const int rangeCount = getRangeCount(inputTuple.second);
-				nRealtimeBalanceRequired += rangeCount;
+				const unsigned int rangeCount = validateRangesAndGetCount(inputTuple.second);
+				if (rangeCount == 0)
+					continue;
+				nRealtimeBalanceRequired += rangeCount*COIN;
 				// if running balance overruns the stored balance then we have a potential conflict
 				// only if nRealtimeBalanceRequired != amountTuple.second meaning we are processing multiple realtime balance requirements before next block
 				if (nRealtimeBalanceRequired != rangeCount && nRealtimeBalanceRequired > dbAssetAllocation.nBalance) {

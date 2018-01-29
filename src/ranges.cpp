@@ -129,21 +129,13 @@ void subtractRanges(vector<CRange> &arr, vector<CRange> &del, vector<CRange> &ou
 		}
 	}
 }
-// just get range count, assume valid
-int getRangeCount(const std::vector<CRange> &arr) {
-	int total = 0;
-	for (auto& range : arr) {
-		total += (arr.end - arr.start) + 1;
-	}
-	return total;
-}
 // validate and get count of range at same time. RangeCount > 0 is valid otherwise invalid
-int validateRangesAndGetCount(const vector<CRange> &arr) {
-	int total = 0;
+unsigned int validateRangesAndGetCount(const vector<CRange> &arr) {
+	unsigned int total = 0;
 	unsigned int nLastEnd = 0;
 	for (auto& range : arr) {
 		// ensure range is well formed
-		if (range.end < range.start || range.end < 0 || range.start < 0)
+		if (range.end < range.start)
 			return 0;
 		if (range.start <= nLastEnd)
 			return 0;
