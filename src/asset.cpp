@@ -576,6 +576,104 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 					}
 				}
 			}
+			else if (theAssetAllocation.listSendingAllocationAmounts.empty()) {
+				if (dbAssetAllocation.listAllocationInputs.empty()) {
+					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, request sending with inputs but sender has no inputs in its allocation list");
+					return true;
+				}
+				if (theAssetAllocation.listSendingAllocationInputs.empty()) {
+					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, expected allocation input ranges");
+					return true;
+				}
+				// check balance is sufficient on sender
+				CAmount nTotal = 0;
+				vector<CAmount> rangeTotals;
+				for (auto& inputTuple : theAssetAllocation.listSendingAllocationInputs) {
+					const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, inputTuple.first);
+					const unsigned int rangeTotal = validateRangesAndGetCount(inputTuple.second);
+					if (rangeTotal == 0)
+					{
+						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid range or duplicate input");
+						return true;
+					}
+					const CAmount rangeTotalAmount = rangeTotal*COIN;
+					rangeTotals.push_back(rangeTotalAmount);
+					nTotal += rangeTotalAmount;
+				}
+				if (theAsset.nBalance < nTotal) {
+					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender balance is insufficient");
+					return true;
+				}
+				for (unsigned int i = 0; i < theAssetAllocation.listSendingAllocationInputs.size(); i++) {
+					InputRanges &input = theAssetAllocation.listSendingAllocationInputs[i];
+					CAssetAllocation receiverAllocation;
+					if (input.first == vchAlias) {
+						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Cannot send an asset allocation to yourself");
+						return true;
+					}
+					const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, input.first);
+					// check receiver alias
+					if (!GetAlias(input.first, alias))
+					{
+						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
+						return true;
+					}
+					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
+					{
+						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
+						return true;
+					}
+					if (!dontaddtodb) {
+						if (!GetAssetAllocation(receiverAllocationTuple, receiverAllocation)) {
+							receiverAllocation.SetNull();
+							receiverAllocation.vchAlias = receiverAllocationTuple.vchAlias;
+							receiverAllocation.vchAsset = receiverAllocationTuple.vchAsset;
+						}
+						
+						receiverAllocation.txHash = tx.GetHash();
+						receiverAllocation.nHeight = nHeight;
+						// figure out receivers added ranges and balance
+						vector<CRange> outputMerge;
+						receiverAllocation.listAllocationInputs.insert(std::end(receiverAllocation.listAllocationInputs), std::begin(input.second), std::end(input.second));
+						mergeRanges(receiverAllocation.listAllocationInputs, outputMerge);
+						receiverAllocation.listAllocationInputs = outputMerge;
+						CAmount prevBalance = receiverAllocation.nBalance;
+						receiverAllocation.nBalance += rangeTotals[i];
+						if (receiverAllocation.nBalance <= prevBalance)
+						{
+							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Receiver balance was unchanged");
+							return true;
+						}
+						// ensure entire allocation range being subtracted exists on sender (full inclusion check)
+						if (!doesRangeContain(dbAsset.listAllocationInputs, input.second))
+						{
+							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender input list does not contain this input range");
+							return true;
+						}
+
+						// figure out senders subtracted ranges and balance
+						vector<CRange> outputSubtract;
+						subtractRanges(dbAsset.listAllocationInputs, input.second, outputSubtract);
+						theAsset.listAllocationInputs = outputSubtract;
+						prevBalance = theAsset.nBalance;
+						theAsset.nBalance -= rangeTotals[i];
+						if (theAsset.nBalance >= prevBalance || theAsset.nBalance == 0)
+						{
+							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender balance was unchanged");
+							return true;
+						}
+						if (!passetallocationdb->WriteAssetAllocation(receiverAllocation, INT64_MAX, fJustCheck))
+						{
+							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to write to asset allocation DB");
+							return error(errorMessage.c_str());
+						}
+
+						if (strResponse != "") {
+							paliasdb->WriteAliasIndexTxHistory(user1, stringFromVch(receiverAllocation.vchAlias), user3, tx.GetHash(), nHeight, strResponseEnglish, receiverAllocationTuple.ToString());
+						}
+					}
+				}
+			}
 		}
 		else if (op != OP_ASSET_ACTIVATE)
 		{

@@ -450,11 +450,11 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				}
 			}
 			if (dbAssetAllocation.nBalance < nTotal) {
+				bBalanceOverrun = true;
 				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender balance is insufficient");
 				if (fJustCheck && !dontaddtodb) {
 					// add conflicting sender
 					assetAllocationConflicts.insert(assetAllocationTuple);
-					bBalanceOverrun = true;
 					LogPrintf("CheckAssetAllocationInputs: balance overrun dbAssetAllocation.nBalance %llu vs nTotal %llu\n", dbAssetAllocation.nBalance, nTotal);
 				}
 			}
@@ -542,7 +542,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 					}
 				}
 				const unsigned int rangeTotal = validateRangesAndGetCount(inputTuple.second);
-				if(rangeTotal <= 0)
+				if(rangeTotal == 0)
 				{
 					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid range or duplicate input");
 					return true;
@@ -552,11 +552,11 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				nTotal += rangeTotalAmount;
 			}
 			if (dbAssetAllocation.nBalance < nTotal) {
+				bBalanceOverrun = true;
 				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender balance is insufficient");
 				if (fJustCheck && !dontaddtodb) {
 					// add conflicting sender
 					assetAllocationConflicts.insert(assetAllocationTuple);
-					bBalanceOverrun = true;
 					LogPrintf("CheckAssetAllocationInputs: input balance overrun dbAssetAllocation.nBalance %llu vs nTotal %llu\n", dbAssetAllocation.nBalance, nTotal);
 				}
 			}
