@@ -53,7 +53,6 @@ public:
 	{
 		vchPubData.clear();
 		sCategory.clear();
-		vchAlias.clear();
 		listAllocationInputs.clear();
 
 	}

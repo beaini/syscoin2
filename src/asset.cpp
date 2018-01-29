@@ -495,14 +495,17 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			}
 			// increase total supply
 			theAsset.nTotalSupply += theAsset.nBalance;
-			if (theAsset.nMaxSupply > 0 && theAsset.nTotalSupply > theAsset.nMaxSupply)
+			if (dbAsset.nMaxSupply > 0 && theAsset.nTotalSupply > dbAsset.nMaxSupply)
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Total supply cannot exceed maximum supply");
 				return true;
 			}
 		}
-		else if (op != OP_ASSET_ACTIVATE)
+		else if (op != OP_ASSET_ACTIVATE) {
 			theAsset.nBalance = dbAsset.nBalance;
+			theAsset.nTotalSupply = dbAsset.nBalance;
+			theAsset.nMaxSupply = dbAsset.nMaxSupply;
+		}
 
 		if (op == OP_ASSET_SEND) {
 			theAsset = dbAsset;
@@ -639,29 +642,20 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						receiverAllocation.listAllocationInputs = outputMerge;
 						CAmount prevBalance = receiverAllocation.nBalance;
 						receiverAllocation.nBalance += rangeTotals[i];
-						if (receiverAllocation.nBalance <= prevBalance)
-						{
-							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Receiver balance was unchanged");
-							return true;
-						}
+					
 						// ensure entire allocation range being subtracted exists on sender (full inclusion check)
 						if (!doesRangeContain(dbAsset.listAllocationInputs, input.second))
 						{
 							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender input list does not contain this input range");
 							return true;
 						}
-
+					
 						// figure out senders subtracted ranges and balance
 						vector<CRange> outputSubtract;
 						subtractRanges(dbAsset.listAllocationInputs, input.second, outputSubtract);
 						theAsset.listAllocationInputs = outputSubtract;
 						prevBalance = theAsset.nBalance;
 						theAsset.nBalance -= rangeTotals[i];
-						if (theAsset.nBalance >= prevBalance || theAsset.nBalance == 0)
-						{
-							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender balance was unchanged");
-							return true;
-						}
 						if (!passetallocationdb->WriteAssetAllocation(receiverAllocation, INT64_MAX, fJustCheck))
 						{
 							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to write to asset allocation DB");
@@ -684,10 +678,11 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			if (theAsset.sCategory.empty())
 				theAsset.sCategory = dbAsset.sCategory;
 
-			theAsset.nMaxSupply = dbAsset.nMaxSupply;
 
 			if (op == OP_ASSET_TRANSFER)
 			{
+				// cannot adjust allocation inputs upon transfer, balance's and maxsupply are also non-alterable and set to default in an above if statement
+				theAsset.listAllocationInputs = dbAsset.listAllocationInputs;
 				// check toalias
 				if (!GetAlias(theAsset.vchAlias, alias))
 				{

@@ -611,11 +611,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						receiverAllocation.listAllocationInputs = outputMerge;
 						CAmount prevBalance= receiverAllocation.nBalance;
 						receiverAllocation.nBalance += rangeTotals[i];
-						if(receiverAllocation.nBalance <= prevBalance)
-						{
-							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Receiver balance was unchanged");
-							return true;
-						}
+						
 						// ensure entire allocation range being subtracted exists on sender (full inclusion check)
 						if (!doesRangeContain(dbAssetAllocation.listAllocationInputs, input.second))
 						{
@@ -629,12 +625,6 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						theAssetAllocation.listAllocationInputs = outputSubtract;
 						prevBalance = theAssetAllocation.nBalance;
 						theAssetAllocation.nBalance -= rangeTotals[i];
-						if (theAssetAllocation.nBalance >= prevBalance || theAssetAllocation.nBalance == 0)
-						{
-							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender balance was unchanged");
-							return true;
-						}
-
 					}
 
 					if (!passetallocationdb->WriteAssetAllocation(receiverAllocation, INT64_MAX, fJustCheck))
