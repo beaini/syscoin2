@@ -491,7 +491,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				}
 				// ensure the new inputs being added are greator than the last input
 				for (auto&input : theAsset.listAllocationInputs) {
-					if(input.start <= dbAsset.nTotalSupply)
+					if(input.start < dbAsset.nTotalSupply)
 					{
 						errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Cannot edit this asset. New asset inputs must be added to the end of the supply");
 						return true;
