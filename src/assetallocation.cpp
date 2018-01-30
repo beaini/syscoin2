@@ -394,6 +394,11 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 			errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find sender asset allocation.");
 			return true;
 		}
+		if (!GetAsset(dbAssetAllocation.vchAsset, dbAsset))
+		{
+			errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2022 - " + _("Failed to read from asset DB");
+			return true;
+		}
 		theAssetAllocation.vchAlias = vchAlias;
 		theAssetAllocation.nBalance = dbAssetAllocation.nBalance;
 		// get sender assetallocation
@@ -417,13 +422,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 			errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Cannot send this asset. Asset allocation owner must sign off on this change");
 			return true;
 		}
-		if (theAssetAllocation.listSendingAllocationInputs.empty()) {
-			if (!dbAssetAllocation.listAllocationInputs.empty()) {
-				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, request not sending with inputs and sender uses inputs in its allocation list");
-				return true;
-			}
-			if (theAssetAllocation.listSendingAllocationAmounts.empty()) {
-				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, expected allocation amounts");
+		if (!theAssetAllocation.listSendingAllocationAmounts.empty()) {
+			if (dbAsset.bUseInputRanges) {
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, request to send amounts but asset uses input ranges");
 				return true;
 			}
 			// check balance is sufficient on sender
@@ -515,13 +516,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				}
 			}
 		}
-		else if (theAssetAllocation.listSendingAllocationAmounts.empty()) {
-			if (dbAssetAllocation.listAllocationInputs.empty()) {
-				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, request sending with inputs but sender has no inputs in its allocation list");
-				return true;
-			}
-			if (theAssetAllocation.listSendingAllocationInputs.empty()) {
-				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, expected allocation input ranges");
+		else if (!theAssetAllocation.listSendingAllocationInputs.empty()) {
+			if (!dbAsset.bUseInputRanges) {
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, request to send input ranges but asset uses amounts");
 				return true;
 			}
 			// check balance is sufficient on sender

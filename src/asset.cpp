@@ -533,13 +533,9 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			CAssetAllocation dbAssetAllocation;
 			const CAssetAllocationTuple allocationTuple(theAssetAllocation.vchAsset, vvchAlias);
 			GetAssetAllocation(allocationTuple, dbAssetAllocation);
-			if (theAssetAllocation.listSendingAllocationInputs.empty()) {
-				if (!dbAssetAllocation.listAllocationInputs.empty()) {
-					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, request not sending with inputs and sender uses inputs in its allocation list");
-					return true;
-				}
-				if (theAssetAllocation.listSendingAllocationAmounts.empty() || dbAsset.bUseInputRanges) {
-					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, expected allocation amounts");
+			if (!theAssetAllocation.listSendingAllocationAmounts.empty()) {
+				if (dbAsset.bUseInputRanges) {
+					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, request to send amounts but asset uses input ranges");
 					return true;
 				}
 				// check balance is sufficient on sender
@@ -599,13 +595,9 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 					}
 				}
 			}
-			else if (theAssetAllocation.listSendingAllocationAmounts.empty()) {
-				if (dbAssetAllocation.listAllocationInputs.empty()) {
-					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, request sending with inputs but sender has no inputs in its allocation list");
-					return true;
-				}
-				if (theAssetAllocation.listSendingAllocationInputs.empty() || !dbAsset.bUseInputRanges) {
-					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, expected allocation input ranges");
+			else if (!theAssetAllocation.listSendingAllocationInputs.empty()) {
+				if (!dbAsset.bUseInputRanges) {
+					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, request to send input ranges but asset uses amounts");
 					return true;
 				}
 				// check balance is sufficient on sender
