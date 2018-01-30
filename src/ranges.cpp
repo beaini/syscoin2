@@ -137,7 +137,7 @@ unsigned int validateRangesAndGetCount(const vector<CRange> &arr) {
 		// ensure range is well formed
 		if (range.end < range.start)
 			return 0;
-		if (range.start <= nLastEnd)
+		if (range.start > 0 && range.start <= nLastEnd)
 			return 0;
 		total += (range.end - range.start) + 1;
 		nLastEnd = range.end;
