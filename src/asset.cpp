@@ -898,7 +898,7 @@ UniValue assetupdate(const UniValue& params, bool fHelp) {
 		unsigned int balance = (nBalance/COIN);
 		CRange range(0, balance-1);
 		if (!copyAsset.listAllocationInputs.empty()) {
-			range.start = copyAsset.nTotalSupply;
+			range.start = (copyAsset.nTotalSupply/COIN);
 			range.end = range.start+(balance-1);
 		}
 		theAsset.listAllocationInputs.push_back(range);
