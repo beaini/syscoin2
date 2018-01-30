@@ -659,7 +659,6 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						receiverAllocation.listAllocationInputs.insert(std::end(receiverAllocation.listAllocationInputs), std::begin(input.second), std::end(input.second));
 						mergeRanges(receiverAllocation.listAllocationInputs, outputMerge);
 						receiverAllocation.listAllocationInputs = outputMerge;
-						CAmount prevBalance = receiverAllocation.nBalance;
 						receiverAllocation.nBalance += rangeTotals[i];
 					
 						// ensure entire allocation range being subtracted exists on sender (full inclusion check)
@@ -673,7 +672,6 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						vector<CRange> outputSubtract;
 						subtractRanges(dbAsset.listAllocationInputs, input.second, outputSubtract);
 						theAsset.listAllocationInputs = outputSubtract;
-						prevBalance = theAsset.nBalance;
 						theAsset.nBalance -= rangeTotals[i];
 						if (!passetallocationdb->WriteAssetAllocation(receiverAllocation, INT64_MAX, fJustCheck))
 						{
