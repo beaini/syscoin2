@@ -803,7 +803,7 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 	newAsset.bUseInputRanges = bUseInputRanges;
 	if (bUseInputRanges)
 	{
-		CRange range(0, ValueFromAmount(nBalance).get_int());
+		CRange range(0, nBalance/COIN);
 		newAsset.listAllocationInputs.push_back(range);
 	}
 	vector<unsigned char> data;
@@ -895,7 +895,7 @@ UniValue assetupdate(const UniValue& params, bool fHelp) {
 	// if using input ranges merge in the new balance
 	if (copyAsset.bUseInputRanges && nBalance > 0)
 	{
-		int balance = ValueFromAmount(nBalance).get_int();
+		unsigned int balance = nBalance/COIN;
 		CRange range(0, balance);
 		if (!copyAsset.listAllocationInputs.empty()) {
 			range = copyAsset.listAllocationInputs.back();
