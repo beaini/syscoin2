@@ -405,7 +405,17 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			if(!boost::algorithm::starts_with(stringFromVch(theAsset.sCategory), "assets"))
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2013 - " + _("Must use a asset category");
-				return true;
+				return error(errorMessage.c_str());
+			}
+			if(theAsset.bUseInputRanges && theAsset.listAllocationInputs.empty())
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2013 - " + _("Must specify input range");
+				return error(errorMessage.c_str());
+			}
+			if (!theAsset.bUseInputRanges && !theAsset.listAllocationInputs.empty())
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2013 - " + _("Cannot specify input range for this asset");
+				return error(errorMessage.c_str());
 			}
 			break;
 
@@ -413,7 +423,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			if(theAsset.sCategory.size() > 0 && !boost::algorithm::istarts_with(stringFromVch(theAsset.sCategory), "assets"))
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2017 - " + _("Must use a asset category");
-				return true;
+				return error(errorMessage.c_str());
 			}
 			if (theAsset.nBalance < 0)
 			{
@@ -423,6 +433,11 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			break;
 
 		case OP_ASSET_TRANSFER:
+			if (!theAssetAllocation.listSendingAllocationInputs.empty() || !theAssetAllocation.listSendingAllocationAmounts.empty() || !theAsset.listAllocationInputs.empty())
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Cannot transfer input allocations");
+				return error(errorMessage.c_str());
+			}
 			break;
 		case OP_ASSET_SEND:
 			if (theAssetAllocation.listSendingAllocationInputs.empty() && theAssetAllocation.listSendingAllocationAmounts.empty())
@@ -469,6 +484,11 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 		}
 		if (op == OP_ASSET_UPDATE) {
 			if (!theAsset.listAllocationInputs.empty()) {
+				if(!dbAsset.bUseInputRanges)
+				{
+					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("This asset does not use input ranges");
+					return true;
+				}
 				// ensure the new inputs being added are greator than the last input
 				for (auto&input : theAsset.listAllocationInputs) {
 					if(input.start <= dbAsset.nTotalSupply)
@@ -484,12 +504,13 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				mergeRanges(dbAsset.listAllocationInputs, outputMerge);
 				theAsset.listAllocationInputs = outputMerge;
 				theAsset.nBalance += newInputCount*COIN;
+				if (theAsset.nBalance <= dbAsset.nBalance)
+				{
+					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("New balance must increase upon the old balance");
+					return true;
+				}
 			}
-			if (theAsset.nBalance <= dbAsset.nBalance)
-			{
-				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("New balance must increase upon the old balance");
-				return true;
-			}
+			
 			// increase total supply
 			theAsset.nTotalSupply += theAsset.nBalance;
 			if (dbAsset.nMaxSupply > 0 && theAsset.nTotalSupply > dbAsset.nMaxSupply)
@@ -502,6 +523,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			theAsset.nBalance = dbAsset.nBalance;
 			theAsset.nTotalSupply = dbAsset.nBalance;
 			theAsset.nMaxSupply = dbAsset.nMaxSupply;
+			theAsset.bUseInputRanges = dbAsset.bUseInputRanges;
 		}
 
 		if (op == OP_ASSET_SEND) {
@@ -515,7 +537,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, request not sending with inputs and sender uses inputs in its allocation list");
 					return true;
 				}
-				if (theAssetAllocation.listSendingAllocationAmounts.empty()) {
+				if (theAssetAllocation.listSendingAllocationAmounts.empty() || dbAsset.bUseInputRanges) {
 					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, expected allocation amounts");
 					return true;
 				}
@@ -581,7 +603,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, request sending with inputs but sender has no inputs in its allocation list");
 					return true;
 				}
-				if (theAssetAllocation.listSendingAllocationInputs.empty()) {
+				if (theAssetAllocation.listSendingAllocationInputs.empty() || !dbAsset.bUseInputRanges) {
 					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid asset send, expected allocation input ranges");
 					return true;
 				}
@@ -732,15 +754,16 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 }
 
 UniValue assetnew(const UniValue& params, bool fHelp) {
-    if (fHelp || params.size() != 7)
+    if (fHelp || params.size() != 8)
         throw runtime_error(
-			"assetnew [name] [alias] [public] [category=assets] [supply] [max_supply] [witness]\n"
+			"assetnew [name] [alias] [public] [category=assets] [supply] [max_supply] [use_inputranges] [witness]\n"
 						"<name> name, 20 characters max.\n"
 						"<alias> An alias you own.\n"
                         "<public> public data, 256 characters max.\n"
 						"<category> category, 256 characters max. Defaults to assets\n"
 						"<supply> Initial supply of asset. Can mint more supply up to total_supply amount or if total_supply is -1 then minting is uncapped.\n"
 						"<max_supply> Maximum supply of this asset. Set to -1 for uncapped.\n"
+						"<use_inputranges> If this asset uses an input for every token, useful if you need to keep track of a token regardless of ownership.\n"
 						"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
 						+ HelpRequiringPassphrase());
     vector<unsigned char> vchName = vchFromString(params[0].get_str());
@@ -751,7 +774,8 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 	vector<unsigned char> vchWitness;
 	CAmount nBalance = AmountFromValue(params[4]);
 	CAmount nMaxSupply = AmountFromValue(params[5]);
-	vchWitness = vchFromValue(params[6]);
+	bool bUseInputRanges = params[6].get_bool();
+	vchWitness = vchFromValue(params[7]);
 	// check for alias existence in DB
 	CAliasIndex theAlias;
 
@@ -778,7 +802,12 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 	newAsset.vchAlias = vchAlias;
 	newAsset.nBalance = nBalance;
 	newAsset.nMaxSupply = nMaxSupply;
-
+	newAsset.bUseInputRanges = bUseInputRanges;
+	if (bUseInputRanges)
+	{
+		CRange range(0, nBalance);
+		newAsset.listAllocationInputs.push_back(range);
+	}
 	vector<unsigned char> data;
 	newAsset.Serialize(data);
     uint256 hash = Hash(data.begin(), data.end());
@@ -865,6 +894,17 @@ UniValue assetupdate(const UniValue& params, bool fHelp) {
 		theAsset.sCategory = vchFromString(strCategory);
 
 	theAsset.nBalance = nBalance;
+	// if using input ranges merge in the new balance
+	if (copyAsset.bUseInputRanges && nBalance > 0)
+	{
+		CRange range(0, nBalance);
+		if (!copyAsset.listAllocationInputs.empty()) {
+			range = copyAsset.listAllocationInputs.back();
+			range.start++;
+			range.end += nBalance+1;
+		}
+		theAsset.listAllocationInputs.push_back(range);
+	}
 
 	vector<unsigned char> data;
 	theAsset.Serialize(data);
@@ -1015,6 +1055,10 @@ UniValue assetsend(const UniValue& params, bool fHelp) {
 	CWalletTx wtx;
 	CScript scriptPubKeyFromOrig;
 
+	CAsset theAsset;
+	if (!GetAsset(vchAsset, theAsset))
+		throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2510 - " + _("Could not find a asset with this key"));
+
 	CAssetAllocation theAssetAllocation;
 	theAssetAllocation.vchAsset = vchAsset;
 
@@ -1055,10 +1099,6 @@ UniValue assetsend(const UniValue& params, bool fHelp) {
 			throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "expected inputrange as string or amount as number in receiver array");
 
 	}
-
-	CAsset theAsset;
-	if (!GetAsset(vchAsset, theAsset))
-		throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2510 - " + _("Could not find a asset with this key"));
 
 	CSyscoinAddress fromAddr;
 	GetAddress(fromAlias, &fromAddr, scriptPubKeyFromOrig);
