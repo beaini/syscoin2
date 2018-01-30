@@ -895,8 +895,8 @@ UniValue assetupdate(const UniValue& params, bool fHelp) {
 	// if using input ranges merge in the new balance
 	if (copyAsset.bUseInputRanges && nBalance > 0)
 	{
-		unsigned int balance = (nBalance/COIN) -1;
-		CRange range(0, balance);
+		unsigned int balance = (nBalance/COIN);
+		CRange range(0, balance-1);
 		if (!copyAsset.listAllocationInputs.empty()) {
 			range = copyAsset.listAllocationInputs.back();
 			range.start++;
