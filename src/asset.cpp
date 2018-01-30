@@ -622,10 +622,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				for (unsigned int i = 0; i < theAssetAllocation.listSendingAllocationInputs.size(); i++) {
 					InputRanges &input = theAssetAllocation.listSendingAllocationInputs[i];
 					CAssetAllocation receiverAllocation;
-					if (input.first == vvchAlias) {
-						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Cannot send an asset allocation to yourself");
-						return true;
-					}
+
 					const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, input.first);
 					// check receiver alias
 					if (!GetAlias(input.first, alias))

@@ -152,10 +152,10 @@ bool doesRangeContain(const vector<CRange> &parent, const vector<CRange> &child)
 	for (auto& childRange : child) {
 		bool found = false;
 		for (auto& parentRange : parent) {
-			if (childRange.start >= parentRange.start && childRange.end <= parentRange.end)
+			if (childRange.start >= parentRange.start && childRange.end <= parentRange.end) {
 				found = true;
-			if (found)
 				break;
+			}
 		}
 		if (!found)
 			return false;
