@@ -635,6 +635,12 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
 						return true;
 					}
+					// ensure entire allocation range being subtracted exists on sender (full inclusion check)
+					if (!doesRangeContain(dbAsset.listAllocationInputs, input.second))
+					{
+						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Input not found");
+						return true;
+					}
 					if (!dontaddtodb) {
 						if (!GetAssetAllocation(receiverAllocationTuple, receiverAllocation)) {
 							receiverAllocation.SetNull();
@@ -650,13 +656,6 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						mergeRanges(receiverAllocation.listAllocationInputs, outputMerge);
 						receiverAllocation.listAllocationInputs = outputMerge;
 						receiverAllocation.nBalance += rangeTotals[i];
-					
-						// ensure entire allocation range being subtracted exists on sender (full inclusion check)
-						if (!doesRangeContain(dbAsset.listAllocationInputs, input.second))
-						{
-							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Input not found");
-							return true;
-						}
 					
 						// figure out senders subtracted ranges and balance
 						vector<CRange> outputSubtract;

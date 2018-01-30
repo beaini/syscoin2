@@ -587,7 +587,12 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 					}
 
 				}
-
+				// ensure entire allocation range being subtracted exists on sender (full inclusion check)
+				if (!doesRangeContain(dbAssetAllocation.listAllocationInputs, input.second))
+				{
+					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Input not found");
+					return true;
+				}
 				if (!dontaddtodb) {
 					if (!GetAssetAllocation(receiverAllocationTuple, receiverAllocation)) {
 						receiverAllocation.SetNull();
@@ -604,13 +609,6 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						receiverAllocation.listAllocationInputs = outputMerge;
 						const CAmount prevBalance = receiverAllocation.nBalance;
 						receiverAllocation.nBalance += rangeTotals[i];
-			
-						// ensure entire allocation range being subtracted exists on sender (full inclusion check)
-						if (!doesRangeContain(dbAssetAllocation.listAllocationInputs, input.second))
-						{
-							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Input not found");
-							return true;
-						}
 
 						// figure out senders subtracted ranges and balance
 						vector<CRange> outputSubtract;
