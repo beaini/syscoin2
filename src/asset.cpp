@@ -485,6 +485,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 		if (op == OP_ASSET_UPDATE) {
 			CAmount increaseBalanceByAmount = theAsset.nBalance;
 			if (!theAsset.listAllocationInputs.empty()) {
+				theAsset.nBalance = dbAsset.nBalance;
 				if(!dbAsset.bUseInputRanges)
 				{
 					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("This asset does not use input ranges");
