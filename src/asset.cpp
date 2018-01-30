@@ -492,7 +492,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				}
 				// ensure the new inputs being added are greator than the last input
 				for (auto&input : theAsset.listAllocationInputs) {
-					if(input.start < dbAsset.nTotalSupply)
+					if(input.start < (dbAsset.nTotalSupply/COIN))
 					{
 						errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Cannot edit this asset. New asset inputs must be added to the end of the supply");
 						return true;
@@ -1191,6 +1191,8 @@ bool BuildAssetJson(const CAsset& asset, const bool bGetInputs, UniValue& oAsset
 	oAsset.push_back(Pair("category", stringFromVch(asset.sCategory)));
 	oAsset.push_back(Pair("alias", stringFromVch(asset.vchAlias)));
 	oAsset.push_back(Pair("balance", ValueFromAmount(asset.nBalance)));
+	oAsset.push_back(Pair("total_supply", ValueFromAmount(asset.nTotalSupply)));
+	oAsset.push_back(Pair("max_supply", ValueFromAmount(asset.nMaxSupply)));
 	int64_t expired_time = GetAssetExpiration(asset);
 	bool expired = false;
 	if (expired_time <= chainActive.Tip()->GetMedianTimePast())
@@ -1254,10 +1256,13 @@ void AssetTxToJSON(const int op, const std::vector<unsigned char> &vchData, cons
 	entry.push_back(Pair("_id", stringFromVch(asset.vchAsset)));
 
 	if(!asset.vchPubData.empty() && asset.vchPubData != dbAsset.vchPubData)
-		entry.push_back(Pair("publicdata", stringFromVch(asset.vchPubData)));
+		entry.push_back(Pair("publicvalue", stringFromVch(asset.vchPubData)));
 
 	if(!asset.vchAlias.empty() && asset.vchAlias != dbAsset.vchAlias)
 		entry.push_back(Pair("alias", stringFromVch(asset.vchAlias)));
+
+	if (!asset.sCategory.empty() && asset.sCategory != dbAsset.sCategory)
+		entry.push_back(Pair("category", stringFromVch(asset.sCategory)));
 
 	UniValue oAssetAllocationReceiversArray(UniValue::VARR);
 	if (!asset.listAllocationInputs.empty()) {
