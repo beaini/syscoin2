@@ -1026,7 +1026,7 @@ UniValue assettransfer(const UniValue& params, bool fHelp) {
 UniValue assetsend(const UniValue& params, bool fHelp) {
 	if (fHelp || params.size() != 4)
 		throw runtime_error(
-			"assetsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",[{\"start\":index,\"end\":index},...]},...] ) [witness]\n"
+			"assetsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [witness]\n"
 			"Send an asset allocation you own to another alias.\n"
 			"<asset> Asset name.\n"
 			"<aliasfrom> alias to transfer from.\n"
@@ -1069,7 +1069,7 @@ UniValue assetsend(const UniValue& params, bool fHelp) {
 
 		UniValue receiverObj = receiver.get_obj();
 		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "alias"));
-		UniValue inputRangeObj = find_value(receiverObj, "inputranges");
+		UniValue inputRangeObj = find_value(receiverObj, "ranges");
 		UniValue amountObj = find_value(receiverObj, "amount");
 		if (inputRangeObj.isArray()) {
 			UniValue inputRanges = inputRangeObj.get_array();
