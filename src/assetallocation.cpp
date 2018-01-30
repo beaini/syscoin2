@@ -540,7 +540,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				const unsigned int rangeTotal = validateRangesAndGetCount(inputTuple.second);
 				if(rangeTotal == 0)
 				{
-					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid range or duplicate input");
+					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid input ranges");
 					return true;
 				}
 				const CAmount rangeTotalAmount = rangeTotal*COIN;
@@ -605,12 +605,13 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						receiverAllocation.listAllocationInputs.insert(std::end(receiverAllocation.listAllocationInputs), std::begin(input.second), std::end(input.second));
 						mergeRanges(receiverAllocation.listAllocationInputs, outputMerge);
 						receiverAllocation.listAllocationInputs = outputMerge;
+						const CAmount prevBalance = receiverAllocation.nBalance;
 						receiverAllocation.nBalance += rangeTotals[i];
-						
+			
 						// ensure entire allocation range being subtracted exists on sender (full inclusion check)
 						if (!doesRangeContain(dbAssetAllocation.listAllocationInputs, input.second))
 						{
-							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender input list does not contain this input range");
+							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Input not found");
 							return true;
 						}
 

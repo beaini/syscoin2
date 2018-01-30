@@ -483,6 +483,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			}
 		}
 		if (op == OP_ASSET_UPDATE) {
+			CAmount increaseBalanceByAmount = theAsset.nBalance;
 			if (!theAsset.listAllocationInputs.empty()) {
 				if(!dbAsset.bUseInputRanges)
 				{
@@ -498,21 +499,20 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 					}
 				}
 				vector<CRange> outputMerge;
-				const unsigned int newInputCount = validateRangesAndGetCount(theAsset.listAllocationInputs);
-
+				increaseBalanceByAmount = validateRangesAndGetCount(theAsset.listAllocationInputs)*COIN;
+				if (increaseBalanceByAmount == 0)
+				{
+					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Invalid input ranges");
+					return true;
+				}
 				dbAsset.listAllocationInputs.insert(std::end(dbAsset.listAllocationInputs), std::begin(theAsset.listAllocationInputs), std::end(theAsset.listAllocationInputs));
 				mergeRanges(dbAsset.listAllocationInputs, outputMerge);
 				theAsset.listAllocationInputs = outputMerge;
-				theAsset.nBalance += newInputCount*COIN;
-				if (theAsset.nBalance <= dbAsset.nBalance)
-				{
-					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("New balance must increase upon the old balance");
-					return true;
-				}
+				theAsset.nBalance += increaseBalanceByAmount;
 			}
 			
 			// increase total supply
-			theAsset.nTotalSupply += theAsset.nBalance;
+			theAsset.nTotalSupply += increaseBalanceByAmount;
 			if (dbAsset.nMaxSupply > 0 && theAsset.nTotalSupply > dbAsset.nMaxSupply)
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Total supply cannot exceed maximum supply");
@@ -615,7 +615,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 					const unsigned int rangeTotal = validateRangesAndGetCount(inputTuple.second);
 					if (rangeTotal == 0)
 					{
-						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid range or duplicate input");
+						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Invalid input range");
 						return true;
 					}
 					const CAmount rangeTotalAmount = rangeTotal*COIN;
@@ -664,7 +664,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						// ensure entire allocation range being subtracted exists on sender (full inclusion check)
 						if (!doesRangeContain(dbAsset.listAllocationInputs, input.second))
 						{
-							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender input list does not contain this input range");
+							errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Input not found");
 							return true;
 						}
 					
@@ -898,9 +898,8 @@ UniValue assetupdate(const UniValue& params, bool fHelp) {
 		unsigned int balance = (nBalance/COIN);
 		CRange range(0, balance-1);
 		if (!copyAsset.listAllocationInputs.empty()) {
-			range = copyAsset.listAllocationInputs.back();
-			range.start++;
-			range.end += balance+1;
+			range.start = copyAsset.nTotalSupply;
+			range.end = range.start+(balance-1);
 		}
 		theAsset.listAllocationInputs.push_back(range);
 	}
