@@ -683,9 +683,9 @@ bool DoesRangeContain(const string& parentRange, const string& childRange) {
 	}
 
 	vector<string> childRangeTokens;
-	boost::split(childRangeTokens, parentRange, boost::is_any_of(" "));
+	boost::split(childRangeTokens, childRange, boost::is_any_of(" "));
 	if (childRangeTokens.empty())
-		childRangeTokens.push_back(parentRange);
+		childRangeTokens.push_back(childRange);
 
 	vector<CRange> vecChildRanges;
 	for (auto &token : childRangeTokens) {

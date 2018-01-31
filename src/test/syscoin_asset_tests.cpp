@@ -20,17 +20,20 @@ BOOST_FIXTURE_TEST_SUITE (syscoin_asset_tests, BasicSyscoinTestingSetup)
 BOOST_AUTO_TEST_CASE(generate_range_merge)
 {
 	printf("Running generate_range_merge...\n");
+	// start with {0,0} {2,3} {6,8}, add {4,5} to it and expect {0,0} {2,8}
 	CheckRangeMerge("{0,0} {2,3} {6,8}", "{4,5}", "{0,0} {2,8}");
 }
 BOOST_AUTO_TEST_CASE(generate_range_subtract)
 {
 	printf("Running generate_range_subtract...\n");
+	// start with {0,9}, subtract {0,0} {2,3} {6,8} from it and expect {1,1} {4,5} {9,9}
 	CheckRangeSubtract("{0,9}", "{0,0} {2,3} {6,8}", "{1,1} {4,5} {9,9}");
 	CheckRangeSubtract("{1,2} {3,3} {6,10}", "{0,0} {2,2} {3,3}", "{1,1} {6,10}");
 }
 BOOST_AUTO_TEST_CASE(generate_range_contain)
 {
 	printf("Running generate_range_contain...\n");
+	// does {0,9} contain {0,0}?
 	BOOST_CHECK(DoesRangeContain("{0,9}", "{0,0}"));
 	BOOST_CHECK(!DoesRangeContain("{1,9}", "{0,0}"));
 
