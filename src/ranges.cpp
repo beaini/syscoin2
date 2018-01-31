@@ -58,7 +58,7 @@ void subtractRanges(vector<CRange> &arr, vector<CRange> &deletions, vector<CRang
 	// sort the ranges in increasing order of start index
 	std::sort(arr.begin(), arr.end(), compareRange);
 
-	// sort the deletions in increasing order of start index
+	// sort the deletions in decreasing order of start index
 	std::sort(deletions.begin(), deletions.end(), compareRangeReverse);
 	CRange deletion;
 	// Start from the beginning of the main range array from which we'll
