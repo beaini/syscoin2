@@ -555,8 +555,8 @@ void CheckRangeMerge(const string& originalRanges, const string& newRanges, cons
 
 	vector<CRange> vecRanges;
 	for (auto &token : originalRangeTokens) {
-		token.erase(token.begin());
-		token.erase(token.end());
+		BOOST_CHECK(token.size() > 2);
+		token.substr(1, token.size() - 2);
 		vector<string> ranges;
 		boost::split(ranges, token, boost::is_any_of(","));
 		BOOST_CHECK_EQUAL(ranges.size(), 2);
@@ -571,8 +571,8 @@ void CheckRangeMerge(const string& originalRanges, const string& newRanges, cons
 		newRangeTokens.push_back(newRanges);
 	vector<CRange> vecNewRanges;
 	for (auto &token : newRangeTokens) {
-		token.erase(token.begin());
-		token.erase(token.end());
+		BOOST_CHECK(token.size() > 2);
+		token.substr(1, token.size() - 2);
 		vector<string> ranges;
 		boost::split(ranges, token, boost::is_any_of(","));
 		BOOST_CHECK_EQUAL(ranges.size(), 2);
@@ -592,8 +592,8 @@ void CheckRangeMerge(const string& originalRanges, const string& newRanges, cons
 
 	vector<CRange> vecExpectedOutputRanges;
 	for (auto &token : expectedOutputRangeTokens) {
-		token.erase(token.begin());
-		token.erase(token.end());
+		BOOST_CHECK(token.size() > 2);
+		token.substr(1, token.size() - 2);
 		vector<string> ranges;
 		boost::split(ranges, token, boost::is_any_of(","));
 		BOOST_CHECK_EQUAL(ranges.size(), 2);
@@ -615,8 +615,8 @@ void CheckRangeSubtract(const string& originalRanges, const string& subtractRang
 
 	vector<CRange> vecRanges;
 	for (auto &token : originalRangeTokens) {
-		token.erase(token.begin());
-		token.erase(token.end());
+		BOOST_CHECK(token.size() > 2);
+		token.substr(1, token.size() - 2);
 		vector<string> ranges;
 		boost::split(ranges, token, boost::is_any_of(","));
 		BOOST_CHECK_EQUAL(ranges.size(), 2);
@@ -632,8 +632,8 @@ void CheckRangeSubtract(const string& originalRanges, const string& subtractRang
 
 	vector<CRange> vecSubtractRanges;
 	for (auto &token : subtractRangeTokens) {
-		token.erase(token.begin());
-		token.erase(token.end());
+		BOOST_CHECK(token.size() > 2);
+		token.substr(1, token.size() - 2);
 		vector<string> ranges;
 		boost::split(ranges, token, boost::is_any_of(","));
 		BOOST_CHECK_EQUAL(ranges.size(), 2);
@@ -651,8 +651,8 @@ void CheckRangeSubtract(const string& originalRanges, const string& subtractRang
 
 	vector<CRange> vecExpectedOutputRanges;
 	for (auto &token : expectedOutputRangeTokens) {
-		token.erase(token.begin());
-		token.erase(token.end());
+		BOOST_CHECK(token.size() > 2);
+		token.substr(1, token.size() - 2);
 		vector<string> ranges;
 		boost::split(ranges, token, boost::is_any_of(","));
 		BOOST_CHECK_EQUAL(ranges.size(), 2);
