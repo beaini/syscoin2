@@ -486,14 +486,14 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			CAmount increaseBalanceByAmount = theAsset.nBalance;
 			if (!theAsset.listAllocationInputs.empty()) {
 				theAsset.nBalance = dbAsset.nBalance;
-				if(!dbAsset.bUseInputRanges)
+				if (!dbAsset.bUseInputRanges)
 				{
 					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("This asset does not use input ranges");
 					return true;
 				}
 				// ensure the new inputs being added are greator than the last input
 				for (auto&input : theAsset.listAllocationInputs) {
-					if(input.start < (dbAsset.nTotalSupply/COIN))
+					if (input.start < (dbAsset.nTotalSupply / COIN))
 					{
 						errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Cannot edit this asset. New asset inputs must be added to the end of the supply");
 						return true;
@@ -511,7 +511,9 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				theAsset.listAllocationInputs = outputMerge;
 				theAsset.nBalance += increaseBalanceByAmount;
 			}
-			
+			else
+				theAsset.listAllocationInputs = dbAsset.listAllocationInputs;
+
 			// increase total supply
 			theAsset.nTotalSupply += increaseBalanceByAmount;
 			if (dbAsset.nMaxSupply > 0 && theAsset.nTotalSupply > dbAsset.nMaxSupply)
