@@ -8,7 +8,7 @@ bool compareRange(const CRange &i1, const CRange &i2)
 }
 bool compareRangeReverse(const CRange &i1, const CRange &i2)
 {
-	return (i1.start < i2.start);
+	return (i1.start > i2.start);
 }
 
 // The main function that takes a set of ranges, merges
@@ -49,33 +49,25 @@ void mergeRanges(vector<CRange>& arr, vector<CRange>& output)
 }
 
 
-void subtractRanges(vector<CRange> &arr, vector<CRange> &del, vector<CRange> &output)
+void subtractRanges(vector<CRange> &arr, vector<CRange> &deletions, vector<CRange> &output)
 {
 	// Test if the given set has at least one range
-	if (arr.empty() || del.empty())
+	if (arr.empty() || deletions.empty())
 		return;
 
 	// sort the ranges in increasing order of start index
 	std::sort(arr.begin(), arr.end(), compareRange);
 
-	// Create an empty stack of ranges
-	vector<CRange> deletions;
-
 	// sort the deletions in increasing order of start index
-	sort(del.begin(), del.end(), compareRange);
-
-	// add the deletions to the stack, the first deletion is at the top
-	for (int i = del.size() - 1; i >= 0; i--) {
-		deletions.push_back(del[i]);
-	}
-
+	std::sort(deletions.begin(), deletions.end(), compareRangeReverse);
+	CRange deletion;
 	// Start from the beginning of the main range array from which we'll
 	// delete another array of ranges
 	for (unsigned int i = 0; i < arr.size(); i++)
 	{
 		// find the first deletion range that comes on or after
 		// the current range element in the main array
-		CRange deletion = deletions.back();
+		deletion = deletions.back();
 		while (arr[i].start > deletion.end && deletions.size() > 1) {
 			deletions.pop_back();
 			deletion = deletions.back();
