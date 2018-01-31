@@ -28,5 +28,11 @@ BOOST_AUTO_TEST_CASE(generate_range_subtract)
 	CheckRangeSubtract("{0,9}", "{0,0} {2,3} {6,8}", "{1,1} {4,5} {9,9}");
 	CheckRangeSubtract("{1,2} {3,3} {6,10}", "{0,0} {2,2} {3,3}", "{1,1} {6,10}");
 }
+BOOST_AUTO_TEST_CASE(generate_range_contain)
+{
+	printf("Running generate_range_contain...\n");
+	BOOST_CHECK(DoesRangeContain("{0,9}", "{0,0}"));
+	BOOST_CHECK(!DoesRangeContain("{1,9}", "{0,0}"));
 
+}
 BOOST_AUTO_TEST_SUITE_END ()

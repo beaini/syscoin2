@@ -665,6 +665,41 @@ void CheckRangeSubtract(const string& originalRanges, const string& subtractRang
 		BOOST_CHECK(mergedRanges[i] == vecExpectedOutputRanges[i]);
 	}
 }
+bool RangeContain(const string& parentRange, const string& childRange) {
+	vector<string> parentRangeTokens;
+	boost::split(parentRangeTokens, parentRange, boost::is_any_of(" "));
+	if (parentRangeTokens.empty())
+		parentRangeTokens.push_back(parentRange);
+
+	vector<CRange> vecParentRanges;
+	for (auto &token : parentRangeTokens) {
+		BOOST_CHECK(token.size() > 2);
+		token = token.substr(1, token.size() - 2);
+		vector<string> ranges;
+		boost::split(ranges, token, boost::is_any_of(","));
+		BOOST_CHECK_EQUAL(ranges.size(), 2);
+		CRange range(boost::lexical_cast<int>(ranges[0]), boost::lexical_cast<int>(ranges[1]));
+		vecParentRanges.push_back(range);
+	}
+
+	vector<string> childRangeTokens;
+	boost::split(childRangeTokens, parentRange, boost::is_any_of(" "));
+	if (childRangeTokens.empty())
+		childRangeTokens.push_back(parentRange);
+
+	vector<CRange> vecChildRanges;
+	for (auto &token : childRangeTokens) {
+		BOOST_CHECK(token.size() > 2);
+		token = token.substr(1, token.size() - 2);
+		vector<string> ranges;
+		boost::split(ranges, token, boost::is_any_of(","));
+		BOOST_CHECK_EQUAL(ranges.size(), 2);
+		CRange range(boost::lexical_cast<int>(ranges[0]), boost::lexical_cast<int>(ranges[1]));
+		vecChildRanges.push_back(range);
+	}
+
+	return doesRangeContain(vecParentRanges, childRangeTokens);
+}
 string AliasNew(const string& node, const string& aliasname, const string& pubdata, string witness)
 {
 	string otherNode1, otherNode2;
