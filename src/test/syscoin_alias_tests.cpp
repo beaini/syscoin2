@@ -13,13 +13,34 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/lexical_cast.hpp>
 #include <iterator>
-
+#include "ranges.h"
 using namespace std;
 BOOST_GLOBAL_FIXTURE( SyscoinTestingSetup );
 
 BOOST_FIXTURE_TEST_SUITE (syscoin_alias_tests, BasicSyscoinTestingSetup)
 const unsigned int MAX_ALIAS_UPDATES_PER_BLOCK = 5;
+BOOST_AUTO_TEST_CASE(generate_range_merge)
+{
+	vector<CRange> vecRanges;
+	vecRanges.push_back(CRange(0, 0));
+	vecRanges.push_back(CRange(2, 3));
+	vecRanges.push_back(CRange(6, 8));
 
+	vector<CRange> vecNewRanges;
+	vecNewRanges.push_back(CRange(4, 5));
+	vecRanges.insert(std::end(vecRanges), std::begin(vecNewRanges), std::end(vecNewRanges));
+
+	vector<CRange> mergedRanges;
+	mergeRanges(vecRanges, mergedRanges);
+
+	BOOST_CHECK_EQUAL(mergedRanges.size(), 2);
+	BOOST_CHECK_EQUAL(mergedRanges[0].start , 0);
+	BOOST_CHECK_EQUAL(mergedRanges[0].end , 0);
+
+	BOOST_CHECK_EQUAL(mergedRanges[1].start , 2);
+	BOOST_CHECK_EQUAL(mergedRanges[1].end , 8);
+
+}
 BOOST_AUTO_TEST_CASE (generate_big_aliasdata)
 {
 	UniValue r;
