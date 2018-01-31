@@ -160,22 +160,3 @@ bool doesRangeContain(const vector<CRange> &parent, const vector<CRange> &child)
 	}
 	return true;
 }
-/*
-int main()
-{
-	Range arr1[] = { { 3,3 },{ 5,6 },{ 4,4 },{ 12,13 },{ 8,10 } };
-	int n1 = sizeof(arr1) / sizeof(arr1[0]);
-
-	mergeRanges(arr1, n1);
-
-	Range arr2[] = { { 2,10 },{ 12,15 } };
-	int n2 = sizeof(arr2) / sizeof(arr2[0]);
-
-	Range del[] = { { 5,5 },{ 7,9 },{ 14,14 } };
-	int dn = sizeof(del) / sizeof(del[0]);
-
-	subtractRanges(arr2, n2, del, dn);
-
-	return 0;
-}
-*/
