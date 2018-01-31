@@ -64,6 +64,20 @@ BOOST_AUTO_TEST_CASE(generate_range_subtract)
 	BOOST_CHECK_EQUAL(outputRanges[2].start, 9);
 	BOOST_CHECK_EQUAL(outputRanges[2].end, 9);
 
+	vecRanges.clear();
+	vecRanges.push_back(CRange(1, 2));
+	vecRanges.push_back(CRange(5, 9));
+
+	vector<CRange> vecSubtractRanges;
+	vecSubtractRanges.push_back(CRange(1, 2));
+
+	vector<CRange> outputRanges;
+	subtractRanges(vecRanges, vecSubtractRanges, outputRanges);
+
+	BOOST_CHECK_EQUAL(outputRanges.size(), 1);
+	BOOST_CHECK_EQUAL(outputRanges[0].start, 5);
+	BOOST_CHECK_EQUAL(outputRanges[0].end, 9);
+
 }
 BOOST_AUTO_TEST_CASE (generate_big_aliasdata)
 {
