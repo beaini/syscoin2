@@ -46,8 +46,6 @@ BOOST_AUTO_TEST_CASE(generate_range_contain)
 	BOOST_CHECK(DoesRangeContain("{0,8}", "{0,1} {2,4} {6,6}"));
 
 	BOOST_CHECK(!DoesRangeContain("{1,9}", "{0,0}"));
-	BOOST_CHECK(!DoesRangeContain("{1,9}", "{1,0}"));
-	BOOST_CHECK(!DoesRangeContain("{9,1}", "{1,1}"));
 	BOOST_CHECK(!DoesRangeContain("{1,9}", "{1,10}"));
 	BOOST_CHECK(!DoesRangeContain("{1,2}", "{1,3}"));
 	BOOST_CHECK(!DoesRangeContain("{1,2}", "{0,2}"));
