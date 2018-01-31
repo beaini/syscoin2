@@ -41,6 +41,30 @@ BOOST_AUTO_TEST_CASE(generate_range_merge)
 	BOOST_CHECK_EQUAL(mergedRanges[1].end , 8);
 
 }
+BOOST_AUTO_TEST_CASE(generate_range_subtract)
+{
+	vector<CRange> vecRanges;
+	vecRanges.push_back(CRange(0, 9));
+
+	vector<CRange> vecSubtractRanges;
+	vecSubtractRanges.push_back(CRange(0, 0));
+	vecSubtractRanges.push_back(CRange(2, 3));
+	vecSubtractRanges.push_back(CRange(6, 8));
+	
+	vector<CRange> outputRanges;
+	subtractRanges(vecRanges, vecSubtractRanges, outputRanges);
+
+	BOOST_CHECK_EQUAL(outputRanges.size(), 3);
+	BOOST_CHECK_EQUAL(outputRanges[0].start, 1);
+	BOOST_CHECK_EQUAL(outputRanges[0].end, 1);
+
+	BOOST_CHECK_EQUAL(outputRanges[1].start, 4);
+	BOOST_CHECK_EQUAL(outputRanges[1].end, 5);
+
+	BOOST_CHECK_EQUAL(outputRanges[2].start, 9);
+	BOOST_CHECK_EQUAL(outputRanges[2].end, 9);
+
+}
 BOOST_AUTO_TEST_CASE (generate_big_aliasdata)
 {
 	UniValue r;
