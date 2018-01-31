@@ -6,6 +6,10 @@ bool compareRange(const CRange &i1, const CRange &i2)
 {
 	return (i1.start < i2.start);
 }
+bool compareRangeReverse(const CRange &i1, const CRange &i2)
+{
+	return (i1.start < i2.start);
+}
 
 // The main function that takes a set of ranges, merges
 // overlapping ranges and put the result in output
@@ -57,24 +61,19 @@ void subtractRanges(vector<CRange> &arr, vector<CRange> &del, vector<CRange> &ou
 	// Create an empty stack of ranges
 	vector<CRange> deletions;
 
-	// sort the deletions in increasing order of start index
-	sort(del.begin(), del.end(), compareRange);
-
-	// add the deletions to the stack, the first deletion is at the top
-	for (int i = del.size() - 1; i >= 0; i--) {
-		deletions.push_back(del[i]);
-	}
-
+	// sort the deletions in decreasing order of start index
+	sort(del.begin(), del.end(), compareRangeReverse);
+	CRange deletion;
 	// Start from the beginning of the main range array from which we'll
 	// delete another array of ranges
 	for (unsigned int i = 0; i < arr.size(); i++)
 	{
 		// find the first deletion range that comes on or after
 		// the current range element in the main array
-		CRange deletion = deletions.front();
+		deletion = deletions.back();
 		while (arr[i].start > deletion.end && deletions.size() > 1) {
 			deletions.pop_back();
-			deletion = deletions.front();
+			deletion = deletions.back();
 		}
 
 		// if the current ranges end is before the deletion start
