@@ -698,7 +698,7 @@ bool DoesRangeContain(const string& parentRange, const string& childRange) {
 		vecChildRanges.push_back(range);
 	}
 
-	return doesRangeContain(vecParentRanges, childRangeTokens);
+	return doesRangeContain(vecParentRanges, vecChildRanges);
 }
 string AliasNew(const string& node, const string& aliasname, const string& pubdata, string witness)
 {
