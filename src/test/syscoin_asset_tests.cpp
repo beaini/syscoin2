@@ -19,10 +19,12 @@ BOOST_GLOBAL_FIXTURE( SyscoinTestingSetup );
 BOOST_FIXTURE_TEST_SUITE (syscoin_asset_tests, BasicSyscoinTestingSetup)
 BOOST_AUTO_TEST_CASE(generate_range_merge)
 {
+	printf("Running generate_range_merge...\n");
 	CheckRangeMerge("{0,0} {2,3} {6,8}", "{4,5}", "{0,0} {2,8}");
 }
 BOOST_AUTO_TEST_CASE(generate_range_subtract)
 {
+	printf("Running generate_range_subtract...\n");
 	CheckRangeSubtract("{0,9}", "{0,0} {2,3} {6,8}", "{1,1} {4,5} {9,9}");
 	CheckRangeSubtract("{1,2} {3,3} {6,10}", "{0,0} {2,2} {3,3}", "{1,1} {6,10}");
 }
