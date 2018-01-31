@@ -665,7 +665,7 @@ void CheckRangeSubtract(const string& originalRanges, const string& subtractRang
 		BOOST_CHECK(mergedRanges[i] == vecExpectedOutputRanges[i]);
 	}
 }
-bool RangeContain(const string& parentRange, const string& childRange) {
+bool DoesRangeContain(const string& parentRange, const string& childRange) {
 	vector<string> parentRangeTokens;
 	boost::split(parentRangeTokens, parentRange, boost::is_any_of(" "));
 	if (parentRangeTokens.empty())

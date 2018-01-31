@@ -26,7 +26,7 @@ void SetSysMocktime(const int64_t& expiryTime);
 void ExpireAlias(const string& alias);
 void CheckRangeSubtract(const string& originalRanges, const string& subtractRanges, const string& expectedOutputRanges);
 void CheckRangeMerge(const string& originalRanges, const string& newRanges, const string& expectedOutputRanges);
-bool RangeContain(const string& parentRange, const string& childRange);
+bool DoesRangeContain(const string& parentRange, const string& childRange);
 void GetOtherNodes(const string& node, string& otherNode1, string& otherNode2);
 string AliasNew(const string& node, const string& aliasname, const string& pubdata, string witness="''");
 string AliasUpdate(const string& node, const string& aliasname, const string& pubdata="''", string addressStr = "''", string witness="''");
