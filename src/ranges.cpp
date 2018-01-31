@@ -49,20 +49,18 @@ void mergeRanges(vector<CRange>& arr, vector<CRange>& output)
 }
 
 
-void subtractRanges(vector<CRange> &arr, vector<CRange> &del, vector<CRange> &output)
+void subtractRanges(vector<CRange> &arr, vector<CRange> &deletions, vector<CRange> &output)
 {
 	// Test if the given set has at least one range
-	if (arr.empty() || del.empty())
+	if (arr.empty() || deletions.empty())
 		return;
 
 	// sort the ranges in increasing order of start index
 	std::sort(arr.begin(), arr.end(), compareRange);
 
-	// Create an empty stack of ranges
-	vector<CRange> deletions;
 
 	// sort the deletions in decreasing order of start index
-	sort(del.begin(), del.end(), compareRangeReverse);
+	sort(deletions.begin(), deletions.end(), compareRangeReverse);
 	CRange deletion;
 	// Start from the beginning of the main range array from which we'll
 	// delete another array of ranges
