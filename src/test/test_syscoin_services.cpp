@@ -606,7 +606,7 @@ void CheckRangeMerge(const string& originalRanges, const string& newRanges, cons
 		BOOST_CHECK(mergedRanges[i] == vecExpectedOutputRanges[i]);
 	}
 }
-void CheckRangeSubtract(const string& originalRanges, const string& subtractRanges, const string& expectedOutputRanges) 
+void CheckRangeSubtract(const string& originalRanges, const string& subtractRange, const string& expectedOutputRanges) 
 {
 	vector<string> originalRangeTokens;
 	boost::split(originalRangeTokens, originalRanges, boost::is_any_of(" "));
@@ -626,9 +626,9 @@ void CheckRangeSubtract(const string& originalRanges, const string& subtractRang
 
 
 	vector<string> subtractRangeTokens;
-	boost::split(subtractRangeTokens, subtractRanges, boost::is_any_of(" "));
+	boost::split(subtractRangeTokens, subtractRange, boost::is_any_of(" "));
 	if (subtractRangeTokens.empty())
-		subtractRangeTokens.push_back(subtractRanges);
+		subtractRangeTokens.push_back(subtractRange);
 
 	vector<CRange> vecSubtractRanges;
 	for (auto &token : subtractRangeTokens) {
