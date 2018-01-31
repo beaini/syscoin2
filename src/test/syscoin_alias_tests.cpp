@@ -68,10 +68,10 @@ BOOST_AUTO_TEST_CASE(generate_range_subtract)
 	vecRanges.push_back(CRange(1, 2));
 	vecRanges.push_back(CRange(5, 9));
 
-	vector<CRange> vecSubtractRanges;
+	vecSubtractRanges.clear();
 	vecSubtractRanges.push_back(CRange(1, 2));
 
-	vector<CRange> outputRanges;
+	outputRanges.clear();
 	subtractRanges(vecRanges, vecSubtractRanges, outputRanges);
 
 	BOOST_CHECK_EQUAL(outputRanges.size(), 1);
