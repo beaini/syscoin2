@@ -20,11 +20,13 @@ void mergeRanges(vector<CRange>& arr, vector<CRange>& output)
 	// push the first range to stack
 	output.push_back(arr[0]);
 
+	CRange top;
+
 	// Start from the next range and merge if necessary
 	for (unsigned int i = 1; i < arr.size(); i++)
 	{
 		// get range from stack top
-		CRange top = output.front();
+		top = output.back();
 
 		// if current range is not overlapping with stack top,
 		// push it to the stack
