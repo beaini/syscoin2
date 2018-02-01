@@ -63,9 +63,6 @@ BOOST_AUTO_TEST_CASE(generate_range_subtract)
 
 	CheckRangeSubtract("{0,1}", "{10,15}", "{0,1}");//check subtract where there is nothing to subtract
 
-	CheckRangeSubtract("{0,10}", "{5,4}", "{0,3} {6,10}");//check wrong way range
-	CheckRangeSubtract("{10,0}", "{5,5}", "{0,4} {6,10}");//check wrong way range
-	CheckRangeSubtract("{0,10}", "{10,10}", "{9,0}");//check wrong way range
 }
 BOOST_AUTO_TEST_CASE(generate_range_contain)
 {
@@ -115,7 +112,7 @@ BOOST_AUTO_TEST_CASE(generate_range_contain)
 
 	BOOST_CHECK(!DoesRangeContain("{7,13}", "{3,73}"));//check unusual numbers 
 
-	BOOST_CHECK(!DoesRangeContain("{0,1}", "{0,4294967296}"));//check big numbers 
+	BOOST_CHECK(!DoesRangeContain("{0,1}", "{0,4294967295}"));//check big numbers 
 
 	BOOST_CHECK(!DoesRangeContain("{1,0}", "{2,2}"));//wrong way range 
 }
