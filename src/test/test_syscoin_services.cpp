@@ -597,7 +597,7 @@ void CheckRangeMerge(const string& originalRanges, const string& newRanges, cons
 		vector<string> ranges;
 		boost::split(ranges, token, boost::is_any_of(","));
 		BOOST_CHECK_EQUAL(ranges.size(), 2);
-		CRange range(boost::lexical_cast<int>(ranges[0]), boost::lexical_cast<int>(ranges[1]));
+		CRange range(boost::lexical_cast<unsigned int>(ranges[0]), boost::lexical_cast<unsigned int>(ranges[1]));
 		vecExpectedOutputRanges.push_back(range);
 	}
 
@@ -656,7 +656,7 @@ void CheckRangeSubtract(const string& originalRanges, const string& subtractRang
 		vector<string> ranges;
 		boost::split(ranges, token, boost::is_any_of(","));
 		BOOST_CHECK_EQUAL(ranges.size(), 2);
-		CRange range(boost::lexical_cast<unsigned int>(ranges[0]), boost::lexical_cast<unsignedint>(ranges[1]));
+		CRange range(boost::lexical_cast<unsigned int>(ranges[0]), boost::lexical_cast<unsigned int>(ranges[1]));
 		vecExpectedOutputRanges.push_back(range);
 	}
 
