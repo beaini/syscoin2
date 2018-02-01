@@ -550,7 +550,7 @@ void CheckRangeMerge(const string& originalRanges, const string& newRanges, cons
 {
 	vector<string> originalRangeTokens;
 	boost::split(originalRangeTokens, originalRanges, boost::is_any_of(" "));
-	if (originalRangeTokens.empty())
+	if (originalRangeTokens.empty() && !originalRanges.empty())
 		originalRangeTokens.push_back(originalRanges);
 
 	vector<CRange> vecRanges;
@@ -567,7 +567,7 @@ void CheckRangeMerge(const string& originalRanges, const string& newRanges, cons
 
 	vector<string> newRangeTokens;
 	boost::split(newRangeTokens, newRanges, boost::is_any_of(" "));
-	if (newRangeTokens.empty())
+	if (newRangeTokens.empty() && !newRanges.empty())
 		newRangeTokens.push_back(newRanges);
 	vector<CRange> vecNewRanges;
 	for (auto &token : newRangeTokens) {
@@ -587,7 +587,7 @@ void CheckRangeMerge(const string& originalRanges, const string& newRanges, cons
 
 	vector<string> expectedOutputRangeTokens;
 	boost::split(expectedOutputRangeTokens, expectedOutputRanges, boost::is_any_of(" "));
-	if (expectedOutputRangeTokens.empty())
+	if (expectedOutputRangeTokens.empty() && !expectedOutputRanges.empty())
 		expectedOutputRangeTokens.push_back(expectedOutputRanges);
 
 	vector<CRange> vecExpectedOutputRanges;
@@ -610,7 +610,7 @@ void CheckRangeSubtract(const string& originalRanges, const string& subtractRang
 {
 	vector<string> originalRangeTokens;
 	boost::split(originalRangeTokens, originalRanges, boost::is_any_of(" "));
-	if (originalRangeTokens.empty())
+	if (originalRangeTokens.empty() && !originalRanges.empty())
 		originalRangeTokens.push_back(originalRanges);
 
 	vector<CRange> vecRanges;
@@ -627,7 +627,7 @@ void CheckRangeSubtract(const string& originalRanges, const string& subtractRang
 
 	vector<string> subtractRangeTokens;
 	boost::split(subtractRangeTokens, subtractRange, boost::is_any_of(" "));
-	if (subtractRangeTokens.empty())
+	if (subtractRangeTokens.empty() && !subtractRange.empty())
 		subtractRangeTokens.push_back(subtractRange);
 
 	vector<CRange> vecSubtractRanges;
@@ -646,7 +646,7 @@ void CheckRangeSubtract(const string& originalRanges, const string& subtractRang
 
 	vector<string> expectedOutputRangeTokens;
 	boost::split(expectedOutputRangeTokens, expectedOutputRanges, boost::is_any_of(" "));
-	if (expectedOutputRangeTokens.empty())
+	if (expectedOutputRangeTokens.empty() && !expectedOutputRanges.empty())
 		expectedOutputRangeTokens.push_back(expectedOutputRanges);
 
 	vector<CRange> vecExpectedOutputRanges;
@@ -668,7 +668,7 @@ void CheckRangeSubtract(const string& originalRanges, const string& subtractRang
 bool DoesRangeContain(const string& parentRange, const string& childRange) {
 	vector<string> parentRangeTokens;
 	boost::split(parentRangeTokens, parentRange, boost::is_any_of(" "));
-	if (parentRangeTokens.empty())
+	if (parentRangeTokens.empty() && !parentRange.empty())
 		parentRangeTokens.push_back(parentRange);
 
 	vector<CRange> vecParentRanges;
@@ -684,7 +684,7 @@ bool DoesRangeContain(const string& parentRange, const string& childRange) {
 
 	vector<string> childRangeTokens;
 	boost::split(childRangeTokens, childRange, boost::is_any_of(" "));
-	if (childRangeTokens.empty())
+	if (childRangeTokens.empty() && !childRange.empty())
 		childRangeTokens.push_back(childRange);
 
 	vector<CRange> vecChildRanges;
