@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(generate_range_merge)
 
 	CheckRangeMerge("{7,73}", "{3,6}", "{3,73}");//check unusual numbers 
 
-	CheckRangeMerge("{0,1}", "{2,4294967296}", "{0,4294967296}");//check large numbers
+	CheckRangeMerge("{0,1}", "{2,4294967295}", "{0,4294967295}");//check large numbers
 
 	CheckRangeMerge("{0,0}", "{0,0}", "{0,0}");//check all equal
 
