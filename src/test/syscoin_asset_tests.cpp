@@ -48,10 +48,10 @@ BOOST_AUTO_TEST_CASE(generate_range_subtract)
 	// start with {0,9}, subtract {0,0} {2,3} {6,8} from it and expect {1,1} {4,5} {9,9}
 	CheckRangeSubtract("{0,9}", "{0,0} {2,3} {6,8}", "{1,1} {4,5} {9,9}");
 
-	CheckRangeSubtract("{1,2} {3,3} {6,10}", "{0,0} {2,2} {3,3}", "{1,1} {6,10}");
-	CheckRangeSubtract("{1,2} {3,3} {6,10}", "{0,0} {2,2}", "{1,1} {3,3} {6,10}");
+	CheckRangeSubtract("{1,3} {6,10}", "{0,0} {2,2} {3,3}", "{1,1} {6,10}");
+	CheckRangeSubtract("{1,3} {6,10}", "{0,0} {2,2}", "{1,1} {3,3} {6,10}");
 
-	CheckRangeSubtract("{0,2} {1,3}", "{2,3}", "{0,1}");//range within range
+	CheckRangeSubtract("{0,3}", "{2,3}", "{0,1}");//range within range
 
 	CheckRangeSubtract("{0,11}", "{6,9}", "{0,5} {10,11}");//check many ranges 
 
@@ -80,18 +80,17 @@ BOOST_AUTO_TEST_CASE(generate_range_contain)
 	BOOST_CHECK(DoesRangeContain("{0,8}", "{0,0} {2,3} {6,8}"));
 	BOOST_CHECK(DoesRangeContain("{0,8}", "{0,1} {2,4} {6,6}"));
 
-	BOOST_CHECK(DoesRangeContain("{0,2} {1,3} {2,3}", "{0,1}"));//range within range
+	BOOST_CHECK(DoesRangeContain("{0,3}", "{0,1}"));//range within range
 
 	BOOST_CHECK(DoesRangeContain("{0,11}", "{1,2} {10,11}"));//check many ranges 
 
 	BOOST_CHECK(DoesRangeContain("{0,1} {0,1}", "{0,0} {1,1}"));//check double range 
-	BOOST_CHECK(DoesRangeContain("{0,1} {2,2}", "{2,2} {0,0}"));//check double range 
+	BOOST_CHECK(DoesRangeContain("{0,2}", "{2,2} {0,0}"));//check double range 
 
 	BOOST_CHECK(DoesRangeContain("{3,73}", "{7,13}"));//check unusual numbers 
 
 	BOOST_CHECK(DoesRangeContain("{0,4294967295}", "{0,1}"));//check big numbers 
 
-	BOOST_CHECK(DoesRangeContain("{1,0}", "{0,1}"));//wrong way range 
 
 	BOOST_CHECK(!DoesRangeContain("{1,9}", "{0,0}"));
 	BOOST_CHECK(!DoesRangeContain("{1,9}", "{1,10}"));
@@ -112,7 +111,7 @@ BOOST_AUTO_TEST_CASE(generate_range_contain)
 	BOOST_CHECK(!DoesRangeContain("{0,11}", "{12,13} {10,11}"));//check many ranges 
 
 	BOOST_CHECK(!DoesRangeContain("{0,1} {0,1}", "{10,10} {11,11}"));//check double range 
-	BOOST_CHECK(!DoesRangeContain("{0,1} {2,2}", "{10,10} {10,10}"));//check double range 
+	BOOST_CHECK(!DoesRangeContain("{0,2}", "{10,10} {10,10}"));//check double range 
 
 	BOOST_CHECK(!DoesRangeContain("{7,13}", "{3,73}"));//check unusual numbers 
 
