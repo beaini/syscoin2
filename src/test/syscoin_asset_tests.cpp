@@ -36,8 +36,6 @@ BOOST_AUTO_TEST_CASE(generate_range_merge)
 
 	CheckRangeMerge("{7,73}", "{3,6}", "{3,73}");//check unusual numbers 
 
-	CheckRangeMerge("{0,1}", "", "{0,1}");//check part null case
-
 	CheckRangeMerge("{0,1}", "{2,4294967296}", "{0,4294967296}");//check large numbers
 
 	CheckRangeMerge("{0,0}", "{0,0}", "{0,0}");//check all equal
@@ -60,9 +58,6 @@ BOOST_AUTO_TEST_CASE(generate_range_subtract)
 	CheckRangeSubtract("{0,10}", "{1,2} {1,2}", "{0,0} {3,10}");//check double subtract 
 
 	CheckRangeSubtract("{3,73}", "{7,13}", "{3,6} {14,73}");//check unusual numbers 
-
-	CheckRangeSubtract("", "", "");//check null case
-	CheckRangeSubtract("{0,1}", "", "{0,1}");//check part null case
 
 	CheckRangeSubtract("{0,4294967296}", "{0,1}", "{2,4294967296}");//check large numbers
 
@@ -111,7 +106,6 @@ BOOST_AUTO_TEST_CASE(generate_range_contain)
 	BOOST_CHECK(!DoesRangeContain("{0,8}", "{0,1} {2,4} {6,9}"));
 	BOOST_CHECK(!DoesRangeContain("{0,8}", "{0,9} {2,4} {6,8}"));
 
-	BOOST_CHECK(!DoesRangeContain("", "{0,1}"));//empty does not contain anything
 
 	BOOST_CHECK(!DoesRangeContain("{0,2} {1,3} {2,3}", "{4,5}"));//range within range
 
