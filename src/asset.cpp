@@ -51,8 +51,6 @@ string assetFromOp(int op) {
         return "assetactivate";
     case OP_ASSET_UPDATE:
         return "assetupdate";
-	case OP_ASSET_MINT:
-		return "assetmint";
     case OP_ASSET_TRANSFER:
         return "assettransfer";
 	case OP_ASSET_SEND:
