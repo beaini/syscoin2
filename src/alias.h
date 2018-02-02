@@ -239,7 +239,7 @@ void AliasTxToJSON(const int op, const std::vector<unsigned char> &vchData, cons
 bool BuildAliasJson(const CAliasIndex& alias, UniValue& oName);
 void CleanupSyscoinServiceDatabases(int &servicesCleaned);
 int aliasunspent(const std::vector<unsigned char> &vchAlias, COutPoint& outPoint);
-void GetAddress(const CAliasIndex &alias, CSyscoinAddress* address, CScript& script, const uint32_t nPaymentOption=1);
+void GetAddress(const CAliasIndex &alias, CSyscoinAddress* address, CScript& script);
 void startMongoDB();
 void stopMongoDB();
 std::string GetSyscoinTransactionDescription(const int op, std::string& responseEnglish, const char &type);

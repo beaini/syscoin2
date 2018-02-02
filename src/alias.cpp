@@ -637,14 +637,12 @@ bool GetSyscoinData(const CScript &scriptPubKey, vector<unsigned char> &vchData,
 		return false;
 	return true;
 }
-void GetAddress(const CAliasIndex& alias, CSyscoinAddress* address,CScript& script,const uint32_t nPaymentOption)
+void GetAddress(const CAliasIndex& alias, CSyscoinAddress* address,CScript& script)
 {
 	if(!address)
 		return;
-	CChainParams::AddressType myAddressType = PaymentOptionToAddressType(nPaymentOption);
-	CSyscoinAddress addrTmp = CSyscoinAddress(EncodeBase58(alias.vchAddress));
-	address[0] = CSyscoinAddress(addrTmp.Get(), myAddressType);
-	script = GetScriptForDestination(address[0].Get());
+	CSyscoinAddress addr = CSyscoinAddress(EncodeBase58(alias.vchAddress));
+	script = GetScriptForDestination(addr.Get());
 }
 bool CAliasIndex::UnserializeFromData(const vector<unsigned char> &vchData, const vector<unsigned char> &vchHash) {
     try {
