@@ -7,7 +7,6 @@
 #include "util.h"
 #include "rpc/server.h"
 #include "alias.h"
-#include "cert.h"
 #include "base58.h"
 #include "chainparams.h"
 #include <boost/test/unit_test.hpp>

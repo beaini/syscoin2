@@ -31,7 +31,6 @@ extern mongoc_collection_t *assethistory_collection;
 extern void SendMoneySyscoin(const vector<unsigned char> &vchAlias, const vector<unsigned char> &vchWitness, const CRecipient &aliasRecipient, CRecipient &aliasPaymentRecipient, vector<CRecipient> &vecSend, CWalletTx& wtxNew, CCoinControl* coinControl, bool fUseInstantSend=false, bool transferAlias=false);
 bool IsAssetOp(int op) {
     return op == OP_ASSET_ACTIVATE
-		|| op == OP_ASSET_MINT
         || op == OP_ASSET_UPDATE
         || op == OP_ASSET_TRANSFER
 		|| op == OP_ASSET_SEND;
@@ -561,7 +560,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to.");
 						continue;
 					}
-					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
+					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ALL))
 					{
 						errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
 						continue;
@@ -632,7 +631,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
 						return true;
 					}
-					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
+					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ALL))
 					{
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
 						return true;
@@ -697,7 +696,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
 					return true;
 				}
-				if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
+				if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ALL))
 				{
 					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("The alias you are transferring to does not accept assets");
 					return true;

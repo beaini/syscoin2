@@ -31,16 +31,11 @@ static const unsigned int MAX_ENCRYPTED_GUID_LENGTH = MAX_GUID_LENGTH + 85;
 static const uint64_t ONE_YEAR_IN_SECONDS = 31536000;
 enum {
 	ALIAS=0,
-	OFFER, 
-	CERT,
-	ESCROW,
 	ASSET,
 	ASSETALLOCATION
 };
 enum {
 	ACCEPT_TRANSFER_NONE=0,
-	ACCEPT_TRANSFER_CERTIFICATES,
-	ACCEPT_TRANSFER_ASSETS,
 	ACCEPT_TRANSFER_ALL,
 };
 class CAliasUnprunable
@@ -79,89 +74,6 @@ class CAliasUnprunable
 	inline void SetNull() { vchGUID.clear(); nExpireTime = 0; }
     inline bool IsNull() const { return (vchGUID.empty()); }
 };
-class COfferLinkWhitelistEntry {
-public:
-	std::vector<unsigned char> aliasLinkVchRand;
-	unsigned char nDiscountPct;
-	COfferLinkWhitelistEntry() {
-		SetNull();
-	}
-
-	ADD_SERIALIZE_METHODS;
-	template <typename Stream, typename Operation>
-	inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
-		READWRITE(aliasLinkVchRand);
-		READWRITE(VARINT(nDiscountPct));
-	}
-
-	inline friend bool operator==(const COfferLinkWhitelistEntry &a, const COfferLinkWhitelistEntry &b) {
-		return (
-			a.aliasLinkVchRand == b.aliasLinkVchRand
-			&& a.nDiscountPct == b.nDiscountPct
-			);
-	}
-
-	inline COfferLinkWhitelistEntry operator=(const COfferLinkWhitelistEntry &b) {
-		aliasLinkVchRand = b.aliasLinkVchRand;
-		nDiscountPct = b.nDiscountPct;
-		return *this;
-	}
-
-	inline friend bool operator!=(const COfferLinkWhitelistEntry &a, const COfferLinkWhitelistEntry &b) {
-		return !(a == b);
-	}
-
-	inline void SetNull() {
-		aliasLinkVchRand.clear(); 
-		nDiscountPct = 0;
-	}
-	inline bool IsNull() const { return (aliasLinkVchRand.empty()); }
-
-};
-typedef std::map<std::vector<unsigned char>, COfferLinkWhitelistEntry> whitelistMap_t;
-class COfferLinkWhitelist {
-public:
-	whitelistMap_t entries;
-	COfferLinkWhitelist() {
-		SetNull();
-	}
-
-	ADD_SERIALIZE_METHODS;
-	template <typename Stream, typename Operation>
-	inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
-		READWRITE(entries);
-	}
-	bool GetLinkEntryByHash(const std::vector<unsigned char> &ahash, COfferLinkWhitelistEntry &entry) const;
-
-	inline void RemoveWhitelistEntry(const std::vector<unsigned char> &ahash) {
-		entries.erase(ahash);
-	}
-	inline void PutWhitelistEntry(const COfferLinkWhitelistEntry &theEntry) {
-		if (entries.count(theEntry.aliasLinkVchRand) > 0) {
-			entries[theEntry.aliasLinkVchRand] = theEntry;
-			return;
-		}
-		entries[theEntry.aliasLinkVchRand] = theEntry;
-	}
-	inline friend bool operator==(const COfferLinkWhitelist &a, const COfferLinkWhitelist &b) {
-		return (
-			a.entries == b.entries
-			);
-	}
-
-	inline COfferLinkWhitelist operator=(const COfferLinkWhitelist &b) {
-		entries = b.entries;
-		return *this;
-	}
-
-	inline friend bool operator!=(const COfferLinkWhitelist &a, const COfferLinkWhitelist &b) {
-		return !(a == b);
-	}
-
-	inline void SetNull() { entries.clear(); }
-	inline bool IsNull() const { return (entries.empty()); }
-
-};
 class CAliasIndex {
 public:
 	std::vector<unsigned char> vchAlias;
@@ -172,13 +84,11 @@ public:
 	std::vector<unsigned char> vchAddress;
 	std::vector<unsigned char> vchEncryptionPublicKey;
 	std::vector<unsigned char> vchEncryptionPrivateKey;
-	// 1 accepts certs, 2 accepts assets, 3 accepts both (default)
+	// accepts asset transfers?
 	unsigned char nAcceptTransferFlags;
 	// 1 can edit, 2 can edit/transfer
 	unsigned char nAccessFlags;
 	std::vector<unsigned char> vchPublicValue;
-	// to control reseller access + wholesaler discounts
-	COfferLinkWhitelist offerWhitelist;
     CAliasIndex() { 
         SetNull();
     }
@@ -192,7 +102,6 @@ public:
 		vchEncryptionPrivateKey.clear();
 		vchPublicValue.clear();
 		vchAddress.clear();
-		offerWhitelist.SetNull();
 	}
 	ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -208,7 +117,6 @@ public:
 		READWRITE(VARINT(nAcceptTransferFlags));
 		READWRITE(VARINT(nAccessFlags));
 		READWRITE(vchAddress);	
-		READWRITE(offerWhitelist);
 	}
     inline friend bool operator==(const CAliasIndex &a, const CAliasIndex &b) {
 		return (a.vchGUID == b.vchGUID && a.vchAlias == b.vchAlias);
@@ -229,10 +137,9 @@ public:
 		vchEncryptionPrivateKey = b.vchEncryptionPrivateKey;
 		vchEncryptionPublicKey = b.vchEncryptionPublicKey;
 		nAccessFlags = b.nAccessFlags;
-		offerWhitelist = b.offerWhitelist;
         return *this;
     }   
-	inline void SetNull() { offerWhitelist.SetNull(); nAccessFlags = 2; vchAddress.clear(); vchEncryptionPublicKey.clear(); vchEncryptionPrivateKey.clear(); nAcceptTransferFlags = 3; nExpireTime = 0; vchGUID.clear(); vchAlias.clear(); txHash.SetNull(); nHeight = 0; vchPublicValue.clear(); }
+	inline void SetNull() { nAccessFlags = 2; vchAddress.clear(); vchEncryptionPublicKey.clear(); vchEncryptionPrivateKey.clear(); nAcceptTransferFlags = 3; nExpireTime = 0; vchGUID.clear(); vchAlias.clear(); txHash.SetNull(); nHeight = 0; vchPublicValue.clear(); }
     inline bool IsNull() const { return (vchAlias.empty()); }
 	bool UnserializeFromTx(const CTransaction &tx);
 	bool UnserializeFromData(const std::vector<unsigned char> &vchData, const std::vector<unsigned char> &vchHash);
@@ -284,15 +191,9 @@ public:
 	void EraseAliasIndexTxHistory(const std::string& id);
 };
 
-class COfferDB;
-class CCertDB;
-class CEscrowDB;
 class CAssetDB;
 class CAssetAllocationDB;
 extern CAliasDB *paliasdb;
-extern COfferDB *pofferdb;
-extern CCertDB *pcertdb;
-extern CEscrowDB *pescrowdb;
 extern CAssetDB *passetdb;
 extern CAssetAllocationDB *passetallocationdb;
 
@@ -319,8 +220,6 @@ bool DecodeAliasScript(const CScript& script, int& op,
 		std::vector<std::vector<unsigned char> > &vvch);
 bool GetAddressFromAlias(const std::string& strAlias, std::string& strAddress, std::vector<unsigned char> &vchPubKey);
 bool GetAliasFromAddress(const std::string& strAddress, std::string& strAlias, std::vector<unsigned char> &vchPubKey);
-int getFeePerByte(const uint64_t &paymentOptionMask);
-float getEscrowFee();
 std::string aliasFromOp(int op);
 std::string GenerateSyscoinGuid();
 bool RemoveAliasScriptPrefix(const CScript& scriptIn, CScript& scriptOut);

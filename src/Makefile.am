@@ -79,14 +79,10 @@ endif
 # syscoin core #
 SYSCOIN_CORE_H = \
   alias.h \
-  offer.h \
-  cert.h \
   ranges.h \
   graph.h \
   asset.h \
   assetallocation.h \
-  escrow.h \
-  feedback.h \
   auxpow.h \
   addrdb.h \
   activemasternode.h \
@@ -231,13 +227,10 @@ libsyscoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(SYSCOIN_INCLUDES) $(MINIUPNPC_CP
 libsyscoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libsyscoin_server_a_SOURCES = \
   alias.cpp \
-  offer.cpp \
-  cert.cpp \
   ranges.cpp \
   graph.cpp \
   asset.cpp \
   assetallocation.cpp \
-  escrow.cpp \
   auxpow.cpp \
   addrman.cpp \
   addrdb.cpp \
