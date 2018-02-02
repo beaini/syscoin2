@@ -7,7 +7,6 @@
 #include "util.h"
 #include "rpc/server.h"
 #include "alias.h"
-#include "cert.h"
 #include "base58.h"
 #include "chainparams.h"
 #include <boost/test/unit_test.hpp>
@@ -16,7 +15,7 @@
 #include <chrono>
 using namespace boost::chrono;
 using namespace std;
-BOOST_GLOBAL_FIXTURE( SyscoinTestingSetup );
+BOOST_GLOBAL_FIXTURE(SyscoinTestingSetup);
 
 void printRangeVector (vector<CRange> &vecRange, string tag) {
 	printf("Printing vector range %s: ", tag.c_str());
@@ -34,8 +33,7 @@ void addToRangeVector (vector<CRange> &vecRange, int range_start, int range_end)
 	vecRange.push_back(range);
 }
 
-BOOST_FIXTURE_TEST_SUITE (syscoin_asset_tests, BasicSyscoinTestingSetup)
-
+BOOST_FIXTURE_TEST_SUITE(syscoin_asset_tests, BasicSyscoinTestingSetup)
 BOOST_AUTO_TEST_CASE(generate_range_merge)
 {
 	printf("Running generate_range_merge...\n");
@@ -47,11 +45,19 @@ BOOST_AUTO_TEST_CASE(generate_range_merge)
 	CheckRangeMerge("{2,3}", "{0,0} {4,5} {6,8}", "{0,0} {2,8}");
 	CheckRangeMerge("{0,0} {4,5} {6,8}", "{2,3}", "{0,0} {2,8}");
 
-	CheckRangeMerge("{0,0} {2,2} {4,4} {6,6} {8,8}", "{1,1} {3,3} {5,5} {7,7} {9,9}", "{0,9}");
-	CheckRangeMerge("{0,8}","{9,9}","{0,9}");
-	CheckRangeMerge("{0,8}","{10,10}","{0,8} {10,10}");
-	CheckRangeMerge("{0,0} {2,2} {4,4} {6,6} {8,8} {10,10} {12,12} {14,14} {16,16} {18,18} {20,20} {22,22} {24,24} {26,26} {28,28} {30,30} {32,32} {34,34} {36,36} {38,38} {40,40} {42,42} {44,44} {46,46} {48,48}", "{1,1} {3,3} {5,5} {7,7} {9,9} {11,11} {13,13} {15,15} {17,17} {19,19} {21,21} {23,23} {25,25} {27,27} {29,29} {31,31} {33,33} {35,35} {37,37} {39,39} {41,41} {43,43} {45,45} {47,47} {49,49}", "{0,49}");  
+	CheckRangeMerge("{0,3}", "{4,5}", "{0,5}");//range within range
+	CheckRangeMerge("{0,10}", "{4,8}", "{0,10}");//range within range on add 
 
+	CheckRangeMerge("{0,11}", "{12,13}", "{0,13}");//check many ranges 
+	CheckRangeMerge("{12,13}", "{0,11}", "{0,13}");//check many ranges 
+
+	CheckRangeMerge("{7,73}", "{3,6}", "{3,73}");//check unusual numbers 
+
+	CheckRangeMerge("{0,1}", "{2,4294967295}", "{0,4294967295}");//check large numbers
+
+	CheckRangeMerge("{0,0}", "{0,0}", "{0,0}");//check all equal
+
+	CheckRangeMerge("{0,1}", "{2,3}", "{0,3}");//check wrong way range
 }
 BOOST_AUTO_TEST_CASE(generate_range_subtract)
 {
@@ -59,8 +65,21 @@ BOOST_AUTO_TEST_CASE(generate_range_subtract)
 	// start with {0,9}, subtract {0,0} {2,3} {6,8} from it and expect {1,1} {4,5} {9,9}
 	CheckRangeSubtract("{0,9}", "{0,0} {2,3} {6,8}", "{1,1} {4,5} {9,9}");
 
-	CheckRangeSubtract("{1,2} {3,3} {6,10}", "{0,0} {2,2} {3,3}", "{1,1} {6,10}");
-	CheckRangeSubtract("{1,2} {3,3} {6,10}", "{0,0} {2,2}", "{1,1} {3,3} {6,10}");
+	CheckRangeSubtract("{1,3} {6,10}", "{0,0} {2,2} {3,3}", "{1,1} {6,10}");
+	CheckRangeSubtract("{1,3} {6,10}", "{0,0} {2,2}", "{1,1} {3,3} {6,10}");
+
+	CheckRangeSubtract("{0,3}", "{2,3}", "{0,1}");//range within range
+
+	CheckRangeSubtract("{0,11}", "{6,9}", "{0,5} {10,11}");//check many ranges 
+
+	CheckRangeSubtract("{0,10}", "{1,2} {1,2}", "{0,0} {3,10}");//check double subtract 
+
+	CheckRangeSubtract("{3,73}", "{7,13}", "{3,6} {14,73}");//check unusual numbers 
+
+	CheckRangeSubtract("{0,4294967295}", "{0,1}", "{2,4294967295}");//check large numbers
+
+	CheckRangeSubtract("{0,1}", "{10,15}", "{0,1}");//check subtract where there is nothing to subtract
+
 }
 BOOST_AUTO_TEST_CASE(generate_range_contain)
 {
@@ -75,6 +94,18 @@ BOOST_AUTO_TEST_CASE(generate_range_contain)
 	BOOST_CHECK(DoesRangeContain("{0,8}", "{0,0} {2,3} {6,8}"));
 	BOOST_CHECK(DoesRangeContain("{0,8}", "{0,1} {2,4} {6,6}"));
 
+	BOOST_CHECK(DoesRangeContain("{0,3}", "{0,1}"));//range within range
+
+	BOOST_CHECK(DoesRangeContain("{0,11}", "{1,2} {10,11}"));//check many ranges 
+
+	BOOST_CHECK(DoesRangeContain("{0,1} {0,1}", "{0,0} {1,1}"));//check double range 
+	BOOST_CHECK(DoesRangeContain("{0,2}", "{2,2} {0,0}"));//check double range 
+
+	BOOST_CHECK(DoesRangeContain("{3,73}", "{7,13}"));//check unusual numbers 
+
+	BOOST_CHECK(DoesRangeContain("{0,4294967295}", "{0,1}"));//check big numbers 
+
+
 	BOOST_CHECK(!DoesRangeContain("{1,9}", "{0,0}"));
 	BOOST_CHECK(!DoesRangeContain("{1,9}", "{1,10}"));
 	BOOST_CHECK(!DoesRangeContain("{1,2}", "{1,3}"));
@@ -87,6 +118,20 @@ BOOST_AUTO_TEST_CASE(generate_range_contain)
 	BOOST_CHECK(!DoesRangeContain("{0,0} {2,3} {6,8}", "{0,8}"));
 	BOOST_CHECK(!DoesRangeContain("{0,8}", "{0,1} {2,4} {6,9}"));
 	BOOST_CHECK(!DoesRangeContain("{0,8}", "{0,9} {2,4} {6,8}"));
+
+
+	BOOST_CHECK(!DoesRangeContain("{0,2} {1,3} {2,3}", "{4,5}"));//range within range
+
+	BOOST_CHECK(!DoesRangeContain("{0,11}", "{12,13} {10,11}"));//check many ranges 
+
+	BOOST_CHECK(!DoesRangeContain("{0,1} {0,1}", "{10,10} {11,11}"));//check double range 
+	BOOST_CHECK(!DoesRangeContain("{0,2}", "{10,10} {10,10}"));//check double range 
+
+	BOOST_CHECK(!DoesRangeContain("{7,13}", "{3,73}"));//check unusual numbers 
+
+	BOOST_CHECK(!DoesRangeContain("{0,1}", "{0,4294967295}"));//check big numbers 
+
+	BOOST_CHECK(!DoesRangeContain("{1,0}", "{2,2}"));//wrong way range 
 }
 BOOST_AUTO_TEST_CASE(generate_range_complex)
 {
@@ -276,4 +321,4 @@ BOOST_AUTO_TEST_CASE(generate_range_stress_subtract2)
 	BOOST_CHECK_EQUAL(vecRange_o.size(), 499991);
 	printf("CheckRangeSubtract Completed %ldms\n", ms2-ms1);
 }
-BOOST_AUTO_TEST_SUITE_END ()
+BOOST_AUTO_TEST_SUITE_END()

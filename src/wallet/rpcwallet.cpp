@@ -31,20 +31,12 @@
 using namespace std;
 // SYSCOIN
 #include "alias.h"
-#include "offer.h"
-#include "escrow.h"
 #include "assetallocation.h"
 #include "coincontrol.h"
 extern bool DecodeAliasTx(const CTransaction& tx, int& op, int& nOut, vector<vector<unsigned char> >& vvch);
-extern bool DecodeOfferTx(const CTransaction& tx, int& op, int& nOut, vector<vector<unsigned char> >& vvch);
-extern bool DecodeCertTx(const CTransaction& tx, int& op, int& nOut, vector<vector<unsigned char> >& vvch);
 extern bool DecodeAssetTx(const CTransaction& tx, int& op, int& nOut, vector<vector<unsigned char> >& vvch);
 extern bool DecodeAssetAllocationTx(const CTransaction& tx, int& op, int& nOut, vector<vector<unsigned char> >& vvch);
-extern bool DecodeEscrowTx(const CTransaction& tx, int& op, int& nOut, vector<vector<unsigned char> >& vvch);
 extern bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, bool fJustCheck, int nHeight, string &errorMessage, bool &bDestCheckFailed, bool dontaddtodb);
-extern bool CheckOfferInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<std::vector<unsigned char> > &revertedOffers, string &errorMessage, bool dontaddtodb);
-extern bool CheckCertInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<std::vector<unsigned char> > &revertedCerts, string &errorMessage, bool dontaddtodb);
-extern bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<std::vector<unsigned char> > &vvchAliasArgs, bool fJustCheck, int nHeight, string &errorMessage, bool dontaddtodb);
 extern bool DecodeAliasScript(const CScript& script, int& op, vector<vector<unsigned char> > &vvch);
 extern bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool dontaddtodb);
 extern bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool dontaddtodb);
@@ -415,29 +407,6 @@ CAmount GetCoinControlInputTotal(const CCoinControl* coinControl)
 	}
 	return nValueRet;
 }
-/*There are three modes of payments with aliases:
-
-Pay with alias balance (utxo's are stored in alias payment db)
-When to pay with this method:
-- Anything that pays money to someone (escrow, offer accept), or changing an alias address (alias transfer, multisig updates, alias renewal)
-- When alias fee placeholders run out
-- if fee placeholder was used to create up to 5 fee placeholders, create minimum of 1
-Pay with alias fee placeholders (utxo's that are stored in alias payment db but are only used as fees for allowing multiple updates to an alias per block)
-When to pay with this method:
-- When not paying with alias balance
-Pay with alias utxo (stored in the alias db and transaction db, used to prove that you own an alias)
-When to pay with this method:
-- every time
-
-1) pay with utxo, create up to 5 total new outputs
-2) If not escrow or alias transfer
-2a) Get fee placeholders, if transaction is is not funded save amount required and goto step 3.
-2b) transaction completely funded
-3) if alias balance is non zero
-3a) if fee placeholders was used, create outputs(1 minimum) up to 5 total and save new total amount summing all outputs
-3b) use total amount + required amount from 2a (if non zero) to find outputs in alias balance, if not enough balance throw error
-3c) transaction completely funded
-4) if transaction completely funded, try to sign and send to network*/
 void SendMoneySyscoin(const vector<unsigned char> &vchAlias, const vector<unsigned char> &vchWitness, const CRecipient &aliasRecipient, CRecipient &aliasFeePlaceholderRecipient, vector<CRecipient> &vecSend, CWalletTx& wtxNew, CCoinControl* coinControl, bool fUseInstantSend=false, bool transferAlias = false)
 {
 	int op;
@@ -593,8 +562,6 @@ void SendMoneySyscoin(const vector<unsigned char> &vchAlias, const vector<unsign
 	string errorMessage = "";
 	bool bCheckDestError = false;
 	sorted_vector<CAssetAllocationTuple> revertedAssetAllocations;
-	sorted_vector<vector<unsigned char> > revertedOffers;
-	sorted_vector<vector<unsigned char> > revertedCerts;
 	if (wtxNew.nVersion == SYSCOIN_TX_VERSION) {
 		if (DecodeAliasTx(wtxNew, op, nOut, vvchAlias))
 		{
@@ -602,15 +569,6 @@ void SendMoneySyscoin(const vector<unsigned char> &vchAlias, const vector<unsign
 			if (!errorMessage.empty())
 				throw runtime_error(errorMessage.c_str());
 			CheckAliasInputs(wtxNew, op, nOut, vvchAlias, !fJustCheck, chainActive.Tip()->nHeight, errorMessage, bCheckDestError, true);
-			if (!errorMessage.empty())
-				throw runtime_error(errorMessage.c_str());
-		}
-		if (DecodeCertTx(wtxNew, op, nOut, vvch))
-		{
-			CheckCertInputs(wtxNew, op, nOut, vvch, vvchAlias[0], fJustCheck, chainActive.Tip()->nHeight, revertedCerts, errorMessage, true);
-			if (!errorMessage.empty())
-				throw runtime_error(errorMessage.c_str());
-			CheckCertInputs(wtxNew, op, nOut, vvch, vvchAlias[0], !fJustCheck, chainActive.Tip()->nHeight, revertedCerts, errorMessage, true);
 			if (!errorMessage.empty())
 				throw runtime_error(errorMessage.c_str());
 		}
@@ -631,25 +589,6 @@ void SendMoneySyscoin(const vector<unsigned char> &vchAlias, const vector<unsign
 			CheckAssetAllocationInputs(wtxNew, op, nOut, vvch, vvchAlias[0], !fJustCheck, chainActive.Tip()->nHeight, revertedAssetAllocations, errorMessage, true);
 			if (!errorMessage.empty())
 				throw runtime_error(errorMessage.c_str());
-		}
-		if (DecodeEscrowTx(wtxNew, op, nOut, vvch))
-		{
-			CheckEscrowInputs(wtxNew, op, nOut, vvch, vvchAlias, fJustCheck, chainActive.Tip()->nHeight, errorMessage, true);
-			if (!errorMessage.empty())
-				throw runtime_error(errorMessage.c_str());
-			CheckEscrowInputs(wtxNew, op, nOut, vvch, vvchAlias, !fJustCheck, chainActive.Tip()->nHeight, errorMessage, true);
-			if (!errorMessage.empty())
-				throw runtime_error(errorMessage.c_str());
-		}
-		if (DecodeOfferTx(wtxNew, op, nOut, vvch))
-		{
-			CheckOfferInputs(wtxNew, op, nOut, vvch, vvchAlias[0], fJustCheck, chainActive.Tip()->nHeight, revertedOffers, errorMessage, true);
-			if (!errorMessage.empty())
-				throw runtime_error(errorMessage.c_str());
-			CheckOfferInputs(wtxNew, op, nOut, vvch, vvchAlias[0], !fJustCheck, chainActive.Tip()->nHeight, revertedOffers, errorMessage, true);
-			if (!errorMessage.empty())
-				throw runtime_error(errorMessage.c_str());
-
 		}
 	}
 }

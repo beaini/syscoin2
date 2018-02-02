@@ -3,10 +3,6 @@
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 //
 #include "alias.h"
-#include "offer.h"
-#include "escrow.h"
-#include "cert.h"
-#include "offer.h"
 #include "asset.h"
 #include "assetallocation.h"
 #include "init.h"
@@ -36,9 +32,6 @@
 #include "instantx.h"
 using namespace std;
 CAliasDB *paliasdb = NULL;
-COfferDB *pofferdb = NULL;
-CCertDB *pcertdb = NULL;
-CEscrowDB *pescrowdb = NULL;
 CAssetDB *passetdb = NULL;
 CAssetAllocationDB *passetallocationdb = NULL;
 typedef map<vector<unsigned char>, COutPoint > mapAliasRegistrationsType;
@@ -52,16 +45,9 @@ mongoc_database_t *database = NULL;
 mongoc_collection_t *alias_collection = NULL;
 mongoc_collection_t *aliashistory_collection = NULL;
 mongoc_collection_t *aliastxhistory_collection = NULL;
-mongoc_collection_t *offer_collection = NULL;
-mongoc_collection_t *offerhistory_collection = NULL;
-mongoc_collection_t *escrow_collection = NULL;
-mongoc_collection_t *escrowbid_collection = NULL;
-mongoc_collection_t *cert_collection = NULL;
-mongoc_collection_t *certhistory_collection = NULL;
 mongoc_collection_t *asset_collection = NULL;
 mongoc_collection_t *assethistory_collection = NULL;
 mongoc_collection_t *assetallocation_collection = NULL;
-mongoc_collection_t *feedback_collection = NULL;
 unsigned int MAX_ALIAS_UPDATES_PER_BLOCK = 5;
 bool GetSyscoinTransaction(int nHeight, const uint256 &hash, CTransaction &txOut, const Consensus::Params& consensusParams)
 {
@@ -122,9 +108,6 @@ bool GetTimeToPrune(const CScript& scriptPubKey, uint64_t &nTime)
 	if(!chainActive.Tip())
 		return false;
 	CAliasIndex alias;
-	COffer offer;
-	CEscrow escrow;
-	CCert cert;
 	CAssetAllocation assetallocation;
 	CAsset asset;
 	nTime = 0;
@@ -152,39 +135,6 @@ bool GetTimeToPrune(const CScript& scriptPubKey, uint64_t &nTime)
 			nTime = chainActive.Tip()->GetMedianTimePast() + 1;
 			return true;
 		}
-	}
-	else if(offer.UnserializeFromData(vchData, vchHash))
-	{
-		if (!pofferdb || !pofferdb->ReadOffer(offer.vchOffer, offer))
-		{
-			// setting to the tip means we don't prune this data, we keep it
-			nTime = chainActive.Tip()->GetMedianTimePast() + 1;
-			return true;
-		}
-		nTime = GetOfferExpiration(offer);
-		return true; 
-	}
-	else if(cert.UnserializeFromData(vchData, vchHash))
-	{
-		if (!pcertdb || !pcertdb->ReadCert(cert.vchCert, cert))
-		{
-			// setting to the tip means we don't prune this data, we keep it
-			nTime = chainActive.Tip()->GetMedianTimePast() + 1;
-			return true;
-		}
-		nTime = GetCertExpiration(cert);
-		return true; 
-	}
-	else if(escrow.UnserializeFromData(vchData, vchHash))
-	{
-		if (!pescrowdb || !pescrowdb->ReadEscrow(escrow.vchEscrow, escrow))
-		{
-			// setting to the tip means we don't prune this data, we keep it
-			nTime = chainActive.Tip()->GetMedianTimePast() + 1;
-			return true;
-		}
-		nTime = GetEscrowExpiration(escrow);
-		return true;
 	}
 	else if (asset.UnserializeFromData(vchData, vchHash))
 	{
@@ -221,12 +171,6 @@ bool IsSyscoinScript(const CScript& scriptPubKey, int &op, vector<vector<unsigne
 {
 	if (DecodeAliasScript(scriptPubKey, op, vvchArgs))
 		return true;
-	else if(DecodeOfferScript(scriptPubKey, op, vvchArgs))
-		return true;
-	else if(DecodeCertScript(scriptPubKey, op, vvchArgs))
-		return true;
-	else if(DecodeEscrowScript(scriptPubKey, op, vvchArgs))
-		return true;
 	else if (DecodeAssetScript(scriptPubKey, op, vvchArgs))
 		return true;
 	else if (DecodeAssetAllocationScript(scriptPubKey, op, vvchArgs))
@@ -236,29 +180,11 @@ bool IsSyscoinScript(const CScript& scriptPubKey, int &op, vector<vector<unsigne
 bool RemoveSyscoinScript(const CScript& scriptPubKeyIn, CScript& scriptPubKeyOut)
 {
 	if (!RemoveAliasScriptPrefix(scriptPubKeyIn, scriptPubKeyOut))
-		if (!RemoveOfferScriptPrefix(scriptPubKeyIn, scriptPubKeyOut))
-			if (!RemoveCertScriptPrefix(scriptPubKeyIn, scriptPubKeyOut))
-				if (!RemoveEscrowScriptPrefix(scriptPubKeyIn, scriptPubKeyOut))
-					if (!RemoveAssetScriptPrefix(scriptPubKeyIn, scriptPubKeyOut))
-						if (!RemoveAssetAllocationScriptPrefix(scriptPubKeyIn, scriptPubKeyOut))
-							return false;
+		if (!RemoveAssetScriptPrefix(scriptPubKeyIn, scriptPubKeyOut))
+			if (!RemoveAssetAllocationScriptPrefix(scriptPubKeyIn, scriptPubKeyOut))
+				return false;
 	return true;
 					
-}
-float getEscrowFee()
-{
-	// 0.05% escrow fee
-	return 0.005;
-}
-int getFeePerByte(const uint64_t &paymentOptionMask)
-{   
-	if (IsPaymentOptionInMask(paymentOptionMask, PAYMENTOPTION_BTC))
-		return 250;
-	else  if (IsPaymentOptionInMask(paymentOptionMask, PAYMENTOPTION_SYS))
-		return 25;
-	else  if (IsPaymentOptionInMask(paymentOptionMask, PAYMENTOPTION_ZEC))
-		return 25;
-	return 25;
 }
 void PutToAliasList(std::vector<CAliasIndex> &aliasList, CAliasIndex& index) {
 	int i = aliasList.size() - 1;
@@ -491,7 +417,7 @@ bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			}
 		}
 		// whitelist alias updates don't update expiry date
-		if (!vchData.empty() && theAlias.offerWhitelist.entries.empty() && theAlias.nExpireTime > 0)
+		if (!vchData.empty() && theAlias.nExpireTime > 0)
 		{
 			CAmount fee = GetDataFee(tx.vout[nDataOut].scriptPubKey);
 			float fYears;
@@ -556,121 +482,61 @@ bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				else
 					bDestCheckFailed = true;
 			}
-			if (!theAliasNull) {
-				COfferLinkWhitelist whiteList;
-				// if updating whitelist, we dont allow updating any alias details
-				if (theAlias.offerWhitelist.entries.size() > 0)
+			if (!theAliasNull) {	
+				if (theAlias.vchPublicValue.empty())
+					theAlias.vchPublicValue = dbAlias.vchPublicValue;
+				if (theAlias.vchEncryptionPrivateKey.empty())
+					theAlias.vchEncryptionPrivateKey = dbAlias.vchEncryptionPrivateKey;
+				if (theAlias.vchEncryptionPublicKey.empty())
+					theAlias.vchEncryptionPublicKey = dbAlias.vchEncryptionPublicKey;
+				if (theAlias.nExpireTime == 0)
+					theAlias.nExpireTime = dbAlias.nExpireTime;
+				if (theAlias.vchAddress.empty())
+					theAlias.vchAddress = dbAlias.vchAddress;
+
+				theAlias.vchGUID = dbAlias.vchGUID;
+				theAlias.vchAlias = dbAlias.vchAlias;
+				// if transfer
+				if (dbAlias.vchAddress != theAlias.vchAddress)
 				{
-					whiteList = theAlias.offerWhitelist;
-					theAlias = dbAlias;
+					// make sure xfer to pubkey doesn't point to an alias already, otherwise don't assign pubkey to alias
+					// we want to avoid aliases with duplicate addresses
+					if (paliasdb->ExistsAddress(theAlias.vchAddress))
+					{
+						vector<unsigned char> vchMyAlias;
+						if (paliasdb->ReadAddress(theAlias.vchAddress, vchMyAlias) && !vchMyAlias.empty() && vchMyAlias != dbAlias.vchAlias)
+						{
+							CAliasIndex dbReadAlias;
+							// ensure that you block transferring only if the recv address has an active alias associated with it
+							if (GetAlias(vchMyAlias, dbReadAlias)) {
+								errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5026 - " + _("An alias already exists with that address, try another public key");
+								theAlias = dbAlias;
+							}
+						}
+					}
+					if (dbAlias.nAccessFlags < 2)
+					{
+						errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5026 - " + _("Cannot edit this alias. Insufficient privileges.");
+						theAlias = dbAlias;
+					}
+					// let old address be re-occupied by a new alias
+					if (!dontaddtodb && errorMessage.empty())
+					{
+						paliasdb->EraseAddress(dbAlias.vchAddress);
+					}
 				}
 				else
 				{
-					// can't edit whitelist through aliasupdate
-					theAlias.offerWhitelist = dbAlias.offerWhitelist;
-					if (theAlias.vchPublicValue.empty())
-						theAlias.vchPublicValue = dbAlias.vchPublicValue;
-					if (theAlias.vchEncryptionPrivateKey.empty())
-						theAlias.vchEncryptionPrivateKey = dbAlias.vchEncryptionPrivateKey;
-					if (theAlias.vchEncryptionPublicKey.empty())
-						theAlias.vchEncryptionPublicKey = dbAlias.vchEncryptionPublicKey;
-					if (theAlias.nExpireTime == 0)
-						theAlias.nExpireTime = dbAlias.nExpireTime;
-					if (theAlias.vchAddress.empty())
-						theAlias.vchAddress = dbAlias.vchAddress;
-
-					theAlias.vchGUID = dbAlias.vchGUID;
-					theAlias.vchAlias = dbAlias.vchAlias;
-					// if transfer
-					if (dbAlias.vchAddress != theAlias.vchAddress)
+					if (dbAlias.nAccessFlags < 1)
 					{
-						// make sure xfer to pubkey doesn't point to an alias already, otherwise don't assign pubkey to alias
-						// we want to avoid aliases with duplicate addresses
-						if (paliasdb->ExistsAddress(theAlias.vchAddress))
-						{
-							vector<unsigned char> vchMyAlias;
-							if (paliasdb->ReadAddress(theAlias.vchAddress, vchMyAlias) && !vchMyAlias.empty() && vchMyAlias != dbAlias.vchAlias)
-							{
-								CAliasIndex dbReadAlias;
-								// ensure that you block transferring only if the recv address has an active alias associated with it
-								if (GetAlias(vchMyAlias, dbReadAlias)) {
-									errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5026 - " + _("An alias already exists with that address, try another public key");
-									theAlias = dbAlias;
-								}
-							}
-						}
-						if (dbAlias.nAccessFlags < 2)
-						{
-							errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5026 - " + _("Cannot edit this alias. Insufficient privileges.");
-							theAlias = dbAlias;
-						}
-						// let old address be re-occupied by a new alias
-						if (!dontaddtodb && errorMessage.empty())
-						{
-							paliasdb->EraseAddress(dbAlias.vchAddress);
-						}
-					}
-					else
-					{
-						if (dbAlias.nAccessFlags < 1)
-						{
-							errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5026 - " + _("Cannot edit this alias. It is view-only.");
-							theAlias = dbAlias;
-						}
-					}
-					if (theAlias.nAccessFlags > dbAlias.nAccessFlags)
-					{
-						errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Cannot modify for more lenient access. Only tighter access level can be granted.");
+						errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5026 - " + _("Cannot edit this alias. It is view-only.");
 						theAlias = dbAlias;
 					}
 				}
-
-
-				// if the txn whitelist entry exists (meaning we want to remove or add)
-				if (whiteList.entries.size() >= 1)
+				if (theAlias.nAccessFlags > dbAlias.nAccessFlags)
 				{
-					if (whiteList.entries.size() > 20)
-					{
-						errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 1094 -" + _("Too many affiliates for this whitelist, maximum 20 entries allowed");
-						theAlias.offerWhitelist.SetNull();
-					}
-					// special case we use to remove all entries
-					else if (whiteList.entries.size() == 1 && whiteList.entries.begin()->second.nDiscountPct == 127)
-					{
-						if (theAlias.offerWhitelist.entries.empty())
-						{
-							errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 1093 - " + _("Whitelist is already empty");
-						}
-						else
-							theAlias.offerWhitelist.SetNull();
-					}
-					else
-					{
-						for (auto const &it : whiteList.entries)
-						{
-							COfferLinkWhitelistEntry entry;
-							const COfferLinkWhitelistEntry& newEntry = it.second;
-							if (newEntry.nDiscountPct > 99) {
-								errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 1094 -" + _("Whitelist discount must be between 0 and 99");
-								continue;
-							}
-							// the stored whitelist has this entry (and its the same) then we want to remove this entry
-							if (theAlias.offerWhitelist.GetLinkEntryByHash(newEntry.aliasLinkVchRand, entry) && newEntry == entry)
-							{
-								theAlias.offerWhitelist.RemoveWhitelistEntry(newEntry.aliasLinkVchRand);
-							}
-							// we want to add it to the whitelist
-							else
-							{
-								if (theAlias.offerWhitelist.entries.size() < 20)
-									theAlias.offerWhitelist.PutWhitelistEntry(newEntry);
-								else
-								{
-									errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 1094 -" + _("Too many affiliates for this whitelist, maximum 20 entries allowed");
-								}
-							}
-						}
-					}
+					errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Cannot modify for more lenient access. Only tighter access level can be granted.");
+					theAlias = dbAlias;
 				}
 			}
 		}
@@ -771,14 +637,12 @@ bool GetSyscoinData(const CScript &scriptPubKey, vector<unsigned char> &vchData,
 		return false;
 	return true;
 }
-void GetAddress(const CAliasIndex& alias, CSyscoinAddress* address,CScript& script,const uint32_t nPaymentOption)
+void GetAddress(const CAliasIndex& alias, CSyscoinAddress* address,CScript& script)
 {
 	if(!address)
 		return;
-	CChainParams::AddressType myAddressType = PaymentOptionToAddressType(nPaymentOption);
-	CSyscoinAddress addrTmp = CSyscoinAddress(EncodeBase58(alias.vchAddress));
-	address[0] = CSyscoinAddress(addrTmp.Get(), myAddressType);
-	script = GetScriptForDestination(address[0].Get());
+	CSyscoinAddress addr = CSyscoinAddress(EncodeBase58(alias.vchAddress));
+	script = GetScriptForDestination(addr.Get());
 }
 bool CAliasIndex::UnserializeFromData(const vector<unsigned char> &vchData, const vector<unsigned char> &vchHash) {
     try {
@@ -861,12 +725,6 @@ bool CAliasDB::CleanupDatabase(int &servicesCleaned)
 }
 void CleanupSyscoinServiceDatabases(int &numServicesCleaned)
 {
-	if(pofferdb != NULL)
-		pofferdb->CleanupDatabase(numServicesCleaned);
-	if(pescrowdb!= NULL)
-		pescrowdb->CleanupDatabase(numServicesCleaned);
-	if(pcertdb!= NULL)
-		pcertdb->CleanupDatabase(numServicesCleaned);
 	if (passetdb != NULL)
 		passetdb->CleanupDatabase(numServicesCleaned);
 	if (passetallocationdb != NULL)
@@ -878,21 +736,6 @@ void CleanupSyscoinServiceDatabases(int &numServicesCleaned)
 	{
 		if (!paliasdb->Flush())
 			LogPrintf("Failed to write to alias database!");
-	}
-	if(pofferdb != NULL)
-	{
-		if (!pofferdb->Flush())
-			LogPrintf("Failed to write to offer database!");
-	}
-	if(pcertdb != NULL)
-	{
-		if (!pcertdb->Flush())
-			LogPrintf("Failed to write to cert database!");
-	}
-	if(pescrowdb != NULL)
-	{
-		if (!pescrowdb->Flush())
-			LogPrintf("Failed to write to escrow database!");
 	}
 	if (passetdb != NULL)
 	{
@@ -979,10 +822,7 @@ bool DecodeAndParseSyscoinTx(const CTransaction& tx, int& op, int& nOut,
 		vector<vector<unsigned char> >& vvch, char& type)
 {
 	return  
-		DecodeAndParseCertTx(tx, op, nOut, vvch, type)
-		|| DecodeAndParseOfferTx(tx, op, nOut, vvch, type)
-		|| DecodeAndParseEscrowTx(tx, op, nOut, vvch, type)
-		|| DecodeAndParseAssetTx(tx, op, nOut, vvch, type)
+		DecodeAndParseAssetTx(tx, op, nOut, vvch, type)
 		|| DecodeAndParseAssetAllocationTx(tx, op, nOut, vvch, type)
 		|| DecodeAndParseAliasTx(tx, op, nOut, vvch, type);
 }
@@ -1207,227 +1047,6 @@ void setupAliasTxHistoryIndexes() {
 	bson_destroy(&reply);
 	bson_destroy(create_indexes);
 }
-void setupOfferIndexes() {
-	bson_t keys;
-	const char *collection_name = "offer";
-	char *index_name;
-	bson_t reply;
-	bson_error_t error;
-	bool r;
-	bson_t *create_indexes;
-
-	bson_init(&keys);
-	BSON_APPEND_INT32(&keys, "category", 1);
-	BSON_APPEND_INT32(&keys, "paymentoptions", 1);
-	BSON_APPEND_INT32(&keys, "alias", 1);
-	BSON_APPEND_INT32(&keys, "offertype", 1);
-	BSON_APPEND_UTF8(&keys, "title", "text");
-	index_name = mongoc_collection_keys_to_index_string(&keys);
-	create_indexes = BCON_NEW("createIndexes",
-		BCON_UTF8(collection_name),
-		"indexes",
-		"[",
-		"{",
-		"key",
-		BCON_DOCUMENT(&keys),
-		"name",
-		BCON_UTF8(index_name),
-		"}",
-		"]");
-
-	r = mongoc_database_write_command_with_opts(
-		database, create_indexes, NULL /* opts */, &reply, &error);
-
-	if (!r) {
-		LogPrintf("Error in createIndexes: %s\n", error.message);
-	}
-	bson_destroy(&keys);
-	bson_free(index_name);
-	bson_destroy(&reply);
-	bson_destroy(create_indexes);
-}
-void setupOfferHistoryIndexes() {
-	bson_t keys;
-	const char *collection_name = "offerhistory";
-	char *index_name;
-	bson_t reply;
-	bson_error_t error;
-	bool r;
-	bson_t *create_indexes;
-
-	bson_init(&keys);
-	BSON_APPEND_INT32(&keys, "offer", 1);
-	index_name = mongoc_collection_keys_to_index_string(&keys);
-	create_indexes = BCON_NEW("createIndexes",
-		BCON_UTF8(collection_name),
-		"indexes",
-		"[",
-		"{",
-		"key",
-		BCON_DOCUMENT(&keys),
-		"name",
-		BCON_UTF8(index_name),
-		"}",
-		"]");
-
-	r = mongoc_database_write_command_with_opts(
-		database, create_indexes, NULL /* opts */, &reply, &error);
-
-	if (!r) {
-		LogPrintf("Error in createIndexes: %s\n", error.message);
-	}
-	bson_destroy(&keys);
-	bson_free(index_name);
-	bson_destroy(&reply);
-	bson_destroy(create_indexes);
-}
-void setupEscrowIndexes() {
-	bson_t keys;
-	const char *collection_name = "escrow";
-	char *index_name;
-	bson_t reply;
-	bson_error_t error;
-	bool r;
-	bson_t *create_indexes;
-
-	bson_init(&keys);
-	BSON_APPEND_INT32(&keys, "offer", 1);
-	BSON_APPEND_INT32(&keys, "seller", 1);
-	BSON_APPEND_INT32(&keys, "arbiter", 1);
-	BSON_APPEND_INT32(&keys, "buyer", 1);
-	index_name = mongoc_collection_keys_to_index_string(&keys);
-	create_indexes = BCON_NEW("createIndexes",
-		BCON_UTF8(collection_name),
-		"indexes",
-		"[",
-		"{",
-		"key",
-		BCON_DOCUMENT(&keys),
-		"name",
-		BCON_UTF8(index_name),
-		"}",
-		"]");
-
-	r = mongoc_database_write_command_with_opts(
-		database, create_indexes, NULL /* opts */, &reply, &error);
-
-	if (!r) {
-		LogPrintf("Error in createIndexes: %s\n", error.message);
-	}
-	bson_destroy(&keys);
-	bson_free(index_name);
-	bson_destroy(&reply);
-	bson_destroy(create_indexes);
-}
-void setupEscrowBidIndexes() {
-	bson_t keys;
-	const char *collection_name = "escrowbid";
-	char *index_name;
-	bson_t reply;
-	bson_error_t error;
-	bool r;
-	bson_t *create_indexes;
-
-	bson_init(&keys);
-	BSON_APPEND_INT32(&keys, "offer", 1);
-	BSON_APPEND_INT32(&keys, "escrow", 1);
-	BSON_APPEND_INT32(&keys, "bidder", 1);
-	index_name = mongoc_collection_keys_to_index_string(&keys);
-	create_indexes = BCON_NEW("createIndexes",
-		BCON_UTF8(collection_name),
-		"indexes",
-		"[",
-		"{",
-		"key",
-		BCON_DOCUMENT(&keys),
-		"name",
-		BCON_UTF8(index_name),
-		"}",
-		"]");
-
-	r = mongoc_database_write_command_with_opts(
-		database, create_indexes, NULL /* opts */, &reply, &error);
-
-	if (!r) {
-		LogPrintf("Error in createIndexes: %s\n", error.message);
-	}
-	bson_destroy(&keys);
-	bson_free(index_name);
-	bson_destroy(&reply);
-	bson_destroy(create_indexes);
-}
-void setupCertIndexes() {
-	bson_t keys;
-	const char *collection_name = "cert";
-	char *index_name;
-	bson_t reply;
-	bson_error_t error;
-	bool r;
-	bson_t *create_indexes;
-
-	bson_init(&keys);
-	BSON_APPEND_INT32(&keys, "category", 1);
-	BSON_APPEND_INT32(&keys, "alias", 1);
-	BSON_APPEND_UTF8(&keys, "title", "text");
-	index_name = mongoc_collection_keys_to_index_string(&keys);
-	create_indexes = BCON_NEW("createIndexes",
-		BCON_UTF8(collection_name),
-		"indexes",
-		"[",
-		"{",
-		"key",
-		BCON_DOCUMENT(&keys),
-		"name",
-		BCON_UTF8(index_name),
-		"}",
-		"]");
-
-	r = mongoc_database_write_command_with_opts(
-		database, create_indexes, NULL /* opts */, &reply, &error);
-
-	if (!r) {
-		LogPrintf("Error in createIndexes: %s\n", error.message);
-	}
-	bson_destroy(&keys);
-	bson_free(index_name);
-	bson_destroy(&reply);
-	bson_destroy(create_indexes);
-}
-void setupCertHistoryIndexes() {
-	bson_t keys;
-	const char *collection_name = "certhistory";
-	char *index_name;
-	bson_t reply;
-	bson_error_t error;
-	bool r;
-	bson_t *create_indexes;
-
-	bson_init(&keys);
-	BSON_APPEND_INT32(&keys, "cert", 1);
-	index_name = mongoc_collection_keys_to_index_string(&keys);
-	create_indexes = BCON_NEW("createIndexes",
-		BCON_UTF8(collection_name),
-		"indexes",
-		"[",
-		"{",
-		"key",
-		BCON_DOCUMENT(&keys),
-		"name",
-		BCON_UTF8(index_name),
-		"}",
-		"]");
-
-	r = mongoc_database_write_command_with_opts(
-		database, create_indexes, NULL /* opts */, &reply, &error);
-
-	if (!r) {
-		LogPrintf("Error in createIndexes: %s\n", error.message);
-	}
-	bson_destroy(&keys);
-	bson_free(index_name);
-	bson_destroy(&reply);
-	bson_destroy(create_indexes);
-}
 void setupAssetIndexes() {
 	bson_t keys;
 	const char *collection_name = "asset";
@@ -1537,44 +1156,6 @@ void setupAssetAllocationIndexes() {
 	bson_destroy(&reply);
 	bson_destroy(create_indexes);
 }
-void setupFeedbackIndexes() {
-	bson_t keys;
-	const char *collection_name = "feedback";
-	char *index_name;
-	bson_t reply;
-	bson_error_t error;
-	bool r;
-	bson_t *create_indexes;
-
-	bson_init(&keys);
-	BSON_APPEND_INT32(&keys, "offer", 1);
-	BSON_APPEND_INT32(&keys, "escrow", 1);
-	BSON_APPEND_INT32(&keys, "feedbackuserfrom", 1);
-	BSON_APPEND_INT32(&keys, "feedbackuserto", 1);
-	index_name = mongoc_collection_keys_to_index_string(&keys);
-	create_indexes = BCON_NEW("createIndexes",
-		BCON_UTF8(collection_name),
-		"indexes",
-		"[",
-		"{",
-		"key",
-		BCON_DOCUMENT(&keys),
-		"name",
-		BCON_UTF8(index_name),
-		"}",
-		"]");
-
-	r = mongoc_database_write_command_with_opts(
-		database, create_indexes, NULL /* opts */, &reply, &error);
-
-	if (!r) {
-		LogPrintf("Error in createIndexes: %s\n", error.message);
-	}
-	bson_destroy(&keys);
-	bson_free(index_name);
-	bson_destroy(&reply);
-	bson_destroy(create_indexes);
-}
 void startMongoDB(){
 	// SYSCOIN
 	nIndexPort = GetArg("-indexport", DEFAULT_INDEXPORT);
@@ -1592,37 +1173,16 @@ void startMongoDB(){
 		alias_collection = mongoc_client_get_collection(client, "syscoindb", "alias");
 		aliashistory_collection = mongoc_client_get_collection(client, "syscoindb", "aliashistory");
 		aliastxhistory_collection = mongoc_client_get_collection(client, "syscoindb", "aliastxhistory");
-		offer_collection = mongoc_client_get_collection(client, "syscoindb", "offer");
-		offerhistory_collection = mongoc_client_get_collection(client, "syscoindb", "offerhistory");
-		escrow_collection = mongoc_client_get_collection(client, "syscoindb", "escrow");
-		escrowbid_collection = mongoc_client_get_collection(client, "syscoindb", "escrowbid");
-		cert_collection = mongoc_client_get_collection(client, "syscoindb", "cert");
-		certhistory_collection = mongoc_client_get_collection(client, "syscoindb", "certhistory");
-		feedback_collection = mongoc_client_get_collection(client, "syscoindb", "feedback");
 		asset_collection = mongoc_client_get_collection(client, "syscoindb", "asset");
 		assethistory_collection = mongoc_client_get_collection(client, "syscoindb", "assethistory");
 		assetallocation_collection = mongoc_client_get_collection(client, "syscoindb", "assetallocation");
 		BSON_ASSERT(alias_collection);
 		BSON_ASSERT(aliashistory_collection);
 		BSON_ASSERT(aliastxhistory_collection);
-		BSON_ASSERT(offer_collection);
-		BSON_ASSERT(offerhistory_collection);
-		BSON_ASSERT(escrow_collection);
-		BSON_ASSERT(escrowbid_collection);
-		BSON_ASSERT(cert_collection);
-		BSON_ASSERT(certhistory_collection);
-		BSON_ASSERT(feedback_collection);
 		BSON_ASSERT(asset_collection);
 		BSON_ASSERT(assethistory_collection);
 		BSON_ASSERT(assetallocation_collection);
 		setupAliasHistoryIndexes();
-		setupOfferIndexes();
-		setupOfferHistoryIndexes();
-		setupEscrowIndexes();
-		setupEscrowBidIndexes();
-		setupCertIndexes();
-		setupCertHistoryIndexes();
-		setupFeedbackIndexes();
 		setupAssetIndexes();
 		setupAssetHistoryIndexes();
 		setupAssetAllocationIndexes();
@@ -1836,20 +1396,6 @@ void stopMongoDB() {
 		mongoc_collection_destroy(aliashistory_collection);
 	if (aliastxhistory_collection)
 		mongoc_collection_destroy(aliastxhistory_collection);
-	if(offer_collection)
-		mongoc_collection_destroy(offer_collection);
-	if (offerhistory_collection)
-		mongoc_collection_destroy(offerhistory_collection);
-	if(escrow_collection)
-		mongoc_collection_destroy(escrow_collection);
-	if (escrowbid_collection)
-		mongoc_collection_destroy(escrowbid_collection);
-	if(cert_collection)
-		mongoc_collection_destroy(cert_collection);
-	if (certhistory_collection)
-		mongoc_collection_destroy(certhistory_collection);
-	if(feedback_collection)
-		mongoc_collection_destroy(feedback_collection);
 	if (asset_collection)
 		mongoc_collection_destroy(asset_collection);
 	if (assethistory_collection)
@@ -1867,7 +1413,7 @@ UniValue syscoinquery(const UniValue& params, bool fHelp) {
 	if (fHelp || 2 > params.size() || 3 < params.size())
 		throw runtime_error(
 			"syscoinquery <collection> <query> [options]\n"
-			"<collection> Collection name, either: 'alias', 'aliashistory', 'aliastxhistory', 'cert', 'certhistory', 'asset', 'assethistory', 'assetallocation', 'offer', 'offerhistory', 'feedback', 'escrow', 'escrowbid'.\n"
+			"<collection> Collection name, either: 'alias', 'aliashistory', 'aliastxhistory', 'asset', 'assethistory', 'assetallocation'.\n"
 			"<query> JSON query on the collection to retrieve a set of documents.\n"
 			"<options> Optional. JSON option arguments into the query. Based on mongoc_collection_find_with_opts.\n"
 			+ HelpRequiringPassphrase());
@@ -1879,28 +1425,14 @@ UniValue syscoinquery(const UniValue& params, bool fHelp) {
 		selectedCollection = aliashistory_collection;
 	else if (collection == "aliastxhistory")
 		selectedCollection = aliastxhistory_collection;
-	else if (collection == "cert")
-		selectedCollection = cert_collection;
-	else if (collection == "certhistory")
-		selectedCollection = certhistory_collection;
 	else if (collection == "asset")
 		selectedCollection = asset_collection;
 	else if (collection == "assethistory")
 		selectedCollection = assethistory_collection;
 	else if (collection == "assetallocation")
 		selectedCollection = assetallocation_collection;
-	else if (collection == "offer")
-		selectedCollection = offer_collection;
-	else if (collection == "offerhistory")
-		selectedCollection = offerhistory_collection;
-	else if (collection == "escrow")
-		selectedCollection = escrow_collection;
-	else if (collection == "escrowbid")
-		selectedCollection = escrowbid_collection;
-	else if (collection == "feedback")
-		selectedCollection = feedback_collection;
 	else
-		throw runtime_error("SYSCOIN_ALIAS_RPC_ERROR: ERRCODE: 5508 - " + _("Invalid selection collection name, please specify the collection parameter as either 'alias', 'cert', 'offer', 'feedback' or 'escrow'"));
+		throw runtime_error("SYSCOIN_ALIAS_RPC_ERROR: ERRCODE: 5508 - " + _("Invalid selection collection name, please specify the collection parameter as either 'alias', 'aliashistory', 'aliastxhistory', 'asset', 'assethistory' or 'assetallocation'"));
 
 	string query = params[1].get_str();
 	string options = "";
@@ -1954,10 +1486,10 @@ UniValue syscoinquery(const UniValue& params, bool fHelp) {
 UniValue aliasnew(const UniValue& params, bool fHelp) {
 	if (fHelp || 8 != params.size())
 		throw runtime_error(
-			"aliasnew [aliasname] [public value] [accept_transfers_flags=3] [expire_timestamp] [address] [encryption_privatekey] [encryption_publickey] [witness]\n"
+			"aliasnew [aliasname] [public value] [accept_transfers_flags=1] [expire_timestamp] [address] [encryption_privatekey] [encryption_publickey] [witness]\n"
 						"<aliasname> alias name.\n"
 						"<public value> alias public profile data, 256 characters max.\n"
-						"<accept_transfers_flags> 0 for none, 1 for accepting certificate transfers, 2 for accepting asset transfers and 3 for all. Default is 3.\n"	
+						"<accept_transfers_flags> 0 for none, 1 for accepting asset transfers. Default is 1.\n"	
 						"<expire_timestamp> Epoch time when to expire alias. It is exponentially more expensive per year, calculation is FEERATE*(2.88^years). FEERATE is the dynamic satoshi per byte fee set in the rate peg alias used for this alias. Defaults to 1 hour.\n"	
 						"<address> Address for this alias.\n"		
 						"<encryption_privatekey> Encrypted private key used for encryption/decryption of private data related to this alias. Should be encrypted to publickey.\n"
@@ -2127,12 +1659,12 @@ UniValue aliasnew(const UniValue& params, bool fHelp) {
 UniValue aliasupdate(const UniValue& params, bool fHelp) {
 	if (fHelp || 8 != params.size())
 		throw runtime_error(
-			"aliasupdate [aliasname] [public value] [address] [accept_transfers_flags=3] [expire_timestamp] [encryption_privatekey] [encryption_publickey] [witness]\n"
+			"aliasupdate [aliasname] [public value] [address] [accept_transfers_flags=1] [expire_timestamp] [encryption_privatekey] [encryption_publickey] [witness]\n"
 						"Update and possibly transfer an alias.\n"
 						"<aliasname> alias name.\n"
 						"<public_value> alias public profile data, 256 characters max.\n"			
 						"<address> Address of alias.\n"		
-						"<accept_transfers_flags> 0 for none, 1 for accepting certificate transfers, 2 for accepting asset transfers and 3 for all. Default is 3.\n"
+						"<accept_transfers_flags> 0 for none, 1 accepting asset transfers. Default is 1.\n"
 						"<expire_timestamp> Epoch time when to expire alias. It is exponentially more expensive per year, calculation is 2.88^years. FEERATE is the dynamic satoshi per byte fee set in the rate peg alias used for this alias. Defaults to 1 hour. Set to 0 if not changing expiration.\n"		
 						"<encryption_privatekey> Encrypted private key used for encryption/decryption of private data related to this alias. If transferring, the key should be encrypted to alias_pubkey.\n"
 						"<encryption_publickey> Public key used for encryption/decryption of private data related to this alias. Useful if you are changing pub/priv keypair for encryption on this alias.\n"						
@@ -2261,12 +1793,6 @@ void SysTxToJSON(const int op, const vector<unsigned char> &vchData, const vecto
 {
 	if(type == ALIAS)
 		AliasTxToJSON(op, vchData, vchHash, entry);
-	else if(type == CERT)
-		CertTxToJSON(op, vchData, vchHash, entry);
-	else if(type == ESCROW)
-		EscrowTxToJSON(op, vchData, vchHash, entry);
-	else if(type == OFFER)
-		OfferTxToJSON(op, vchData, vchHash, entry);
 	else if (type == ASSET)
 		AssetTxToJSON(op, vchData, vchHash, entry);
 	else if (type == ASSETALLOCATION)
@@ -2283,13 +1809,6 @@ void AliasTxToJSON(const int op, const vector<unsigned char> &vchData, const vec
 
 	entry.push_back(Pair("txtype", opName));
 	entry.push_back(Pair("_id", stringFromVch(alias.vchAlias)));
-	if (!alias.offerWhitelist.IsNull())
-	{
-		if (alias.offerWhitelist.entries.begin()->second.nDiscountPct == 127)
-			entry.push_back(Pair("whitelist", _("Whitelist was cleared")));
-		else
-			entry.push_back(Pair("whitelist", _("Whitelist entries were added or removed")));
-	}
 	if(!alias.vchPublicValue .empty() && alias.vchPublicValue != dbAlias.vchPublicValue)
 		entry.push_back(Pair("publicvalue", stringFromVch(alias.vchPublicValue)));
 
@@ -2750,192 +2269,10 @@ UniValue aliasaddscript(const UniValue& params, bool fHelp) {
 	res.push_back(Pair("result", "success"));
 	return res;
 }
-UniValue aliasupdatewhitelist(const UniValue& params, bool fHelp) {
-	if (fHelp || params.size() != 3)
-		throw runtime_error(
-			"aliasupdatewhitelist [owner alias] [{\"alias\":\"aliasname\",\"discount_percentage\":n},...] [witness]\n"
-			"Update to the whitelist(controls who can resell). Array of whitelist entries in parameter 1.\n"
-			"To add to list, include a new alias/discount percentage that does not exist in the whitelist.\n"
-			"To update entry, change the discount percentage of an existing whitelist entry.\n"
-			"To remove whitelist entry, pass the whilelist entry without changing discount percentage.\n"
-			"<owner alias> owner alias controlling this whitelist.\n"
-			"	\"entries\"       (string) A json array of whitelist entries to add/remove/update\n"
-			"    [\n"
-			"      \"alias\"     (string) Alias that you want to add to the affiliate whitelist. Can be '*' to represent that the offers owned by owner alias can be resold by anybody.\n"
-			"	   \"discount_percentage\"     (number) A discount percentage associated with this alias. The reseller can sell your offer at this discount, not accounting for any commissions he/she may set in his own reselling offer. 0 to 99.\n"
-			"      ,...\n"
-			"    ]\n"
-			"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
-			+ HelpRequiringPassphrase());
 
-	// gather & validate inputs
-	vector<unsigned char> vchOwnerAlias = vchFromValue(params[0]);
-	UniValue whitelistEntries = params[1].get_array();
-	vector<unsigned char> vchWitness;
-	vchWitness = vchFromValue(params[2]);
-	CWalletTx wtx;
-
-	// this is a syscoin txn
-	CScript scriptPubKeyOrig;
-
-
-	CAliasIndex theAlias;
-	if (!GetAlias(vchOwnerAlias, theAlias))
-		throw runtime_error("SYSCOIN_ALIAS_RPC_ERROR ERRCODE: 1518 - " + _("Could not find an alias with this guid"));
-
-	CSyscoinAddress aliasAddress;
-	GetAddress(theAlias, &aliasAddress, scriptPubKeyOrig);
-	CAliasIndex copyAlias = theAlias;
-	theAlias.ClearAlias();
-
-	for (unsigned int idx = 0; idx < whitelistEntries.size(); idx++) {
-		const UniValue& p = whitelistEntries[idx];
-		if (!p.isObject())
-			throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "expected object with {\"alias\",\"discount_percentage\"}");
-
-		UniValue whiteListEntryObj = p.get_obj();
-		RPCTypeCheckObj(whiteListEntryObj, boost::assign::map_list_of("alias", UniValue::VSTR)("discount_percentage", UniValue::VNUM));
-		string aliasEntryName = find_value(whiteListEntryObj, "alias").get_str();
-		int nDiscount = find_value(whiteListEntryObj, "discount_percentage").get_int();
-
-		COfferLinkWhitelistEntry entry;
-		entry.aliasLinkVchRand = vchFromString(aliasEntryName);
-		entry.nDiscountPct = nDiscount;
-		theAlias.offerWhitelist.PutWhitelistEntry(entry);
-
-		if (!theAlias.offerWhitelist.GetLinkEntryByHash(vchFromString(aliasEntryName), entry))
-			throw runtime_error("SYSCOIN_ALIAS_RPC_ERROR ERRCODE: 1523 - " + _("This alias entry was not added to affiliate list: ") + aliasEntryName);
-	}
-	vector<unsigned char> data;
-	theAlias.Serialize(data);
-	uint256 hash = Hash(data.begin(), data.end());
-	vector<unsigned char> vchHashAlias = vchFromValue(hash.GetHex());
-
-	CScript scriptPubKey;
-	scriptPubKey << CScript::EncodeOP_N(OP_SYSCOIN_ALIAS) << CScript::EncodeOP_N(OP_ALIAS_UPDATE) << copyAlias.vchAlias << copyAlias.vchGUID << vchHashAlias << vchWitness << OP_2DROP << OP_2DROP << OP_2DROP;
-	scriptPubKey += scriptPubKeyOrig;
-
-	vector<CRecipient> vecSend;
-	CRecipient recipient;
-	CreateRecipient(scriptPubKey, recipient);
-	CRecipient recipientPayment;
-	CreateAliasRecipient(scriptPubKeyOrig, recipientPayment);
-	CScript scriptData;
-	scriptData << OP_RETURN << data;
-	CRecipient fee;
-	CreateFeeRecipient(scriptData, data, fee);
-	vecSend.push_back(fee);
-
-
-	CCoinControl coinControl;
-	coinControl.fAllowOtherInputs = false;
-	coinControl.fAllowWatchOnly = false;
-	SendMoneySyscoin(copyAlias.vchAlias, vchWitness, recipient, recipientPayment, vecSend, wtx, &coinControl);
-
-	UniValue res(UniValue::VARR);
-	res.push_back(EncodeHexTx(wtx));
-	return res;
-}
-UniValue aliasclearwhitelist(const UniValue& params, bool fHelp) {
-	if (fHelp || params.size() != 2)
-		throw runtime_error(
-			"aliasclearwhitelist [owner alias] [witness]\n"
-			"Clear your whitelist(controls who can resell).\n"
-			+ HelpRequiringPassphrase());
-	// gather & validate inputs
-	vector<unsigned char> vchAlias = vchFromValue(params[0]);
-	vector<unsigned char> vchWitness;
-	vchWitness = vchFromValue(params[1]);
-	// this is a syscoind txn
-	CWalletTx wtx;
-	CScript scriptPubKeyOrig;
-
-
-	CAliasIndex theAlias;
-	if (!GetAlias(vchAlias, theAlias))
-		throw runtime_error("SYSCOIN_ALIAS_RPC_ERROR ERRCODE: 1529 - " + _("Could not find an alias with this name"));
-
-
-	CSyscoinAddress aliasAddress;
-	GetAddress(theAlias, &aliasAddress, scriptPubKeyOrig);
-
-	COfferLinkWhitelistEntry entry;
-	// special case to clear all entries for this offer
-	entry.nDiscountPct = 127;
-	CAliasIndex copyAlias = theAlias;
-	theAlias.ClearAlias();
-	theAlias.offerWhitelist.PutWhitelistEntry(entry);
-	vector<unsigned char> data;
-	theAlias.Serialize(data);
-	uint256 hash = Hash(data.begin(), data.end());
-	vector<unsigned char> vchHashAlias = vchFromValue(hash.GetHex());
-
-	CScript scriptPubKey;
-	scriptPubKey << CScript::EncodeOP_N(OP_SYSCOIN_ALIAS) << CScript::EncodeOP_N(OP_ALIAS_UPDATE) << copyAlias.vchAlias << copyAlias.vchGUID << vchHashAlias << vchWitness << OP_2DROP << OP_2DROP << OP_2DROP;
-	scriptPubKey += scriptPubKeyOrig;
-
-	vector<CRecipient> vecSend;
-	CRecipient recipient;
-	CreateRecipient(scriptPubKey, recipient);
-	CRecipient recipientPayment;
-	CreateAliasRecipient(scriptPubKeyOrig, recipientPayment);
-	CScript scriptData;
-	scriptData << OP_RETURN << data;
-	CRecipient fee;
-	CreateFeeRecipient(scriptData, data, fee);
-	vecSend.push_back(fee);
-
-
-	CCoinControl coinControl;
-	coinControl.fAllowOtherInputs = false;
-	coinControl.fAllowWatchOnly = false;
-	SendMoneySyscoin(copyAlias.vchAlias, vchWitness, recipient, recipientPayment, vecSend, wtx, &coinControl);
-
-	UniValue res(UniValue::VARR);
-	res.push_back(EncodeHexTx(wtx));
-	return res;
-}
-
-UniValue aliaswhitelist(const UniValue& params, bool fHelp) {
-	if (fHelp || params.size() != 1)
-		throw runtime_error("aliaswhitelist <alias>\n"
-			"List all affiliates for this alias.\n");
-	UniValue oRes(UniValue::VARR);
-	vector<unsigned char> vchAlias = vchFromValue(params[0]);
-
-	CAliasIndex theAlias;
-
-	if (!GetAlias(vchAlias, theAlias))
-		throw runtime_error("could not find alias with this guid");
-
-	for (auto const &it : theAlias.offerWhitelist.entries)
-	{
-		const COfferLinkWhitelistEntry& entry = it.second;
-		UniValue oList(UniValue::VOBJ);
-		oList.push_back(Pair("alias", stringFromVch(entry.aliasLinkVchRand)));
-		oList.push_back(Pair("discount_percentage", entry.nDiscountPct));
-		oRes.push_back(oList);
-	}
-	return oRes;
-}
-bool COfferLinkWhitelist::GetLinkEntryByHash(const std::vector<unsigned char> &ahash, COfferLinkWhitelistEntry &entry) const {
-	entry.SetNull();
-	const vector<unsigned char> allAliases = vchFromString("*");
-	if (entries.count(ahash) > 0) {
-		entry = entries.at(ahash);
-		return true;
-	}
-	else if(entries.count(allAliases) > 0) {
-		entry = entries.at(allAliases);
-		return true;
-	}
-	return false;
-}
 string GetSyscoinTransactionDescription(const int op, string& responseEnglish, const char &type)
 {
 	string strResponse = "";
-	COffer offer;
-	CEscrow escrow;
 	if (type == ALIAS) {
 		if (op == OP_ALIAS_ACTIVATE) {
 			strResponse = _("Alias Activated");
@@ -2946,40 +2283,12 @@ string GetSyscoinTransactionDescription(const int op, string& responseEnglish, c
 			responseEnglish = "Alias Updated";
 		}
 	}
-	else if (type == OFFER) {
-		if (op == OP_OFFER_ACTIVATE) {
-			strResponse = _("Offer Activated");
-			responseEnglish = "Offer Activated";
-		}
-		else if (op == OP_OFFER_UPDATE) {
-			strResponse = _("Offer Updated");
-			responseEnglish = "Offer Updated";
-		}
-	}
-	else if (type == CERT) {
-		if (op == OP_CERT_ACTIVATE) {
-			strResponse = _("Certificate Activated");
-			responseEnglish = "Certificate Activated";
-		}
-		else if (op == OP_CERT_UPDATE) {
-			strResponse = _("Certificate Updated");
-			responseEnglish = "Certificate Updated";
-		}
-		else if (op == OP_CERT_TRANSFER) {
-			strResponse = _("Certificate Transferred");
-			responseEnglish = "Certificate Transferred";
-		}
-	}
 	else if (type == ASSET) {
 		if (op == OP_ASSET_ACTIVATE) {
 			strResponse = _("Asset Activated");
 			responseEnglish = "Asset Activated";
 		}
-		else if (op == OP_ASSET_MINT) {
-			strResponse = _("Asset Minted");
-			responseEnglish = "Asset Minted";
-		}
-		else if (op == OP_ASSET_UPDATE) {
+		if (op == OP_ASSET_UPDATE) {
 			strResponse = _("Asset Updated");
 			responseEnglish = "Asset Updated";
 		}
@@ -2996,44 +2305,6 @@ string GetSyscoinTransactionDescription(const int op, string& responseEnglish, c
 		if (op == OP_ASSET_ALLOCATION_SEND) {
 			strResponse = _("Asset Allocation Sent");
 			responseEnglish = "Asset Allocation Sent";
-		}
-	}
-	else if (type == ESCROW) {
-		if (op == OP_ESCROW_ACTIVATE) {
-			strResponse = _("Escrow Activated");
-			responseEnglish = "Escrow Activated";
-		}
-		else if (op == OP_ESCROW_ACKNOWLEDGE) {
-			strResponse = _("Escrow Acknowledged");
-			responseEnglish = "Escrow Acknowledged";
-		}
-		else if (op == OP_ESCROW_RELEASE) {
-			strResponse = _("Escrow Released");
-			responseEnglish = "Escrow Released";
-		}
-		else if (op == OP_ESCROW_RELEASE_COMPLETE) {
-			strResponse = _("Escrow Release Complete");
-			responseEnglish = "Escrow Release Complete";
-		}
-		else if (op == OP_ESCROW_FEEDBACK) {
-			strResponse = _("Escrow Feedback");
-			responseEnglish = "Escrow Feedback";
-		}
-		else if (op == OP_ESCROW_BID) {
-			strResponse = _("Escrow Bid");
-			responseEnglish = "Escrow Bid";
-		}
-		else if (op == OP_ESCROW_ADD_SHIPPING) {
-			strResponse = _("Escrow Add Shipping");
-			responseEnglish = "Escrow Add Shipping";
-		}
-		else if (op == OP_ESCROW_REFUND) {
-			strResponse = _("Escrow Refunded");
-			responseEnglish = "Escrow Refunded";
-		}
-		else if (op == OP_ESCROW_REFUND_COMPLETE) {
-			strResponse = _("Escrow Refund Complete");
-			responseEnglish = "Escrow Refund Complete";
 		}
 	}
 	else{

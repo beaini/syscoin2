@@ -52,12 +52,9 @@
 #include <boost/thread.hpp>
 // SYSCOIN
 #include "auxpow.h"
-#include "offer.h"
-#include "cert.h"
 #include "alias.h"
 #include "asset.h"
 #include "assetallocation.h"
-#include "escrow.h"
 #include "graph.h"
 #include "base58.h"
 #include "rpc/server.h"
@@ -552,8 +549,6 @@ bool CheckSyscoinInputs(const CTransaction& tx, bool fJustCheck, int nHeight, co
 	vector<vector<unsigned char> > vvchArgs;
 	vector<vector<unsigned char> > vvchAliasArgs;
 	sorted_vector<CAssetAllocationTuple> revertedAssetAllocations;
-	sorted_vector<vector<unsigned char> > revertedOffers;
-	sorted_vector<vector<unsigned char> > revertedCerts;
 	int op;
 	int nOut;
 	if (nHeight == 0)
@@ -584,13 +579,6 @@ bool CheckSyscoinInputs(const CTransaction& tx, bool fJustCheck, int nHeight, co
 		}
 		if (!bDestCheckFailed && !vvchAliasArgs.empty() && good && errorMessage.empty())
 		{
-			if (DecodeCertTx(tx, op, nOut, vvchArgs))
-			{
-				errorMessage.clear();
-				good = CheckCertInputs(tx, op, nOut, vvchArgs, vvchAliasArgs[0], fJustCheck, nHeight, revertedCerts, errorMessage);
-				if (fDebug && !errorMessage.empty())
-					LogPrintf("%s\n", errorMessage.c_str());
-			}
 			if (DecodeAssetTx(tx, op, nOut, vvchArgs))
 			{
 				errorMessage.clear();
@@ -602,20 +590,6 @@ bool CheckSyscoinInputs(const CTransaction& tx, bool fJustCheck, int nHeight, co
 			{
 				errorMessage.clear();
 				good = CheckAssetAllocationInputs(tx, op, nOut, vvchArgs, vvchAliasArgs[0], fJustCheck, nHeight, revertedAssetAllocations, errorMessage);
-				if (fDebug && !errorMessage.empty())
-					LogPrintf("%s\n", errorMessage.c_str());
-			}
-			else if (DecodeEscrowTx(tx, op, nOut, vvchArgs))
-			{
-				errorMessage.clear();
-				good = CheckEscrowInputs(tx, op, nOut, vvchArgs, vvchAliasArgs, fJustCheck, nHeight, errorMessage);
-				if (fDebug && !errorMessage.empty())
-					LogPrintf("%s\n", errorMessage.c_str());
-			}
-			else if (DecodeOfferTx(tx, op, nOut, vvchArgs))
-			{
-				errorMessage.clear();
-				good = CheckOfferInputs(tx, op, nOut, vvchArgs, vvchAliasArgs[0], fJustCheck, nHeight, revertedOffers, errorMessage);
 				if (fDebug && !errorMessage.empty())
 					LogPrintf("%s\n", errorMessage.c_str());
 			}
@@ -660,13 +634,6 @@ bool CheckSyscoinInputs(const CTransaction& tx, bool fJustCheck, int nHeight, co
 				}
 				if (!bDestCheckFailed && !vvchAliasArgs.empty() && good && errorMessage.empty())
 				{
-					if (DecodeCertTx(tx, op, nOut, vvchArgs))
-					{
-						errorMessage.clear();
-						good = CheckCertInputs(tx, op, nOut, vvchArgs, vvchAliasArgs[0], fJustCheck, nHeight, revertedCerts, errorMessage);
-						if (fDebug && !errorMessage.empty())
-							LogPrintf("%s\n", errorMessage.c_str());
-					}
 					if (DecodeAssetTx(tx, op, nOut, vvchArgs))
 					{
 						errorMessage.clear();
@@ -681,20 +648,6 @@ bool CheckSyscoinInputs(const CTransaction& tx, bool fJustCheck, int nHeight, co
 						if (fDebug && !errorMessage.empty())
 							LogPrintf("%s\n", errorMessage.c_str());
 
-					}
-					else if (DecodeEscrowTx(tx, op, nOut, vvchArgs))
-					{
-						errorMessage.clear();
-						good = CheckEscrowInputs(tx, op, nOut, vvchArgs, vvchAliasArgs, fJustCheck, nHeight, errorMessage);
-						if (fDebug && !errorMessage.empty())
-							LogPrintf("%s\n", errorMessage.c_str());
-					}
-					else if (DecodeOfferTx(tx, op, nOut, vvchArgs))
-					{
-						errorMessage.clear();
-						good = CheckOfferInputs(tx, op, nOut, vvchArgs, vvchAliasArgs[0], fJustCheck, nHeight, revertedOffers, errorMessage);
-						if (fDebug && !errorMessage.empty())
-							LogPrintf("%s\n", errorMessage.c_str());
 					}
 				}
 				if (!good)

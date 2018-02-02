@@ -477,7 +477,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
 						return true;
 					}
-					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
+					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ALL))
 					{
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
 						return true;
@@ -576,7 +576,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
 						return true;
 					}
-					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
+					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ALL))
 					{
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
 						return true;
