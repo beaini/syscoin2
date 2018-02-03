@@ -13,6 +13,7 @@
 #include <boost/lexical_cast.hpp>
 #include <iterator>
 #include <chrono>
+#include "ranges.h"
 using namespace boost::chrono;
 using namespace std;
 BOOST_GLOBAL_FIXTURE(SyscoinTestingSetup);
