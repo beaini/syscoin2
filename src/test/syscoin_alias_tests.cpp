@@ -7,6 +7,7 @@
 #include "util.h"
 #include "rpc/server.h"
 #include "alias.h"
+#include "cert.h"
 #include "base58.h"
 #include "chainparams.h"
 #include <boost/test/unit_test.hpp>
@@ -22,6 +23,14 @@ BOOST_AUTO_TEST_CASE (generate_big_aliasdata)
 {
 	UniValue r;
 	ECC_Start();
+		// rate converstion to SYS
+	pegRates["USD"] = 2690.1;
+	pegRates["EUR"] = 2695.2;
+	pegRates["GBP"] = 2697.3;
+	pegRates["CAD"] = 2698.0;
+	pegRates["BTC"] = 100000.0;
+	pegRates["ZEC"] = 10000.0;
+	pegRates["SYS"] = 1.0;
 	printf("Running generate_big_aliasdata...\n");
 	GenerateBlocks(200,"node1");
 	GenerateBlocks(200,"node2");
@@ -316,14 +325,14 @@ BOOST_AUTO_TEST_CASE (generate_aliaspay)
 	GenerateBlocks(10, "node2");
 	GenerateBlocks(10, "node3");
 }
-/*BOOST_AUTO_TEST_CASE (generate_alias_assetexpiry_resync)
+BOOST_AUTO_TEST_CASE (generate_alias_offerexpiry_resync)
 {
-	printf("Running generate_asset_aliasexpiry_resync...\n");
+	printf("Running generate_offer_aliasexpiry_resync...\n");
 	UniValue r;
 	GenerateBlocks(5);
 	GenerateBlocks(5, "node2");
 	GenerateBlocks(5, "node3");
-	// change asset to an older alias, expire the alias and ensure that on resync the asset seems to be expired still
+	// change offer to an older alias, expire the alias and ensure that on resync the offer seems to be expired still
 	AliasNew("node1", "aliasold", "changeddata1");
 	printf("Sleeping 5 seconds between the creation of the two aliases for this test...\n");
 	MilliSleep(5000);
@@ -343,14 +352,14 @@ BOOST_AUTO_TEST_CASE (generate_aliaspay)
 	StopNode("node3");
 	GenerateBlocks(5, "node2");
 
-	string assetguid = AssetNew("node1", "aliasnew", "category", "title", "1", "0.05", "description", "USD");
-	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo " + assetguid));
+	string offerguid = OfferNew("node1", "aliasnew", "category", "title", "1", "0.05", "description", "USD");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "offerinfo " + offerguid));
 	
 	BOOST_CHECK_EQUAL(aliasnewexpiry ,  find_value(r.get_obj(), "expires_on").get_int64());
-	AssetUpdate("node1", "aliasold", assetguid, "category", "title", "1", "0.05", "description", "USD");
+	OfferUpdate("node1", "aliasold", offerguid, "category", "title", "1", "0.05", "description", "USD");
 	GenerateBlocks(5, "node1");
 	GenerateBlocks(5, "node2");
-	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo " + assetguid));
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "offerinfo " + offerguid));
 	BOOST_CHECK_EQUAL(aliasoldexpiry ,  find_value(r.get_obj(), "expires_on").get_int64());
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "alias").get_str(), "aliasold");	
 	
@@ -365,7 +374,7 @@ BOOST_AUTO_TEST_CASE (generate_aliaspay)
 	StopNode("node1");
 	StartNode("node1");
 
-	// aliasnew should still be active, but asset was set to aliasold so it should be expired
+	// aliasnew should still be active, but offer was set to aliasold so it should be expired
 	GenerateBlocks(5, "node1");
 
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "getblockchaininfo"));
@@ -374,7 +383,7 @@ BOOST_AUTO_TEST_CASE (generate_aliaspay)
 	BOOST_CHECK(aliasnewexpiry > mediantime);
 
 	BOOST_CHECK_THROW(r = CallRPC("node1", "aliasinfo aliasold"), runtime_error);
-	BOOST_CHECK_THROW(r = CallRPC("node1", "assetinfo " + assetguid), runtime_error);
+	BOOST_CHECK_THROW(r = CallRPC("node1", "offerinfo " + offerguid), runtime_error);
 
 	StartNode("node3");
 	GenerateBlocks(5, "node3");
@@ -393,15 +402,15 @@ BOOST_AUTO_TEST_CASE (generate_aliaspay)
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "expired").get_bool(), false);
 
 
-	// node 3 doesn't download the asset since it expired while node 3 was offline
-	BOOST_CHECK_THROW(r = CallRPC("node3", "assetinfo " + assetguid), runtime_error);
+	// node 3 doesn't download the offer since it expired while node 3 was offline
+	BOOST_CHECK_THROW(r = CallRPC("node3", "offerinfo " + offerguid), runtime_error);
 
-	BOOST_CHECK_NO_THROW(r = CallRPC("node2", "assetinfo " + assetguid));
+	BOOST_CHECK_NO_THROW(r = CallRPC("node2", "offerinfo " + offerguid));
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "expired").get_bool(), true);	
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "alias").get_str(), "aliasold");	
 	BOOST_CHECK_EQUAL(aliasoldexpiry ,  find_value(r.get_obj(), "expires_on").get_int64());
 
-}*/
+}
 BOOST_AUTO_TEST_CASE (generate_aliastransfer)
 {
 	printf("Running generate_aliastransfer...\n");
@@ -822,30 +831,84 @@ BOOST_AUTO_TEST_CASE (generate_aliaspruning)
 	BOOST_CHECK_THROW(CallRPC("node3", "aliasinfo aliasprune1"), runtime_error);
 	BOOST_CHECK_EQUAL(AliasFilter("node3", "aliasprune1"), false);
 }
-
-/*BOOST_AUTO_TEST_CASE (generate_aliasprunewithasset)
+BOOST_AUTO_TEST_CASE (generate_aliasprunewithoffer)
 {
-	printf("Running generate_aliasprunewithasset...\n");
+	printf("Running generate_aliasprunewithoffer...\n");
+	UniValue r;
+	
+	GenerateBlocks(5);
+	GenerateBlocks(5, "node2");
+	GenerateBlocks(5, "node3");
+	AliasNew("node3", "aliasprunewithoffer3", "pubdata");
+	StopNode("node3");
+	AliasNew("node1", "aliasprunewithoffer", "pubdata");
+	AliasNew("node1", "aliasprunewithoffer1", "pubdata");
+	AliasNew("node2", "aliasprunewithoffer2", "pubdata");
+	string offerguid = OfferNew("node1", "aliasprunewithoffer", "category", "title", "1", "0.05", "description", "SYS");
+	string escrowguid = EscrowNewBuyItNow("node2", "node1", "aliasprunewithoffer2", offerguid, "1", "aliasprunewithoffer3");
+	EscrowRelease("node2", "buyer", escrowguid);
+	EscrowClaimRelease("node1", escrowguid);
+	// last created alias should have furthest expiry
+	ExpireAlias("aliasprunewithoffer2");
+	StartNode("node3");
+	GenerateBlocks(5, "node3");
+	// node3 shouldn't find the service at all (meaning node3 doesn't sync the data)
+	BOOST_CHECK_THROW(CallRPC("node3", "escrowinfo " + escrowguid), runtime_error);
+	BOOST_CHECK_EQUAL(EscrowFilter("node3", escrowguid), false);
+}
+BOOST_AUTO_TEST_CASE (generate_aliasprunewithcertoffer)
+{
+	printf("Running generate_aliasprunewithcertoffer...\n");
+	UniValue r;
+	
+	GenerateBlocks(5);
+	GenerateBlocks(5, "node2");
+	GenerateBlocks(5, "node3");
+	AliasNew("node3", "aliasprunewithcertofferarbiter", "pubdata");
+	StopNode("node3");
+	AliasNew("node1", "aliasprunewithcertoffer", "pubdata");
+	AliasNew("node2", "aliasprunewithcertoffer2", "pubdata");
+	
+	string certguid = CertNew("node1", "aliasprunewithcertoffer", "jag1", "pubdata");
+	string certofferguid = OfferNew("node1", "aliasprunewithcertoffer", "certificates", "title", "1", "0.05", "description", "SYS", certguid);	
+	string offerguid = OfferNew("node1", "aliasprunewithcertoffer", "category", "title", "1", "0.05", "description", "SYS");
+	BOOST_CHECK_THROW(CallRPC("node1", "sendtoaddress aliasprunewithcertoffer2 300"), runtime_error);
+	GenerateBlocks(10);	
+	OfferUpdate("node1", "aliasprunewithcertoffer", offerguid, "category", "titlenew", "1", "0.05", "descriptionnew", "USD");
+	OfferUpdate("node1", "aliasprunewithcertoffer", certofferguid, "certificates", "titlenew", "1", "0.05", "descriptionnew", "USD", "false", certguid);
+	OfferAccept("node1", "node2", "aliasprunewithcertoffer2", "aliasprunewithcertofferarbiter", certofferguid, "1");
+	OfferAccept("node1", "node2", "aliasprunewithcertoffer2", "aliasprunewithcertofferarbiter", offerguid, "1");
+	ExpireAlias("aliasprunewithcertoffer2");
+	StartNode("node3");
+	GenerateBlocks(5, "node3");
+	// node3 shouldn't find the service at all (meaning node3 doesn't sync the data)
+	BOOST_CHECK_THROW(CallRPC("node3", "offerinfo " + offerguid), runtime_error);
+	BOOST_CHECK_EQUAL(OfferFilter("node3", offerguid), false);
+}
+
+BOOST_AUTO_TEST_CASE (generate_aliasprunewithcert)
+{
+	printf("Running generate_aliasprunewithcert...\n");
 	UniValue r;
 	
 	GenerateBlocks(5);
 	GenerateBlocks(5, "node2");
 	GenerateBlocks(5, "node3");
 	StopNode("node3");
-	AliasNew("node1", "aliasprunewithasset", "pubdata");
-	AliasNew("node2", "aliasprunewithasset2", "pubdata");
-	string assetguid = AssetNew("node1", "aliasprunewithasset", "jag1", "pubdata");
-	AssetUpdate("node1", assetguid, "''", "newdata");
-	AssetTransfer("node1", "node2", assetguid, "aliasprunewithasset2");
+	AliasNew("node1", "aliasprunewithcert", "pubdata");
+	AliasNew("node2", "aliasprunewithcert2", "pubdata");
+	string certguid = CertNew("node1", "aliasprunewithcert", "jag1", "pubdata");
+	CertUpdate("node1", certguid, "''", "newdata");
+	CertTransfer("node1", "node2", certguid, "aliasprunewithcert2");
 	GenerateBlocks(5, "node1");
-	ExpireAlias("aliasprunewithasset2");
+	ExpireAlias("aliasprunewithcert2");
 	StartNode("node3");
 	GenerateBlocks(5, "node3");
 	// node3 shouldn't find the service at all (meaning node3 doesn't sync the data)
-	BOOST_CHECK_THROW(CallRPC("node3", "assetinfo " + assetguid), runtime_error);
-	BOOST_CHECK_EQUAL(AssetFilter("node3", assetguid), false);
-}*/
-/*BOOST_AUTO_TEST_CASE (generate_aliasexpired)
+	BOOST_CHECK_THROW(CallRPC("node3", "certinfo " + certguid), runtime_error);
+	BOOST_CHECK_EQUAL(OfferFilter("node3", certguid), false);
+}
+BOOST_AUTO_TEST_CASE (generate_aliasexpired)
 {
 	printf("Running generate_aliasexpired...\n");
 	UniValue r;
@@ -858,7 +921,8 @@ BOOST_AUTO_TEST_CASE (generate_aliaspruning)
 	AliasNew("node1", "aliasexpire0", "somedata");
 	AliasNew("node2", "aliasexpire1", "somedata");
 	string aliasexpirenode2address = AliasNew("node2", "aliasexpirednode2", "somedata");
-	string assetguid = AssetNew("node1", "aliasexpire", "assettitle", "pubdata");
+	string offerguid = OfferNew("node1", "aliasexpire0", "category", "title", "100", "1.00", "description", "USD");
+	string certguid = CertNew("node1", "aliasexpire", "certtitle", "pubdata");
 	MilliSleep(2500);
 	AliasNew("node3", "aliasexpire3", "somedata");
 	StopNode("node3");
@@ -873,9 +937,9 @@ BOOST_AUTO_TEST_CASE (generate_aliaspruning)
 	int64_t expires_on = find_value(r.get_obj(), "expires_on").get_int64();  
 	BOOST_CHECK_THROW(CallRPC("node1", "sendtoaddress aliasexpirednode2 3000"), runtime_error);
 	GenerateBlocks(10);	
-
+	const string &escrowguid = EscrowNewBuyItNow("node2", "node1", "aliasexpirednode2", offerguid, "1", "aliasexpire3");
 	string aliasexpire2node2address = AliasNew("node2", "aliasexpire2node2", "pubdata");
-	string assetgoodguid = AssetNew("node1", "aliasexpire2", "assettitle", "pubdata");
+	string certgoodguid = CertNew("node1", "aliasexpire2", "certtitle", "pubdata");
 	ExpireAlias("aliasexpirednode2");
 	GenerateBlocks(5, "node2");
 	
@@ -898,27 +962,46 @@ BOOST_AUTO_TEST_CASE (generate_aliaspruning)
 	// should fail: alias transfer to another non-expired alias address
 	BOOST_CHECK_THROW(CallRPC("node1", "aliasupdate aliasexpire2 changedata1 " + aliasexpire1address + " 3 0 '' '' ''"), runtime_error);
 
+	// should fail: link to an expired alias in offer
+	BOOST_CHECK_THROW(CallRPC("node2", "offerlink aliasexpirednode2 " + offerguid + " 5 newdetails ''"), runtime_error);
+	// should fail: generate an offer using expired alias
+	
+	BOOST_CHECK_THROW(CallRPC("node2", "offernew aliasexpirednode2 category title 1 0.05 description USD '' SYS false 1 BUYNOW 0 0 false 0 ''"), runtime_error);
+	// should fail: new escrow with expired arbiter alias
 
-	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetupdate " + assetgoodguid + " titlenew pubdata assetificates ''"));
+	BOOST_CHECK_THROW(CallRPC("node2", "escrownew false aliasexpire2node2 aliasexpirednode2 " + offerguid + " 1 true 0 0 25 0.005 0 '' SYS 0 0 ''"), runtime_error);
+	// should fail: new escrow with expired alias
+	BOOST_CHECK_THROW(CallRPC("node2", "escrownew false aliasexpirednode2 aliasexpire " + offerguid + " 1 true 0 0 25 0.005 0 '' SYS 0 0 ''"), runtime_error);
+
+
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "certupdate " + certgoodguid + " titlenew pubdata certificates ''"));
 	UniValue arr2 = r.get_array();
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "signrawtransaction " + arr2[0].get_str()));
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "syscoinsendrawtransaction " + find_value(r.get_obj(), "hex").get_str()));
-
 	GenerateBlocks(5, "node1");
-	// update asset after alias was renewed
-	BOOST_CHECK_NO_THROW(CallRPC("node1", "assetupdate " + assetguid + " aliasexpire pubdata assetificates ''"));
+	// should pass: offer alias expired and was renewed
+	BOOST_CHECK_NO_THROW(CallRPC("node1", "offerupdate aliasexpire0 " + offerguid + " category title 100 0.05 description USD false '' 0 SYS BUYNOW 0 0 false 0 ''"));
+	GenerateBlocks(5, "node1");
+	// update cert after alias was renewed
+	BOOST_CHECK_NO_THROW(CallRPC("node1", "certupdate " + certguid + " aliasexpire pubdata certificates ''"));
 	GenerateBlocks(5, "node1");
 
 	StartNode("node3");	
 	GenerateBlocks(5, "node3");
 
 	AliasNew("node3", "aliasexpire3", "somedata");
-
-	// this will recreate the alias and give it a new pubkey
+	// since all aliases are expired related to that escrow, the escrow was pruned
+	BOOST_CHECK_THROW(CallRPC("node3", "escrowinfo " + escrowguid), runtime_error);
+	// and node2
+	BOOST_CHECK_NO_THROW(CallRPC("node2", "escrowinfo " + escrowguid));
+	// this will recreate the alias and give it a new pubkey.. we need to use the old pubkey to sign the multisig, the escrow rpc call must check for the right pubkey
 	BOOST_CHECK(aliasexpirenode2address != AliasNew("node2", "aliasexpirednode2", "somedata"));
-	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo " + assetgoodguid));
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "certinfo " + certgoodguid));
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "expires_on").get_int64(), expires_on);
 
+	// able to release and claim release on escrow with non-expired aliases with new pubkeys
+	EscrowRelease("node2", "buyer", escrowguid);	 
+	EscrowClaimRelease("node1", escrowguid); 
 
 	// should cleanup db for node1 and remove aliasexpirenode2address from alias address db
 	ExpireAlias("aliasexpirednode2");
@@ -942,20 +1025,20 @@ BOOST_AUTO_TEST_CASE (generate_aliaspruning)
 	GenerateBlocks(5);
 	BOOST_CHECK(aliasexpirenode2address != AliasNew("node2", "aliasexpirednode2", "somedata"));
 
-	// should pass: asset alias was expired and renewed(aliasexpire2)
-	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assettransfer " + assetgoodguid + " aliasexpirednode2 '' 2 ''"));
+	// should pass: cert alias was expired and renewed(aliasexpire2)
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "certtransfer " + certgoodguid + " aliasexpirednode2 '' 2 ''"));
 	GenerateBlocks(5);
-	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo " + assetgoodguid));
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "certinfo " + certgoodguid));
 	// alias hasn't changed
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "alias").get_str(), "aliasexpire2");
 
 	ExpireAlias("aliasexpire2");
-	// should fail: update asset with expired alias
-	BOOST_CHECK_THROW(CallRPC("node1", "assetupdate " + assetgoodguid + " title pubdata assetificates ''"), runtime_error);
-	// should fail: xfer an asset with expired alias
-	BOOST_CHECK_THROW(CallRPC("node1", "assettransfer " + assetgoodguid + " aliasexpire2 '' 2 ''"), runtime_error);
-	// should fail: xfer an asset to an expired alias even though transferring asset is good
-	BOOST_CHECK_THROW(CallRPC("node1", "assettransfer " + assetguid + " aliasexpire2 '' 2 ''"), runtime_error);
+	// should fail: update cert with expired alias
+	BOOST_CHECK_THROW(CallRPC("node1", "certupdate " + certgoodguid + " title pubdata certificates ''"), runtime_error);
+	// should fail: xfer an cert with expired alias
+	BOOST_CHECK_THROW(CallRPC("node1", "certtransfer " + certgoodguid + " aliasexpire2 '' 2 ''"), runtime_error);
+	// should fail: xfer an cert to an expired alias even though transferring cert is good
+	BOOST_CHECK_THROW(CallRPC("node1", "certtransfer " + certguid + " aliasexpire2 '' 2 ''"), runtime_error);
 
 	AliasNew("node2", "aliasexpire2", "somedata");
 
@@ -963,15 +1046,15 @@ BOOST_AUTO_TEST_CASE (generate_aliaspruning)
 	AliasNew("node2", "aliasexpirednode2", "somedataa");
 	AliasNew("node1", "aliasexpire2", "somedatab");
 	// should fail:  transferring to a good alias but owner alias has expired and recreated (all services on old alias are now expired as a result even though alias was recreated, this is due to network pruning of expired services)
-	BOOST_CHECK_THROW(CallRPC("node1", "assettransfer " + assetguid + " aliasexpirednode2 '' 2 ''"), runtime_error);
-	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo " + assetgoodguid));
+	BOOST_CHECK_THROW(CallRPC("node1", "certtransfer " + certguid + " aliasexpirednode2 '' 2 ''"), runtime_error);
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "certinfo " + certgoodguid));
 	// alias hasn't changed
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "alias").get_str(), "aliasexpire2");
 
 	ExpireAlias("aliasexpire2");
-	// should fail: generate a asset using expired alias
-	BOOST_CHECK_THROW(CallRPC("node1", "assetnew aliasexpire2 jag1 pubdata assetificates ''"), runtime_error);
+	// should fail: generate a cert using expired alias
+	BOOST_CHECK_THROW(CallRPC("node1", "certnew aliasexpire2 jag1 pubdata certificates ''"), runtime_error);
 	// renew alias after expiry
 	AliasNew("node2", "aliasexpirednode2", "somedata");
-}*/
+}
 BOOST_AUTO_TEST_SUITE_END ()

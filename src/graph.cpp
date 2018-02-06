@@ -1,4 +1,6 @@
 #include "graph.h"
+#include "offer.h"
+#include "cert.h"
 #include "alias.h"
 #include "asset.h"
 #include "assetallocation.h"
@@ -26,6 +28,32 @@ bool OrderBasedOnArrivalTime(std::vector<CTransaction>& blockVtx) {
 				CAssetAllocation assetallocation(tx);
 				CAssetAllocationTuple assetAllocationTuple(assetallocation.vchAsset, vvchAliasArgs[0]);
 				passetallocationdb->ReadISArrivalTimes(assetAllocationTuple, arrivalTimes);
+				ArrivalTimesMap::iterator it = arrivalTimes.find(tx.GetHash());
+				if (it != arrivalTimes.end())
+					orderedIndexes.insert(make_pair((*it).second, n));
+				// we don't have this in our arrival times list, means it must be rejected via consensus so add it to the end
+				else
+					orderedIndexes.insert(make_pair(INT64_MAX, n));
+				continue;
+			}
+			else if (DecodeOfferTx(tx, op, nOut, vvchArgs))
+			{
+				ArrivalTimesMap arrivalTimes;
+				COffer offer(tx);
+				pofferdb->ReadISArrivalTimes(offer.vchOffer, arrivalTimes);
+				ArrivalTimesMap::iterator it = arrivalTimes.find(tx.GetHash());
+				if (it != arrivalTimes.end())
+					orderedIndexes.insert(make_pair((*it).second, n));
+				// we don't have this in our arrival times list, means it must be rejected via consensus so add it to the end
+				else
+					orderedIndexes.insert(make_pair(INT64_MAX, n));
+				continue;
+			}
+			else if (DecodeCertTx(tx, op, nOut, vvchArgs))
+			{
+				ArrivalTimesMap arrivalTimes;
+				CCert cert(tx);
+				pcertdb->ReadISArrivalTimes(cert.vchCert, arrivalTimes);
 				ArrivalTimesMap::iterator it = arrivalTimes.find(tx.GetHash());
 				if (it != arrivalTimes.end())
 					orderedIndexes.insert(make_pair((*it).second, n));

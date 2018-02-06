@@ -31,6 +31,7 @@ extern mongoc_collection_t *assethistory_collection;
 extern void SendMoneySyscoin(const vector<unsigned char> &vchAlias, const vector<unsigned char> &vchWitness, const CRecipient &aliasRecipient, CRecipient &aliasPaymentRecipient, vector<CRecipient> &vecSend, CWalletTx& wtxNew, CCoinControl* coinControl, bool fUseInstantSend=false, bool transferAlias=false);
 bool IsAssetOp(int op) {
     return op == OP_ASSET_ACTIVATE
+		|| op == OP_ASSET_MINT
         || op == OP_ASSET_UPDATE
         || op == OP_ASSET_TRANSFER
 		|| op == OP_ASSET_SEND;
@@ -51,6 +52,8 @@ string assetFromOp(int op) {
         return "assetactivate";
     case OP_ASSET_UPDATE:
         return "assetupdate";
+	case OP_ASSET_MINT:
+		return "assetmint";
     case OP_ASSET_TRANSFER:
         return "assettransfer";
 	case OP_ASSET_SEND:
@@ -481,16 +484,16 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 		}
 		if (op == OP_ASSET_UPDATE) {
 			CAmount increaseBalanceByAmount = theAsset.nBalance;
-			theAsset.nBalance = dbAsset.nBalance;
 			if (!theAsset.listAllocationInputs.empty()) {
-				if (!dbAsset.bUseInputRanges)
+				theAsset.nBalance = dbAsset.nBalance;
+				if(!dbAsset.bUseInputRanges)
 				{
 					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("This asset does not use input ranges");
 					return true;
 				}
 				// ensure the new inputs being added are greator than the last input
 				for (auto&input : theAsset.listAllocationInputs) {
-					if (input.start < (dbAsset.nTotalSupply / COIN))
+					if(input.start < (dbAsset.nTotalSupply/COIN))
 					{
 						errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Cannot edit this asset. New asset inputs must be added to the end of the supply");
 						return true;
@@ -508,9 +511,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				theAsset.listAllocationInputs = outputMerge;
 				theAsset.nBalance += increaseBalanceByAmount;
 			}
-			else
-				theAsset.listAllocationInputs = dbAsset.listAllocationInputs;
-
+			
 			// increase total supply
 			theAsset.nTotalSupply += increaseBalanceByAmount;
 			if (dbAsset.nMaxSupply > 0 && theAsset.nTotalSupply > dbAsset.nMaxSupply)
@@ -558,7 +559,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to.");
 						continue;
 					}
-					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ALL))
+					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
 					{
 						errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
 						continue;
@@ -629,7 +630,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
 						return true;
 					}
-					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ALL))
+					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
 					{
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
 						return true;
@@ -694,7 +695,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
 					return true;
 				}
-				if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ALL))
+				if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
 				{
 					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("The alias you are transferring to does not accept assets");
 					return true;

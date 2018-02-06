@@ -69,6 +69,9 @@
 #include <memory>
 // SYSCOIN services
 #include "alias.h"
+#include "offer.h"
+#include "cert.h"
+#include "escrow.h"
 #include "asset.h"
 #include "assetallocation.h"
 
@@ -279,6 +282,20 @@ void PrepareShutdown()
 			delete paliasdb;
 			paliasdb = NULL;
 		}
+		if (pofferdb != NULL)
+		{
+			if (!pofferdb->Flush())
+				LogPrintf("Failed to write to offer database!");
+			delete pofferdb;
+			pofferdb = NULL;
+		}
+		if (pcertdb != NULL)
+		{
+			if (!pcertdb->Flush())
+				LogPrintf("Failed to write to cert database!");
+			delete pcertdb;
+			pcertdb = NULL;
+		}
 		if (passetdb != NULL)
 		{
 			if (!passetdb->Flush())
@@ -292,6 +309,13 @@ void PrepareShutdown()
 				LogPrintf("Failed to write to asset allocation database!");
 			delete passetallocationdb;
 			passetallocationdb = NULL;
+		}
+		if (pescrowdb != NULL)
+		{
+			if (!pescrowdb->Flush())
+				LogPrintf("Failed to write to escrow database!");
+			delete pescrowdb;
+			pescrowdb = NULL;
 		}
 		delete pcoinsTip;
 		pcoinsTip = NULL;
@@ -1594,16 +1618,22 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 				delete pblocktree;
 				// SYSCOIN service db's
 				delete paliasdb;
+				delete pofferdb;
+				delete pcertdb;
 				delete passetdb;
 				delete passetallocationdb;
+				delete pescrowdb;
 
 				pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
 				pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex || fReindexChainState);
 				pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
 				pcoinsTip = new CCoinsViewCache(pcoinscatcher);
 				paliasdb = new CAliasDB(nCoinCacheUsage * 20, false, fReindex);
+				pofferdb = new COfferDB(nCoinCacheUsage * 2, false, fReindex);
+				pcertdb = new CCertDB(nCoinCacheUsage * 2, false, fReindex);
 				passetdb = new CAssetDB(nCoinCacheUsage * 2, false, fReindex);
 				passetallocationdb = new CAssetAllocationDB(nCoinCacheUsage * 2, false, fReindex);
+				pescrowdb = new CEscrowDB(nCoinCacheUsage * 2, false, fReindex);
 				startMongoDB();
 				if (fReindex) {
 					pblocktree->WriteReindexing(true);

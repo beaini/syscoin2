@@ -414,10 +414,37 @@ static const CRPCCommand vRPCCommands[] =
 	{ "wallet", "aliasbalance",      &aliasbalance,         false },
 	{ "wallet", "aliaspay",       &aliaspay,       false },
 	{ "wallet", "aliasaddscript",        &aliasaddscript,       false },
+	{ "wallet", "aliasupdatewhitelist",        &aliasupdatewhitelist,       false },
+	{ "wallet", "aliasclearwhitelist",        &aliasclearwhitelist,       false },
+	{ "wallet", "aliaswhitelist",        &aliaswhitelist,       false },
 	{ "wallet", "syscoinsendrawtransaction",		 &syscoinsendrawtransaction,	false },
 	{ "wallet", "syscoindecoderawtransaction",		 &syscoindecoderawtransaction,	false },
 	{ "wallet", "syscoinquery",          &syscoinquery,          false },
 	{ "wallet", "prunesyscoinservices",          &prunesyscoinservices,          false },
+
+		// use the blockchain as a distributed marketplace
+	{ "wallet", "offernew",             &offernew,             false },
+	{ "wallet", "offerupdate",          &offerupdate,          false },
+	{ "wallet", "offerlink",		    &offerlink,            false },
+	{ "wallet", "offerinfo",            &offerinfo,            false },
+
+		// use the blockchain as a certificate issuance platform
+	{ "wallet", "certnew",         &certnew,     false },
+	{ "wallet", "certupdate",      &certupdate,  false },
+	{ "wallet", "certtransfer",          &certtransfer,      false },
+	{ "wallet", "certinfo",              &certinfo,          false },
+
+		// use the blockchain for escrow linked to offers
+	{ "wallet", "escrownew",         &escrownew,     false },
+	{ "wallet", "escrowbid",         &escrowbid,     false },
+	{ "wallet", "escrowcreaterawtransaction",      &escrowcreaterawtransaction,  false },
+	{ "wallet", "escrowrelease",      &escrowrelease,  false },
+	{ "wallet", "escrowcompleterelease",      &escrowcompleterelease,  false },
+	{ "wallet", "escrowrefund",          &escrowrefund,      false },
+	{ "wallet", "escrowcompleterefund",          &escrowcompleterefund,      false },
+	{ "wallet", "escrowinfo",              &escrowinfo,          false },
+	{ "wallet", "escrowfeedback",      &escrowfeedback,  false },
+	{ "wallet", "escrowacknowledge",      &escrowacknowledge,  false },
 
 	// assets using the blockchain, coins/points/service backed tokens
 	{ "wallet", "assetnew",         &assetnew,     false },

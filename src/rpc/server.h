@@ -309,9 +309,33 @@ extern UniValue aliasbalance(const UniValue& params, bool fHelp);
 extern UniValue prunesyscoinservices(const UniValue& params, bool fHelp);
 extern UniValue aliaspay(const UniValue& params, bool fHelp);
 extern UniValue aliasaddscript(const UniValue& params, bool fHelp);
+extern UniValue aliasupdatewhitelist(const UniValue& params, bool fHelp);
+extern UniValue aliasclearwhitelist(const UniValue& params, bool fHelp);
+extern UniValue aliaswhitelist(const UniValue& params, bool fHelp);
 extern UniValue syscoinsendrawtransaction(const UniValue& params, bool fHelp);
 extern UniValue syscoindecoderawtransaction(const UniValue& params, bool fHelp);
 extern UniValue syscoinquery(const UniValue& params, bool fHelp);
+
+extern UniValue offernew(const UniValue& params, bool fHelp);
+extern UniValue offerupdate(const UniValue& params, bool fHelp);
+extern UniValue offerlink(const UniValue& params, bool fHelp);
+extern UniValue offerinfo(const UniValue& params, bool fHelp);
+
+extern UniValue certupdate(const UniValue& params, bool fHelp);
+extern UniValue certnew(const UniValue& params, bool fHelp);
+extern UniValue certtransfer(const UniValue& params, bool fHelp);
+extern UniValue certinfo(const UniValue& params, bool fHelp);
+
+extern UniValue escrownew(const UniValue& params, bool fHelp);
+extern UniValue escrowbid(const UniValue& params, bool fHelp);
+extern UniValue escrowcreaterawtransaction(const UniValue& params, bool fHelp);
+extern UniValue escrowrelease(const UniValue& params, bool fHelp);
+extern UniValue escrowcompleterelease(const UniValue& params, bool fHelp);
+extern UniValue escrowrefund(const UniValue& params, bool fHelp);
+extern UniValue escrowcompleterefund(const UniValue& params, bool fHelp);
+extern UniValue escrowinfo(const UniValue& params, bool fHelp);
+extern UniValue escrowfeedback(const UniValue& params, bool fHelp);
+extern UniValue escrowacknowledge(const UniValue& params, bool fHelp);
 
 extern UniValue assetnew(const UniValue& params, bool fHelp);
 extern UniValue assetupdate(const UniValue& params, bool fHelp);

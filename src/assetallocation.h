@@ -7,6 +7,7 @@
 
 #include "rpc/server.h"
 #include "dbwrapper.h"
+#include "feedback.h"
 #include "primitives/transaction.h"
 #include "ranges.h"
 #include <unordered_map>
