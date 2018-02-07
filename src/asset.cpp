@@ -482,6 +482,11 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Total supply cannot exceed maximum supply");
 				return true;
 			}
+			if (theAsset.nTotalSupply < dbAsset.nMaxSupply && theAsset.fInterestRatePerYear > 0)
+			{
+				ApplyAssetInterestRate(theAsset);
+
+			}
 		}
 		else if (op != OP_ASSET_ACTIVATE) {
 			theAsset.nBalance = dbAsset.nBalance;
@@ -630,12 +635,6 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			{
 				// cannot adjust allocation inputs upon transfer, balance's and maxsupply are also non-alterable and set to default in an above if statement
 				theAsset.listAllocationInputs = dbAsset.listAllocationInputs;
-				// check toalias
-				if (!GetAlias(theAsset.vchAlias, alias))
-				{
-					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
-					return true;
-				}
 			}
 		}
 		if (op == OP_ASSET_ACTIVATE)
@@ -677,9 +676,9 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 }
 
 UniValue assetnew(const UniValue& params, bool fHelp) {
-    if (fHelp || params.size() != 8)
+    if (fHelp || params.size() != 10)
         throw runtime_error(
-			"assetnew [name] [alias] [public] [category=assets] [supply] [max_supply] [use_inputranges] [witness]\n"
+			"assetnew [name] [alias] [public] [category=assets] [supply] [max_supply] [use_inputranges] [interest_rate] [can_adjust_interest_rate] [witness]\n"
 						"<name> name, 20 characters max.\n"
 						"<alias> An alias you own.\n"
                         "<public> public data, 256 characters max.\n"
@@ -687,6 +686,8 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 						"<supply> Initial supply of asset. Can mint more supply up to total_supply amount or if total_supply is -1 then minting is uncapped.\n"
 						"<max_supply> Maximum supply of this asset. Set to -1 for uncapped.\n"
 						"<use_inputranges> If this asset uses an input for every token, useful if you need to keep track of a token regardless of ownership.\n"
+						"<interest_rate> If this asset pays out in interest to holders. Annual interest compounded monthly. Money supply is still capped to total supply.\n"
+						"<can_adjust_interest_rate> Ability to adjust interest rate through assetupdate in the future.\n"
 						"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
 						+ HelpRequiringPassphrase());
     vector<unsigned char> vchName = vchFromString(params[0].get_str());
@@ -698,7 +699,9 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 	CAmount nBalance = AmountFromValue(params[4]);
 	CAmount nMaxSupply = AmountFromValue(params[5]);
 	bool bUseInputRanges = params[6].get_bool();
-	vchWitness = vchFromValue(params[7]);
+	float fInterestRate = params[7].get_real();
+	bool bCanAdjustInterestRate = params[8].get_bool();
+	vchWitness = vchFromValue(params[9]);
 	// check for alias existence in DB
 	CAliasIndex theAlias;
 
@@ -726,6 +729,8 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 	newAsset.nBalance = nBalance;
 	newAsset.nMaxSupply = nMaxSupply;
 	newAsset.bUseInputRanges = bUseInputRanges;
+	newAsset.fInterestRate = fInterestRate;
+	newAsset.bCanAdjustInterestRate = bCanAdjustInterestRate;
 	if (bUseInputRanges)
 	{
 		CRange range(0, (nBalance/COIN) - 1);
@@ -770,14 +775,15 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 }
 
 UniValue assetupdate(const UniValue& params, bool fHelp) {
-    if (fHelp || params.size() != 5)
+    if (fHelp || params.size() != 6)
         throw runtime_error(
-			"assetupdate [asset] [public] [category=assets] [supply] [witness]\n"
+			"assetupdate [asset] [public] [category=assets] [supply] [interest_rate] [witness]\n"
 						"Perform an update on an asset you control.\n"
 						"<asset> Asset name.\n"
                         "<public> Public data, 256 characters max.\n"                
 						"<category> Category, 256 characters max. Defaults to assets\n"
 						"<supply> New supply of asset. Can mint more supply up to total_supply amount or if max_supply is - 1 then minting is uncapped.\n"
+						"<interest_rate> If this asset pays out in interest to holders. Annual interest compounded monthly. Money supply is still capped to total supply. Can only set if this asset allows adjustment of interest rate.\n"
 						"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
 						+ HelpRequiringPassphrase());
 	vector<unsigned char> vchAsset = vchFromValue(params[0]);
@@ -788,8 +794,9 @@ UniValue assetupdate(const UniValue& params, bool fHelp) {
 	strPubData = params[1].get_str();
 	strCategory = params[2].get_str();
 	CAmount nBalance = AmountFromValue(params[3]);
+	float fInterestRate = params[4].get_real();
 	vector<unsigned char> vchWitness;
-	vchWitness = vchFromValue(params[4]);
+	vchWitness = vchFromValue(params[5]);
     // this is a syscoind txn
     CWalletTx wtx;
     CScript scriptPubKeyOrig;
@@ -817,6 +824,7 @@ UniValue assetupdate(const UniValue& params, bool fHelp) {
 		theAsset.sCategory = vchFromString(strCategory);
 
 	theAsset.nBalance = nBalance;
+	theAsset.fInterestRate = fInterestRate;
 	// if using input ranges merge in the new balance
 	if (copyAsset.bUseInputRanges && nBalance > 0)
 	{

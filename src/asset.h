@@ -43,6 +43,8 @@ public:
 	CAmount nTotalSupply;
 	CAmount nMaxSupply;
 	bool bUseInputRanges;
+	float fInterestRatePerYear;
+	bool bCanAdjustInterestRate;
     CAsset() {
         SetNull();
     }
@@ -72,6 +74,8 @@ public:
 		READWRITE(nTotalSupply);
 		READWRITE(nMaxSupply);
 		READWRITE(bUseInputRanges);
+		READWRITE(fInterestRatePerYear);
+		READWRITE(bCanAdjustInterestRate);
 	}
     inline friend bool operator==(const CAsset &a, const CAsset &b) {
         return (
@@ -91,13 +95,15 @@ public:
 		nTotalSupply = b.nTotalSupply;
 		nMaxSupply = b.nMaxSupply;
 		bUseInputRanges = b.bUseInputRanges;
+		fInterestRatePerYear = b.fInterestRatePerYear;
+		bCanAdjustInterestRate = b.bCanAdjustInterestRate;
         return *this;
     }
 
     inline friend bool operator!=(const CAsset &a, const CAsset &b) {
         return !(a == b);
     }
-	inline void SetNull() { bUseInputRanges = false; nMaxSupply = 0; nTotalSupply = 0; nBalance = 0; listAllocationInputs.clear(); sCategory.clear(); vchAsset.clear(); nHeight = 0; txHash.SetNull(); vchAlias.clear(); vchPubData.clear(); }
+	inline void SetNull() { bCanAdjustInterestRate = false; fInterestRatePerYear = 0;  bUseInputRanges = false; nMaxSupply = 0; nTotalSupply = 0; nBalance = 0; listAllocationInputs.clear(); sCategory.clear(); vchAsset.clear(); nHeight = 0; txHash.SetNull(); vchAlias.clear(); vchPubData.clear(); }
     inline bool IsNull() const { return (vchAsset.empty()); }
     bool UnserializeFromTx(const CTransaction &tx);
 	bool UnserializeFromData(const std::vector<unsigned char> &vchData, const std::vector<unsigned char> &vchHash);
