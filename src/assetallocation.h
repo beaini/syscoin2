@@ -170,7 +170,6 @@ public:
 		EraseAssetAllocationIndex(assetAllocationTuple, cleanup);
 		return eraseState;
 	}
-	bool CleanupDatabase(int &servicesCleaned);
     bool ReadAssetAllocation(const CAssetAllocationTuple& assetAllocationTuple, CAssetAllocation& assetallocation) {
         return Read(make_pair(std::string("assetallocationi"), assetAllocationTuple), assetallocation);
     }
@@ -202,6 +201,5 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 bool GetAssetAllocation(const CAssetAllocationTuple& assetAllocationTuple,CAssetAllocation& txPos);
 bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const bool bGetInputs, UniValue& oName);
 bool BuildAssetAllocationIndexerJson(const CAssetAllocation& assetallocation,UniValue& oName);
-uint64_t GetAssetAllocationExpiration(const CAssetAllocation& assetallocation);
 bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove, const uint256 &txHash, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations);
 #endif // ASSETALLOCATION_H

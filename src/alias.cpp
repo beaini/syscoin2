@@ -186,28 +186,6 @@ bool GetTimeToPrune(const CScript& scriptPubKey, uint64_t &nTime)
 		nTime = GetEscrowExpiration(escrow);
 		return true;
 	}
-	else if (asset.UnserializeFromData(vchData, vchHash))
-	{
-		if (!passetdb || !passetdb->ReadAsset(asset.vchAsset, asset))
-		{
-			// setting to the tip means we don't prune this data, we keep it
-			nTime = chainActive.Tip()->GetMedianTimePast() + 1;
-			return true;
-		}
-		nTime = GetAssetExpiration(asset);
-		return true;
-	}
-	else if (assetallocation.UnserializeFromData(vchData, vchHash))
-	{
-		if (!passetallocationdb || !passetallocationdb->ReadAssetAllocation(CAssetAllocationTuple(assetallocation.vchAsset, assetallocation.vchAlias), assetallocation))
-		{
-			// setting to the tip means we don't prune this data, we keep it
-			nTime = chainActive.Tip()->GetMedianTimePast() + 1;
-			return true;
-		}
-		nTime = GetAssetAllocationExpiration(assetallocation);
-		return true;
-	}
 	return false;
 }
 bool IsSysServiceExpired(const uint64_t &nTime)
@@ -867,10 +845,6 @@ void CleanupSyscoinServiceDatabases(int &numServicesCleaned)
 		pescrowdb->CleanupDatabase(numServicesCleaned);
 	if(pcertdb!= NULL)
 		pcertdb->CleanupDatabase(numServicesCleaned);
-	if (passetdb != NULL)
-		passetdb->CleanupDatabase(numServicesCleaned);
-	if (passetallocationdb != NULL)
-		passetallocationdb->CleanupDatabase(numServicesCleaned);
 	if (paliasdb != NULL) 
 		paliasdb->CleanupDatabase(numServicesCleaned);
 	

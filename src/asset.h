@@ -123,7 +123,6 @@ public:
     bool ReadAsset(const std::vector<unsigned char>& vchAsset, CAsset& asset) {
         return Read(make_pair(std::string("asseti"), vchAsset), asset);
     }
-	bool CleanupDatabase(int &servicesCleaned);
 	void WriteAssetIndex(const CAsset& asset, const int &op);
 	void EraseAssetIndex(const std::vector<unsigned char>& vchAsset, bool cleanup);
 	void WriteAssetIndexHistory(const CAsset& asset, const int &op);
@@ -135,5 +134,4 @@ bool GetAsset(const std::vector<unsigned char> &vchAsset,CAsset& txPos);
 bool BuildAssetJson(const CAsset& asset, const bool bGetInputs, UniValue& oName);
 bool BuildAssetIndexerJson(const CAsset& asset,UniValue& oName);
 bool BuildAssetIndexerHistoryJson(const CAsset& asset, UniValue& oName);
-uint64_t GetAssetExpiration(const CAsset& asset);
 #endif // ASSET_H

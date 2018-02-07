@@ -38,15 +38,6 @@ bool IsAssetAllocationOp(int op) {
 string CAssetAllocationTuple::ToString() const {
 	return stringFromVch(vchAsset) + "-" + stringFromVch(vchAlias);
 }
-uint64_t GetAssetAllocationExpiration(const CAssetAllocation& assetallocation) {
-	uint64_t nTime = chainActive.Tip()->GetMedianTimePast() + 1;
-	CAliasUnprunable aliasUnprunable;
-	if (paliasdb && paliasdb->ReadAliasUnprunable(assetallocation.vchAlias, aliasUnprunable) && !aliasUnprunable.IsNull())
-		nTime = aliasUnprunable.nExpireTime;
-
-	return nTime;
-}
-
 string assetAllocationFromOp(int op) {
     switch (op) {
 	case OP_ASSET_ALLOCATION_SEND:
@@ -143,39 +134,10 @@ void CAssetAllocationDB::EraseAssetAllocationIndex(const CAssetAllocationTuple& 
 	if (write_concern)
 		mongoc_write_concern_destroy(write_concern);
 }
-bool CAssetAllocationDB::CleanupDatabase(int &servicesCleaned)
-{
-	boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
-	pcursor->SeekToFirst();
-	CAssetAllocation txPos;
-	pair<string, CAssetAllocationTuple > key;
-	while (pcursor->Valid()) {
-		boost::this_thread::interruption_point();
-		try {
-			if (pcursor->GetKey(key) && key.first == "assetallocationi") {
-				if (!GetAssetAllocation(key.second, txPos) || chainActive.Tip()->GetMedianTimePast() >= GetAssetAllocationExpiration(txPos))
-				{
-					servicesCleaned++;
-					EraseAssetAllocation(key.second, true);
-				}
-
-			}
-			pcursor->Next();
-		}
-		catch (std::exception &e) {
-			return error("%s() : deserialize error", __PRETTY_FUNCTION__);
-		}
-	}
-	return true;
-}
 bool GetAssetAllocation(const CAssetAllocationTuple &assetAllocationTuple,
         CAssetAllocation& txPos) {
     if (!passetallocationdb || !passetallocationdb->ReadAssetAllocation(assetAllocationTuple, txPos))
         return false;
-	if (chainActive.Tip()->GetMedianTimePast() >= GetAssetAllocationExpiration(txPos)) {
-		txPos.SetNull();
-		return false;
-	}
     return true;
 }
 bool DecodeAndParseAssetAllocationTx(const CTransaction& tx, int& op, int& nOut,
@@ -471,17 +433,6 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				}
 				const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, amountTuple.first);
 				if (fJustCheck) {
-					// check receiver alias
-					if (!GetAlias(amountTuple.first, alias))
-					{
-						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
-						return true;
-					}
-					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
-					{
-						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
-						return true;
-					}
 					if (bAddAllReceiversToConflictList || bBalanceOverrun) {
 						LogPrintf("CheckAssetAllocationInputs: adding recver %s to conflict list\n", receiverAllocationTuple.ToString().c_str());
 						assetAllocationConflicts.insert(receiverAllocationTuple);
@@ -570,17 +521,6 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				}
 				const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, input.first);
 				if (fJustCheck) {
-					// check receiver alias
-					if (!GetAlias(input.first, alias))
-					{
-						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
-						return true;
-					}
-					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
-					{
-						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
-						return true;
-					}
 					if (bAddAllReceiversToConflictList || bBalanceOverrun) {
 						LogPrintf("CheckAssetAllocationInputs: adding recver %s to conflict list\n", receiverAllocationTuple.ToString().c_str());
 						assetAllocationConflicts.insert(receiverAllocationTuple);
@@ -681,6 +621,7 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	if (!valueTo.isArray())
 		throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Array of receivers not found");
 
+	CAliasIndex toAlias;
 	CAssetAllocation theAssetAllocation;
 	theAssetAllocation.vchAsset = vchAsset;
 
@@ -692,6 +633,9 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 
 		UniValue receiverObj = receiver.get_obj();
 		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "alias"));
+		if (!GetAlias(vchAliasTo, toAlias))
+			throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2509 - " + _("Failed to read recipient alias from DB"));
+
 		UniValue inputRangeObj = find_value(receiverObj, "ranges");
 		UniValue amountObj = find_value(receiverObj, "amount");
 		if (inputRangeObj.isArray()) {
@@ -896,14 +840,6 @@ bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const boo
     oAssetAllocation.push_back(Pair("height", (int)assetallocation.nHeight));
 	oAssetAllocation.push_back(Pair("alias", stringFromVch(assetallocation.vchAlias)));
 	oAssetAllocation.push_back(Pair("balance", ValueFromAmount(assetallocation.nBalance)));
-	int64_t expired_time = GetAssetAllocationExpiration(assetallocation);
-	bool expired = false;
-	if (expired_time <= chainActive.Tip()->GetMedianTimePast())
-	{
-		expired = true;
-	}
-	oAssetAllocation.push_back(Pair("expires_on", expired_time));
-	oAssetAllocation.push_back(Pair("expired", expired));
 	if (bGetInputs) {
 		UniValue oAssetAllocationInputsArray(UniValue::VARR);
 		for (auto& input : assetallocation.listAllocationInputs) {

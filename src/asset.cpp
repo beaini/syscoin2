@@ -37,14 +37,6 @@ bool IsAssetOp(int op) {
 		|| op == OP_ASSET_SEND;
 }
 
-uint64_t GetAssetExpiration(const CAsset& asset) {
-	uint64_t nTime = chainActive.Tip()->GetMedianTimePast() + 1;
-	CAliasUnprunable aliasUnprunable;
-	if (paliasdb && paliasdb->ReadAliasUnprunable(asset.vchAlias, aliasUnprunable) && !aliasUnprunable.IsNull())
-		nTime = aliasUnprunable.nExpireTime;
-
-	return nTime;
-}
 
 string assetFromOp(int op) {
     switch (op) {
@@ -213,39 +205,10 @@ void CAssetDB::EraseAssetIndex(const std::vector<unsigned char>& vchAsset, bool 
 		mongoc_write_concern_destroy(write_concern);
 	EraseAssetIndexHistory(vchAsset, cleanup);
 }
-bool CAssetDB::CleanupDatabase(int &servicesCleaned)
-{
-	boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
-	pcursor->SeekToFirst();
-	CAsset txPos;
-	pair<string, vector<unsigned char> > key;
-	while (pcursor->Valid()) {
-		boost::this_thread::interruption_point();
-		try {
-			if (pcursor->GetKey(key) && key.first == "asseti") {
-				if (!GetAsset(key.second, txPos) || chainActive.Tip()->GetMedianTimePast() >= GetAssetExpiration(txPos))
-				{
-					servicesCleaned++;
-					EraseAsset(key.second, true);
-				}
-
-			}
-			pcursor->Next();
-		}
-		catch (std::exception &e) {
-			return error("%s() : deserialize error", __PRETTY_FUNCTION__);
-		}
-	}
-	return true;
-}
 bool GetAsset(const vector<unsigned char> &vchAsset,
         CAsset& txPos) {
     if (!passetdb || !passetdb->ReadAsset(vchAsset, txPos))
         return false;
-	if (chainActive.Tip()->GetMedianTimePast() >= GetAssetExpiration(txPos)) {
-		txPos.SetNull();
-		return false;
-	}
     return true;
 }
 bool DecodeAndParseAssetTx(const CTransaction& tx, int& op, int& nOut,
@@ -553,17 +516,6 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 					return true;
 				}
 				for (auto& amountTuple : theAssetAllocation.listSendingAllocationAmounts) {
-					// check receiver alias
-					if (!GetAlias(amountTuple.first, alias))
-					{
-						errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to.");
-						continue;
-					}
-					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
-					{
-						errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
-						continue;
-					}
 
 					if (!dontaddtodb) {
 						CAssetAllocation receiverAllocation;
@@ -624,17 +576,6 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 					CAssetAllocation receiverAllocation;
 
 					const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, input.first);
-					// check receiver alias
-					if (!GetAlias(input.first, alias))
-					{
-						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
-						return true;
-					}
-					if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
-					{
-						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("An alias you are transferring to does not accept assets");
-						return true;
-					}
 					// ensure entire allocation range being subtracted exists on sender (full inclusion check)
 					if (!doesRangeContain(dbAsset.listAllocationInputs, input.second))
 					{
@@ -693,11 +634,6 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				if (!GetAlias(theAsset.vchAlias, alias))
 				{
 					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find alias you are transferring to");
-					return true;
-				}
-				if (!(alias.nAcceptTransferFlags & ACCEPT_TRANSFER_ASSETS))
-				{
-					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("The alias you are transferring to does not accept assets");
 					return true;
 				}
 			}
@@ -1046,6 +982,7 @@ UniValue assetsend(const UniValue& params, bool fHelp) {
 	if (!GetAsset(vchAsset, theAsset))
 		throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2510 - " + _("Could not find a asset with this key"));
 
+	CAliasIndex toAlias;
 	CAssetAllocation theAssetAllocation;
 	theAssetAllocation.vchAsset = vchAsset;
 
@@ -1055,8 +992,12 @@ UniValue assetsend(const UniValue& params, bool fHelp) {
 		if (!receiver.isObject())
 			throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "expected object with {\"alias'\",\"inputranges\" or \"amount\"}");
 
+	
 		UniValue receiverObj = receiver.get_obj();
 		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "alias"));
+		if (!GetAlias(vchAliasTo, toAlias))
+			throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2509 - " + _("Failed to read recipient alias from DB"));
+
 		UniValue inputRangeObj = find_value(receiverObj, "ranges");
 		UniValue amountObj = find_value(receiverObj, "amount");
 		if (inputRangeObj.isArray()) {
@@ -1182,16 +1123,7 @@ bool BuildAssetJson(const CAsset& asset, const bool bGetInputs, UniValue& oAsset
 	oAsset.push_back(Pair("balance", ValueFromAmount(asset.nBalance)));
 	oAsset.push_back(Pair("total_supply", ValueFromAmount(asset.nTotalSupply)));
 	oAsset.push_back(Pair("max_supply", ValueFromAmount(asset.nMaxSupply)));
-	int64_t expired_time = GetAssetExpiration(asset);
-	bool expired = false;
-	if (expired_time <= chainActive.Tip()->GetMedianTimePast())
-	{
-		expired = true;
-	}
 
-
-	oAsset.push_back(Pair("expires_on", expired_time));
-	oAsset.push_back(Pair("expired", expired));
 	if (bGetInputs) {
 		UniValue oAssetAllocationInputsArray(UniValue::VARR);
 		for (auto& input : asset.listAllocationInputs) {
