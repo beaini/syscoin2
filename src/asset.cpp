@@ -298,7 +298,20 @@ bool RemoveAssetScriptPrefix(const CScript& scriptIn, CScript& scriptOut) {
 	scriptOut = CScript(pc, scriptIn.end());
 	return true;
 }
-
+// calculate compound interest on an asset
+// depends on total possible interest and that it does not cross maxsupply threshold should this interest be accounted for
+// only add interest since the last time this asset was updated
+void ApplyAssetInterestRate(CAsset& asset) {
+	// since inception, we should know how much total interest could have been accrued
+	// time between inception and this asset update
+	int64_t &nTimeDifference = chainActive[asset.nHeight]->GetMedianTimePast() - chainActive[asset.nStartHeight]->GetMedianTimePast();
+	if (nTimeDifference <= 0)
+		return;
+	// convert seconds to years
+	int nYears = nTimeDifference / 31536000;
+	CAmount nNewMaxTotalSupply = asset.nTotalSupply*pow(1 + (asset.fInterestRatePerYear / 12), nYears);
+	asset.fInterestRatePerYear*asset.nMaxSupply
+}
 bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias,
         bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool dontaddtodb) {
 	if (!paliasdb || !passetdb)
@@ -482,11 +495,6 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Total supply cannot exceed maximum supply");
 				return true;
 			}
-			if (theAsset.nTotalSupply < dbAsset.nMaxSupply && theAsset.fInterestRatePerYear > 0)
-			{
-				ApplyAssetInterestRate(theAsset);
-
-			}
 		}
 		else if (op != OP_ASSET_ACTIVATE) {
 			theAsset.nBalance = dbAsset.nBalance;
@@ -635,6 +643,12 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			{
 				// cannot adjust allocation inputs upon transfer, balance's and maxsupply are also non-alterable and set to default in an above if statement
 				theAsset.listAllocationInputs = dbAsset.listAllocationInputs;
+			}
+			if (theAsset.nTotalSupply < dbAsset.nMaxSupply)
+			{
+				ApplyAssetInterestRate(theAsset);
+				if (theAsset.nTotalSupply > dbAsset.nMaxSupply)
+					theAsset.nTotalSupply = dbAsset.nMaxSupply;
 			}
 		}
 		if (op == OP_ASSET_ACTIVATE)
