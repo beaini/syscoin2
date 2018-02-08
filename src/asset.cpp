@@ -298,20 +298,6 @@ bool RemoveAssetScriptPrefix(const CScript& scriptIn, CScript& scriptOut) {
 	scriptOut = CScript(pc, scriptIn.end());
 	return true;
 }
-// calculate compound interest on an asset
-// depends on total possible interest and that it does not cross maxsupply threshold should this interest be accounted for
-// only add interest since the last time this asset was updated
-void ApplyAssetInterestRate(CAsset& asset) {
-	// since inception, we should know how much total interest could have been accrued
-	// time between inception and this asset update
-	int64_t &nTimeDifference = chainActive[asset.nHeight]->GetMedianTimePast() - chainActive[asset.nStartHeight]->GetMedianTimePast();
-	if (nTimeDifference <= 0)
-		return;
-	// convert seconds to years
-	int nYears = nTimeDifference / 31536000;
-	CAmount nNewMaxTotalSupply = asset.nTotalSupply*pow(1 + (asset.fInterestRatePerYear / 12), nYears);
-	asset.fInterestRatePerYear*asset.nMaxSupply
-}
 bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias,
         bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool dontaddtodb) {
 	if (!paliasdb || !passetdb)
@@ -393,6 +379,12 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2013 - " + _("Cannot specify input range for this asset");
 				return error(errorMessage.c_str());
 			}
+
+			if (theAsset.fInterestRate < 0 || theAsset.fInterestRate > 1)
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2013 - " + _("Interest must be between 0 and 1");
+				return error(errorMessage.c_str());
+			}
 			break;
 
 		case OP_ASSET_UPDATE:
@@ -404,6 +396,11 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			if (theAsset.nBalance < 0)
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2015 - " + _("Balance must be greator than or equal to 0");
+				return error(errorMessage.c_str());
+			}
+			if (theAsset.fInterestRate < 0 || theAsset.fInterestRate > 1)
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2013 - " + _("Interest must be between 0 and 1");
 				return error(errorMessage.c_str());
 			}
 			break;
@@ -421,9 +418,9 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Asset send must send an input or transfer balance");
 				return error(errorMessage.c_str());
 			}
-			if (theAssetAllocation.listSendingAllocationInputs.size() > 50 && theAssetAllocation.listSendingAllocationAmounts.size() > 50)
+			if (theAssetAllocation.listSendingAllocationInputs.size() > 250 || theAssetAllocation.listSendingAllocationAmounts.size() > 250)
 			{
-				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Too many receivers in one allocation send, maximum of 50 is allowed at once");
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Too many receivers in one allocation send, maximum of 250 is allowed at once");
 				return error(errorMessage.c_str());
 			}
 			break;
@@ -501,6 +498,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			theAsset.nTotalSupply = dbAsset.nBalance;
 			theAsset.nMaxSupply = dbAsset.nMaxSupply;
 			theAsset.bUseInputRanges = dbAsset.bUseInputRanges;
+			theAsset.bCanAdjustInterestRate = dbAsset.bCanAdjustInterestRate;
 		}
 
 		if (op == OP_ASSET_SEND) {
@@ -638,18 +636,19 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			if (theAsset.sCategory.empty())
 				theAsset.sCategory = dbAsset.sCategory;
 
-
+			if (op == OP_ASSET_UPDATE) {
+				if (!theAsset.bCanAdjustInterestRate && theAsset.fInterestRate != dbAsset.fInterestRate) {
+					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2022 - " + _("Cannot adjust interest rate or compound term for this asset");
+					return true;
+				}
+			}
 			if (op == OP_ASSET_TRANSFER)
 			{
-				// cannot adjust allocation inputs upon transfer, balance's and maxsupply are also non-alterable and set to default in an above if statement
+				// cannot adjust allocation inputs upon transfer, balance's and maxsupply or interest rate variables are also non-alterable and set to default in an above if statement
 				theAsset.listAllocationInputs = dbAsset.listAllocationInputs;
+				theAsset.fInterestRate = dbAsset.fInterestRate;
 			}
-			if (theAsset.nTotalSupply < dbAsset.nMaxSupply)
-			{
-				ApplyAssetInterestRate(theAsset);
-				if (theAsset.nTotalSupply > dbAsset.nMaxSupply)
-					theAsset.nTotalSupply = dbAsset.nMaxSupply;
-			}
+
 		}
 		if (op == OP_ASSET_ACTIVATE)
 		{
@@ -700,7 +699,7 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 						"<supply> Initial supply of asset. Can mint more supply up to total_supply amount or if total_supply is -1 then minting is uncapped.\n"
 						"<max_supply> Maximum supply of this asset. Set to -1 for uncapped.\n"
 						"<use_inputranges> If this asset uses an input for every token, useful if you need to keep track of a token regardless of ownership.\n"
-						"<interest_rate> If this asset pays out in interest to holders. Annual interest compounded monthly. Money supply is still capped to total supply.\n"
+						"<interest_rate> The annual interest rate if any. Money supply is still capped to total supply. Should be between 0 and 1 and represents a percentage divided by 100.\n"
 						"<can_adjust_interest_rate> Ability to adjust interest rate through assetupdate in the future.\n"
 						"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
 						+ HelpRequiringPassphrase());
@@ -715,7 +714,7 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 	bool bUseInputRanges = params[6].get_bool();
 	float fInterestRate = params[7].get_real();
 	bool bCanAdjustInterestRate = params[8].get_bool();
-	vchWitness = vchFromValue(params[9]);
+	vchWitness = vchFromValue(params[9);
 	// check for alias existence in DB
 	CAliasIndex theAlias;
 
@@ -796,8 +795,8 @@ UniValue assetupdate(const UniValue& params, bool fHelp) {
 						"<asset> Asset name.\n"
                         "<public> Public data, 256 characters max.\n"                
 						"<category> Category, 256 characters max. Defaults to assets\n"
-						"<supply> New supply of asset. Can mint more supply up to total_supply amount or if max_supply is - 1 then minting is uncapped.\n"
-						"<interest_rate> If this asset pays out in interest to holders. Annual interest compounded monthly. Money supply is still capped to total supply. Can only set if this asset allows adjustment of interest rate.\n"
+						"<supply> New supply of asset. Can mint more supply up to total_supply amount or if max_supply is -1 then minting is uncapped.\n"
+						"<interest_rate> The annual interest rate if any. Money supply is still capped to total supply. Should be between 0 and 1 and represents a percentage divided by 100. Can only set if this asset allows adjustment of interest rate.\n"
 						"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
 						+ HelpRequiringPassphrase());
 	vector<unsigned char> vchAsset = vchFromValue(params[0]);

@@ -266,6 +266,32 @@ bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove,
 	return true;
 	
 }
+// calculate annual interest on an asset allocation
+// only add interest since the last time this asset allocation sent/received
+CAmount GetAssetAllocationInterest(const CAsset& asset, const CAssetAllocationTuple & assetAllocationTuple, const int64_t& nHeight) {
+	// get prev height
+	CAssetAllocation dbAssetAllocation;
+	if (!passetallocationdb->ReadLastAssetAllocation(assetAllocationTuple, dbAssetAllocation)) {
+		return 0;
+	}
+	const int64_t &nTimeDifference = chainActive[nHeight]->GetMedianTimePast() - chainActive[dbAssetAllocation.nHeight]->GetMedianTimePast();
+	if (nTimeDifference <= 0)
+		return 0;
+	// convert seconds to years
+	const float fYears = nTimeDifference / ONE_YEAR_IN_SECONDS;
+	// apply simple annual interest Prt (Principle*rate*time) to get total interest since last time interest was collected
+	return asset.nBalance*asset.fInterestRate*fYears;
+}
+void ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight) {
+	CAmount nInterest = GetAssetAllocationInterest(asset, CAssetAllocationTuple(assetAllocation.vchAsset, assetAllocation.vchAlias), nHeight);
+	// if interest cross max supply, reduce interest to fill up to max supply
+	if ((nInterest + asset.nTotalSupply) > asset.nMaxSupply) {
+		nInterest = asset.nMaxSupply - asset.nTotalSupply;
+		if (nInterest <= 0)
+			return;
+	}
+	assetAllocation.nBalance += nInterest;
+}
 bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vchAlias,
         bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool dontaddtodb) {
 	if (!paliasdb || !passetallocationdb)
@@ -316,9 +342,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Asset send must send an input or transfer balance");
 				return error(errorMessage.c_str());
 			}
-			if (theAssetAllocation.listSendingAllocationInputs.size() > 50 && theAssetAllocation.listSendingAllocationAmounts.size() > 50)
+			if (theAssetAllocation.listSendingAllocationInputs.size() > 250 || theAssetAllocation.listSendingAllocationAmounts.size() > 250)
 			{
-				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Too many receivers in one allocation send, maximum of 50 is allowed at once");
+				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Too many receivers in one allocation send, maximum of 250 is allowed at once");
 				return error(errorMessage.c_str());
 			}
 			break;
@@ -363,6 +389,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 		}
 		theAssetAllocation.vchAlias = vchAlias;
 		theAssetAllocation.nBalance = dbAssetAllocation.nBalance;
+		if (!dontaddtodb && dbAsset.fInterestRate > 0) {
+			ApplyAssetAllocationInterest(dbAsset, theAssetAllocation, nHeight);
+		}
 		// get sender assetallocation
 		// if no custom allocations are sent with request
 			// if sender assetallocation has custom allocations, break as invalid assetsend request
@@ -408,7 +437,8 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 					return true;
 				}
 			}
-			if (dbAssetAllocation.nBalance < nTotal) {
+
+			if (theAssetAllocation.nBalance < nTotal) {
 				bBalanceOverrun = true;
 				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender balance is insufficient");
 				if (fJustCheck && !dontaddtodb) {
@@ -447,6 +477,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						receiverAllocation.vchAsset = receiverAllocationTuple.vchAsset;
 					}
 					if (!bBalanceOverrun) {
+						if (dbAsset.fInterestRate > 0) {
+							ApplyAssetAllocationInterest(dbAsset, theAssetAllocation, nHeight);
+						}
 						receiverAllocation.txHash = tx.GetHash();
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.nBalance += amountTuple.second;
