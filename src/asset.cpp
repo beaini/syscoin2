@@ -714,7 +714,7 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 	bool bUseInputRanges = params[6].get_bool();
 	float fInterestRate = params[7].get_real();
 	bool bCanAdjustInterestRate = params[8].get_bool();
-	vchWitness = vchFromValue(params[9);
+	vchWitness = vchFromValue(params[9]);
 	// check for alias existence in DB
 	CAliasIndex theAlias;
 

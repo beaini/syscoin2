@@ -90,6 +90,7 @@ public:
 	std::vector<unsigned char> vchAlias;
 	uint256 txHash;
 	uint64_t nHeight;
+	uint64_t nLastInterestClaimHeight;
 	// if allocations are tracked by individual inputs
 	std::vector<CRange> listAllocationInputs;
 	RangeInputArrayTuples listSendingAllocationInputs;
@@ -110,6 +111,7 @@ public:
 		READWRITE(vchAlias);
 		READWRITE(txHash);
 		READWRITE(VARINT(nHeight));
+		READWRITE(VARINT(nLastInterestClaimHeight));
 		READWRITE(listAllocationInputs);
 		READWRITE(listSendingAllocationInputs);
 		READWRITE(listSendingAllocationAmounts);
@@ -124,6 +126,7 @@ public:
 		vchAsset = b.vchAsset;
 		txHash = b.txHash;
 		nHeight = b.nHeight;
+		nLastInterestClaimHeight = b.nLastInterestClaimHeight;
 		vchAlias = b.vchAlias;
 		listAllocationInputs = b.listAllocationInputs;
 		listSendingAllocationInputs = b.listSendingAllocationInputs;
@@ -135,7 +138,7 @@ public:
 	inline friend bool operator!=(const CAssetAllocation &a, const CAssetAllocation &b) {
 		return !(a == b);
 	}
-	inline void SetNull() { nBalance = 0;  listSendingAllocationAmounts.clear();  listSendingAllocationInputs.clear(); listAllocationInputs.clear(); vchAsset.clear(); nHeight = 0; txHash.SetNull(); vchAlias.clear(); }
+	inline void SetNull() { nLastInterestClaimHeight = 0; nBalance = 0; listSendingAllocationAmounts.clear();  listSendingAllocationInputs.clear(); listAllocationInputs.clear(); vchAsset.clear(); nHeight = 0; txHash.SetNull(); vchAlias.clear(); }
 	inline bool IsNull() const { return (vchAsset.empty()); }
 	bool UnserializeFromTx(const CTransaction &tx);
 	bool UnserializeFromData(const std::vector<unsigned char> &vchData, const std::vector<unsigned char> &vchHash);
