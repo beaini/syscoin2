@@ -343,6 +343,7 @@ extern UniValue assettransfer(const UniValue& params, bool fHelp);
 extern UniValue assetsend(const UniValue& params, bool fHelp);
 extern UniValue assetinfo(const UniValue& params, bool fHelp);
 extern UniValue assetallocationsend(const UniValue& params, bool fHelp);
+extern UniValue assetallocationcollectioninterest(const UniValue& params, bool fHelp);
 extern UniValue assetallocationinfo(const UniValue& params, bool fHelp);
 extern UniValue assetallocationsenderstatus(const UniValue& params, bool fHelp);
 bool StartRPC();

@@ -75,6 +75,7 @@ enum opcodetype
 	OP_ASSET_SEND = 0x05,
 
 	OP_ASSET_ALLOCATION_SEND = 0x01,
+	OP_ASSET_COLLECT_INTEREST = 0x01,
 
 	// syscoin extended reserved 
 	OP_SYSCOIN_ALIAS = 0x01,

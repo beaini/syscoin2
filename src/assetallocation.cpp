@@ -33,7 +33,7 @@ extern mongoc_collection_t *aliastxhistory_collection;
 extern void SendMoneySyscoin(const vector<unsigned char> &vchAlias, const vector<unsigned char> &vchWitness, const CRecipient &aliasRecipient, CRecipient &aliasPaymentRecipient, vector<CRecipient> &vecSend, CWalletTx& wtxNew, CCoinControl* coinControl, bool fUseInstantSend = false, bool transferAlias = false);
 
 bool IsAssetAllocationOp(int op) {
-	return op == OP_ASSET_ALLOCATION_SEND;
+	return op == OP_ASSET_ALLOCATION_SEND || op == OP_ASSET_COLLECT_INTEREST;
 }
 string CAssetAllocationTuple::ToString() const {
 	return stringFromVch(vchAsset) + "-" + stringFromVch(vchAlias);
@@ -42,6 +42,8 @@ string assetAllocationFromOp(int op) {
     switch (op) {
 	case OP_ASSET_ALLOCATION_SEND:
 		return "assetallocationsend";
+	case OP_ASSET_COLLECT_INTEREST:
+		return "assetallocationcollectinterest";
     default:
         return "<unknown assetallocation op>";
     }
@@ -348,7 +350,13 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				return error(errorMessage.c_str());
 			}
 			break;
-
+		case OP_ASSET_COLLECT_INTEREST:
+			if (!theAssetAllocation.listSendingAllocationInputs.empty() || !theAssetAllocation.listSendingAllocationAmounts.empty())
+			{
+				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Cannot send tokens in an interest collection transaction");
+				return error(errorMessage.c_str());
+			}
+			break;
 		default:
 			errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Asset transaction has unknown op");
 			return error(errorMessage.c_str());
@@ -365,7 +373,30 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 	bool bRevert = false;
 	bool bBalanceOverrun = false;
 	bool bAddAllReceiversToConflictList = false;
-	if (op == OP_ASSET_ALLOCATION_SEND)
+	if (op == OP_ASSET_COLLECT_INTEREST)
+	{
+		if (!GetAssetAllocation(assetAllocationTuple, dbAssetAllocation))
+		{
+			errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find sender asset allocation");
+			return true;
+		}
+		if (!GetAsset(dbAssetAllocation.vchAsset, dbAsset))
+		{
+			errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2022 - " + _("Failed to read from asset DB");
+			return true;
+		}
+		if (dbAsset.fInterestRate <= 0)
+		{
+			errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2022 - " + _("Cannot collect interest on this asset, no interest rate has been defined");
+			return true;
+		}
+		theAssetAllocation = dbAssetAllocation;
+		// only apply interest on PoW
+		if (!dontaddtodb && !fJustCheck) {
+			ApplyAssetAllocationInterest(dbAsset, theAssetAllocation, nHeight);
+		}
+	}
+	else if (op == OP_ASSET_ALLOCATION_SEND)
 	{
 		if (!dontaddtodb) {
 			bRevert = !fJustCheck;
@@ -389,9 +420,6 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 		}
 		theAssetAllocation.vchAlias = vchAlias;
 		theAssetAllocation.nBalance = dbAssetAllocation.nBalance;
-		if (!dontaddtodb && dbAsset.fInterestRate > 0) {
-			ApplyAssetAllocationInterest(dbAsset, theAssetAllocation, nHeight);
-		}
 		// get sender assetallocation
 		// if no custom allocations are sent with request
 			// if sender assetallocation has custom allocations, break as invalid assetsend request
@@ -477,9 +505,6 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						receiverAllocation.vchAsset = receiverAllocationTuple.vchAsset;
 					}
 					if (!bBalanceOverrun) {
-						if (dbAsset.fInterestRate > 0) {
-							ApplyAssetAllocationInterest(dbAsset, theAssetAllocation, nHeight);
-						}
 						receiverAllocation.txHash = tx.GetHash();
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.nBalance += amountTuple.second;
@@ -607,17 +632,19 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 	}
 
 	// write assetallocation  
-	if (!dontaddtodb) {
+	// interest collection is only available on PoW
+	if (!dontaddtodb && ((op == OP_ASSET_COLLECT_INTEREST && !fJustCheck) || (op != OP_ASSET_COLLECT_INTEREST))) {
 		// set the assetallocation's txn-dependent 
 		if (!bBalanceOverrun) {
 			theAssetAllocation.nHeight = nHeight;
 			theAssetAllocation.txHash = tx.GetHash();
 		}
-		
+
 		int64_t ms = INT64_MAX;
 		if (fJustCheck) {
 			ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 		}
+
 		if (!passetallocationdb->WriteAssetAllocation(theAssetAllocation, ms, fJustCheck))
 		{
 			errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to write to asset allocation DB");
@@ -631,6 +658,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				tx.GetHash().ToString().c_str(),
 				nHeight,
 				fJustCheck ? 1 : 0, (long long)ms);
+
 	}
     return true;
 }
@@ -768,7 +796,80 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	res.push_back(EncodeHexTx(wtx));
 	return res;
 }
+UniValue assetallocationcollectinterest(const UniValue& params, bool fHelp) {
+	if (fHelp || params.size() != 3)
+		throw runtime_error(
+			"assetallocationcollectinterest [asset] [alias] [witness]\n"
+			"Collect interest on this asset allocation if an interest rate is set on this asset.\n"
+			"<asset> Asset name.\n"
+			"<alias> alias which owns this asset allocation.\n"
+			"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
+			+ HelpRequiringPassphrase());
 
+	// gather & validate inputs
+	vector<unsigned char> vchAsset = vchFromValue(params[0]);
+	vector<unsigned char> vchAliasFrom = vchFromValue(params[1]);
+	vector<unsigned char> vchWitness;
+	vchWitness = vchFromValue(params[2]);
+	
+
+	CAssetAllocation theAssetAllocation;
+	theAssetAllocation.vchAsset = vchAsset;
+
+	// check for alias existence in DB
+	CAliasIndex fromAlias;
+	if (!GetAlias(vchAliasFrom, fromAlias))
+		throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2509 - " + _("Failed to read transfer alias from DB"));
+
+	// this is a syscoin txn
+	CWalletTx wtx;
+	CScript scriptPubKeyFromOrig;
+
+	CAsset theAsset;
+	if (!GetAsset(vchAsset, theAsset))
+		throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2510 - " + _("Could not find a asset with this key"));
+
+	CSyscoinAddress fromAddr;
+	GetAddress(fromAlias, &fromAddr, scriptPubKeyFromOrig);
+
+	CScript scriptPubKey;
+
+	vector<unsigned char> data;
+	theAssetAllocation.Serialize(data);
+	uint256 hash = Hash(data.begin(), data.end());
+
+	vector<unsigned char> vchHashAsset = vchFromValue(hash.GetHex());
+	scriptPubKey << CScript::EncodeOP_N(OP_SYSCOIN_ASSET_ALLOCATION) << CScript::EncodeOP_N(OP_ASSET_COLLECT_INTEREST) << vchHashAsset << OP_2DROP << OP_DROP;
+	scriptPubKey += scriptPubKeyFromOrig;
+	// send the asset pay txn
+	vector<CRecipient> vecSend;
+	CRecipient recipient;
+	CreateRecipient(scriptPubKey, recipient);
+	vecSend.push_back(recipient);
+
+	CScript scriptPubKeyAlias;
+	scriptPubKeyAlias << CScript::EncodeOP_N(OP_SYSCOIN_ALIAS) << CScript::EncodeOP_N(OP_ALIAS_UPDATE) << fromAlias.vchAlias << fromAlias.vchGUID << vchFromString("") << vchWitness << OP_2DROP << OP_2DROP << OP_2DROP;
+	scriptPubKeyAlias += scriptPubKeyFromOrig;
+	CRecipient aliasRecipient;
+	CreateRecipient(scriptPubKeyAlias, aliasRecipient);
+	CRecipient aliasPaymentRecipient;
+	CreateAliasRecipient(scriptPubKeyFromOrig, aliasPaymentRecipient);
+
+	CScript scriptData;
+	scriptData << OP_RETURN << data;
+	CRecipient fee;
+	CreateFeeRecipient(scriptData, data, fee);
+	vecSend.push_back(fee);
+
+
+	CCoinControl coinControl;
+	coinControl.fAllowOtherInputs = false;
+	coinControl.fAllowWatchOnly = false;
+	SendMoneySyscoin(fromAlias.vchAlias, vchWitness, aliasRecipient, aliasPaymentRecipient, vecSend, wtx, &coinControl);
+	UniValue res(UniValue::VARR);
+	res.push_back(EncodeHexTx(wtx));
+	return res;
+}
 UniValue assetallocationinfo(const UniValue& params, bool fHelp) {
     if (fHelp || 3 != params.size())
         throw runtime_error("assetallocationinfo <asset> <alias> <getinputs>\n"

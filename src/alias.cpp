@@ -2971,6 +2971,10 @@ string GetSyscoinTransactionDescription(const int op, string& responseEnglish, c
 			strResponse = _("Asset Allocation Sent");
 			responseEnglish = "Asset Allocation Sent";
 		}
+		else if (op == OP_ASSET_COLLECT_INTEREST) {
+			strResponse = _("Asset Collect Interest");
+			responseEnglish = "Asset Collect Interest";
+		}
 	}
 	else if (type == ESCROW) {
 		if (op == OP_ESCROW_ACTIVATE) {
