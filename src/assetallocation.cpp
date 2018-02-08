@@ -294,6 +294,7 @@ bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetA
 	}
 	assetAllocation.nBalance += nInterest;
 	assetAllocation.nLastInterestClaimHeight = nHeight;
+	return true;
 }
 bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vchAlias,
         bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool dontaddtodb) {
