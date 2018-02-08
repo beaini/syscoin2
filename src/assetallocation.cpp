@@ -806,10 +806,10 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	res.push_back(EncodeHexTx(wtx));
 	return res;
 }
-UniValue assetallocationcollectinterest(const UniValue& params, bool fHelp) {
+UniValue assetallocationcollectioninterest(const UniValue& params, bool fHelp) {
 	if (fHelp || params.size() != 3)
 		throw runtime_error(
-			"assetallocationcollectinterest [asset] [alias] [witness]\n"
+			"assetallocationcollectioninterest [asset] [alias] [witness]\n"
 			"Collect interest on this asset allocation if an interest rate is set on this asset.\n"
 			"<asset> Asset name.\n"
 			"<alias> alias which owns this asset allocation.\n"
