@@ -351,11 +351,21 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Too many receivers in one allocation send, maximum of 250 is allowed at once");
 				return error(errorMessage.c_str());
 			}
+			if (theAssetAllocation.vchMemo.size() > MAX_MEMO_LENGTH)
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2007 - " + _("memo too long, must be 128 character or less");
+				return error(errorMessage.c_str());
+			}
 			break;
 		case OP_ASSET_COLLECT_INTEREST:
 			if (!theAssetAllocation.listSendingAllocationInputs.empty() || !theAssetAllocation.listSendingAllocationAmounts.empty())
 			{
 				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2021 - " + _("Cannot send tokens in an interest collection transaction");
+				return error(errorMessage.c_str());
+			}
+			if (theAssetAllocation.vchMemo.size() > 0)
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2007 - " + _("Cannot send memo when collecting interest");
 				return error(errorMessage.c_str());
 			}
 			break;
@@ -517,6 +527,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 					if (!bBalanceOverrun) {
 						receiverAllocation.txHash = tx.GetHash();
 						receiverAllocation.nHeight = nHeight;
+						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
 						receiverAllocation.nBalance += amountTuple.second;
 						theAssetAllocation.nBalance -= amountTuple.second;
 					}
@@ -673,12 +684,13 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
     return true;
 }
 UniValue assetallocationsend(const UniValue& params, bool fHelp) {
-	if (fHelp || params.size() != 4)
+	if (fHelp || params.size() != 5)
 		throw runtime_error(
-			"assetallocationsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [witness]\n"
+			"assetallocationsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [memo] [witness]\n"
 			"Send an asset allocation you own to another alias.\n"
 			"<asset> Asset name.\n"
 			"<aliasfrom> alias to transfer from.\n"
+			"<memo> Message to include in this asset allocation transfer.\n"
 			"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
 			"The third parameter can be either an array of alias and amounts if sending amount pairs or an array of alias and array of start/end pairs of indexes for input ranges.\n"
 			+ HelpRequiringPassphrase());
@@ -687,14 +699,15 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	vector<unsigned char> vchAsset = vchFromValue(params[0]);
 	vector<unsigned char> vchAliasFrom = vchFromValue(params[1]);
 	UniValue valueTo = params[2];
-	vector<unsigned char> vchWitness;
-	vchWitness = vchFromValue(params[3]);
+	vector<unsigned char> vchMemo = vchFromValue(params[3]);
+	vector<unsigned char> vchWitness = vchFromValue(params[4]);
 	if (!valueTo.isArray())
 		throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Array of receivers not found");
 
 	CAliasIndex toAlias;
 	CAssetAllocation theAssetAllocation;
 	theAssetAllocation.vchAsset = vchAsset;
+	theAssetAllocation.vchMemo = vchMemo;
 
 	UniValue receivers = valueTo.get_array();
 	for (unsigned int idx = 0; idx < receivers.size(); idx++) {

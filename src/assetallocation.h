@@ -77,6 +77,7 @@ typedef std::vector<InputRanges> RangeInputArrayTuples;
 typedef std::vector<std::pair<std::vector<unsigned char>, CAmount > > RangeAmountTuples;
 typedef std::map<uint256, int64_t> ArrivalTimesMap;
 static const int ZDAG_MINIMUM_LATENCY_SECONDS = 10;
+static const int MAX_MEMO_LENGTH = 128;
 static sorted_vector<CAssetAllocationTuple> assetAllocationConflicts;
 enum {
 	ZDAG_STATUS_OK = 0,
@@ -96,6 +97,7 @@ public:
 	RangeInputArrayTuples listSendingAllocationInputs;
 	RangeAmountTuples listSendingAllocationAmounts;
 	CAmount nBalance;
+	std::vector<unsigned char> vchMemo;
 	CAssetAllocation() {
 		SetNull();
 	}
@@ -116,6 +118,7 @@ public:
 		READWRITE(listSendingAllocationInputs);
 		READWRITE(listSendingAllocationAmounts);
 		READWRITE(nBalance);
+		READWRITE(vchMemo);
 	}
 	inline friend bool operator==(const CAssetAllocation &a, const CAssetAllocation &b) {
 		return (a.vchAsset == b.vchAsset && a.vchAlias == b.vchAlias
@@ -132,13 +135,14 @@ public:
 		listSendingAllocationInputs = b.listSendingAllocationInputs;
 		listSendingAllocationAmounts = b.listSendingAllocationAmounts;
 		nBalance = b.nBalance;
+		vchMemo = b.vchMemo;
 		return *this;
 	}
 
 	inline friend bool operator!=(const CAssetAllocation &a, const CAssetAllocation &b) {
 		return !(a == b);
 	}
-	inline void SetNull() { nLastInterestClaimHeight = 0; nBalance = 0; listSendingAllocationAmounts.clear();  listSendingAllocationInputs.clear(); listAllocationInputs.clear(); vchAsset.clear(); nHeight = 0; txHash.SetNull(); vchAlias.clear(); }
+	inline void SetNull() { vchMemo.clear(); nLastInterestClaimHeight = 0; nBalance = 0; listSendingAllocationAmounts.clear();  listSendingAllocationInputs.clear(); listAllocationInputs.clear(); vchAsset.clear(); nHeight = 0; txHash.SetNull(); vchAlias.clear(); }
 	inline bool IsNull() const { return (vchAsset.empty()); }
 	bool UnserializeFromTx(const CTransaction &tx);
 	bool UnserializeFromData(const std::vector<unsigned char> &vchData, const std::vector<unsigned char> &vchHash);
