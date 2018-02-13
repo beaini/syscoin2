@@ -98,7 +98,7 @@ public:
 	RangeInputArrayTuples listSendingAllocationInputs;
 	RangeAmountTuples listSendingAllocationAmounts;
 	CAmount nBalance;
-	CAmount nAccumulatedBalanceSinceLastInterestClaim;
+	uint64_t nAccumulatedBalanceSinceLastInterestClaim;
 	std::vector<unsigned char> vchMemo;
 	CAssetAllocation() {
 		SetNull();
@@ -120,7 +120,7 @@ public:
 		READWRITE(listSendingAllocationInputs);
 		READWRITE(listSendingAllocationAmounts);
 		READWRITE(nBalance);
-		READWRITE(nAccumulatedBalanceSinceLastInterestClaim);
+		READWRITE(VARINT(nAccumulatedBalanceSinceLastInterestClaim));
 		READWRITE(vchMemo);
 	}
 	inline friend bool operator==(const CAssetAllocation &a, const CAssetAllocation &b) {

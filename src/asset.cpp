@@ -548,8 +548,10 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 							receiverAllocation.vchAsset = receiverAllocationTuple.vchAsset;
 						}
 						receiverAllocation.txHash = tx.GetHash();
-						if (receiverAllocation.nHeight > 0) {
-							AccumulateBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+						if (theAsset.fInterestRate > 0) {
+							if (receiverAllocation.nHeight > 0) {
+								AccumulateBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+							}
 						}
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
@@ -610,8 +612,10 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						}
 						
 						receiverAllocation.txHash = tx.GetHash();
-						if (receiverAllocation.nHeight > 0) {
-							AccumulateBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+						if (theAsset.fInterestRate > 0) {
+							if (receiverAllocation.nHeight > 0) {
+								AccumulateBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+							}
 						}
 						receiverAllocation.nHeight = nHeight;
 						// figure out receivers added ranges and balance

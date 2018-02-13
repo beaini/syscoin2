@@ -304,7 +304,7 @@ bool AccumulateBalanceSinceLastInterestClaim(CAssetAllocation & assetAllocation,
 	if (nBlocksSinceLastUpdate <= 0)
 		return false;
 	// formula is 1/N * (blocks since last update * previous balance) where N is the number of blocks in the total time period
-	const CAmount &nNewRunningAverage = assetAllocation.nBalance*nBlocksSinceLastUpdate;
+	const uint64_t &nNewRunningAverage = assetAllocation.nBalance*nBlocksSinceLastUpdate;
 	if (!MoneyRange(nNewRunningAverage))
 		return false;
 	assetAllocation.nAccumulatedBalanceSinceLastInterestClaim += nNewRunningAverage;
@@ -540,11 +540,13 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 					}
 					if (!bBalanceOverrun) {
 						receiverAllocation.txHash = tx.GetHash();
-						// accumulate balances as sender/receiver allocations balances are adjusted
-						if (receiverAllocation.nHeight > 0) {
-							AccumulateBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+						if (dbAsset.fInterestRate > 0) {
+							// accumulate balances as sender/receiver allocations balances are adjusted
+							if (receiverAllocation.nHeight > 0) {
+								AccumulateBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+							}
+							AccumulateBalanceSinceLastInterestClaim(theAssetAllocation, nHeight);
 						}
-						AccumulateBalanceSinceLastInterestClaim(theAssetAllocation, nHeight);
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
 						receiverAllocation.nBalance += amountTuple.second;
@@ -639,12 +641,14 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 					}
 					if (!bBalanceOverrun) {
 						receiverAllocation.txHash = tx.GetHash();
-						// accumulate balances as sender/receiver allocations balances are adjusted
-						if (receiverAllocation.nHeight > 0) {
-							AccumulateBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+						if (dbAsset.fInterestRate > 0) {
+							// accumulate balances as sender/receiver allocations balances are adjusted
+							if (receiverAllocation.nHeight > 0) {
+								AccumulateBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+							}
+							AccumulateBalanceSinceLastInterestClaim(theAssetAllocation, nHeight);
 						}
 						receiverAllocation.nHeight = nHeight;
-						AccumulateBalanceSinceLastInterestClaim(theAssetAllocation, nHeight);
 						// figure out receivers added ranges and balance
 						vector<CRange> outputMerge;
 						receiverAllocation.listAllocationInputs.insert(std::end(receiverAllocation.listAllocationInputs), std::begin(input.second), std::end(input.second));
