@@ -213,5 +213,5 @@ bool GetAssetAllocation(const CAssetAllocationTuple& assetAllocationTuple,CAsset
 bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const bool bGetInputs, UniValue& oName);
 bool BuildAssetAllocationIndexerJson(const CAssetAllocation& assetallocation,UniValue& oName);
 bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove, const uint256 &txHash, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations);
-bool CalculateAverageBalanceSinceLastInterestClaim(CAssetAllocation & assetAllocation, const int64_t& nHeight);
+bool AccumulateBalanceSinceLastInterestClaim(CAssetAllocation & assetAllocation, const int64_t& nHeight);
 #endif // ASSETALLOCATION_H
