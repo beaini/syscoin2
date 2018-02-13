@@ -305,8 +305,6 @@ bool AccumulateBalanceSinceLastInterestClaim(CAssetAllocation & assetAllocation,
 		return false;
 	// formula is 1/N * (blocks since last update * previous balance) where N is the number of blocks in the total time period
 	const uint64_t &nNewRunningAverage = assetAllocation.nBalance*nBlocksSinceLastUpdate;
-	if (!MoneyRange(nNewRunningAverage))
-		return false;
 	assetAllocation.nAccumulatedBalanceSinceLastInterestClaim += nNewRunningAverage;
 	return true;
 }
