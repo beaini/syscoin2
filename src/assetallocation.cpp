@@ -269,7 +269,7 @@ bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove,
 	
 }
 // calculate annual interest on an asset allocation
-CAmount GetAssetAllocationInterest(const CAsset& asset, const CAssetAllocation & assetAllocation, const int64_t& nHeight) {
+CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight) {
 	const int64_t &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
 	if (nBlockDifference < ONE_YEAR_IN_BLOCKS)
 		return 0;
