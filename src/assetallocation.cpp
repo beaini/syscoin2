@@ -304,8 +304,7 @@ bool AccumulateBalanceSinceLastInterestClaim(CAssetAllocation & assetAllocation,
 	if (nBlocksSinceLastUpdate <= 0)
 		return false;
 	// formula is 1/N * (blocks since last update * previous balance) where N is the number of blocks in the total time period
-	const uint64_t &nNewRunningAverage = assetAllocation.nBalance*nBlocksSinceLastUpdate;
-	assetAllocation.nAccumulatedBalanceSinceLastInterestClaim += nNewRunningAverage;
+	assetAllocation.nAccumulatedBalanceSinceLastInterestClaim += assetAllocation.nBalance*nBlocksSinceLastUpdat;
 	return true;
 }
 bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vchAlias,
