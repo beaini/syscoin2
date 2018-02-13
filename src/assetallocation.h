@@ -78,6 +78,7 @@ typedef std::vector<std::pair<std::vector<unsigned char>, CAmount > > RangeAmoun
 typedef std::map<uint256, int64_t> ArrivalTimesMap;
 static const int ZDAG_MINIMUM_LATENCY_SECONDS = 10;
 static const int MAX_MEMO_LENGTH = 128;
+static const int ONE_YEAR_IN_BLOCKS = 525600;
 static sorted_vector<CAssetAllocationTuple> assetAllocationConflicts;
 enum {
 	ZDAG_STATUS_OK = 0,
@@ -97,6 +98,7 @@ public:
 	RangeInputArrayTuples listSendingAllocationInputs;
 	RangeAmountTuples listSendingAllocationAmounts;
 	CAmount nBalance;
+	CAmount nAccumulatedBalanceSinceLastInterestClaim;
 	std::vector<unsigned char> vchMemo;
 	CAssetAllocation() {
 		SetNull();
@@ -118,6 +120,7 @@ public:
 		READWRITE(listSendingAllocationInputs);
 		READWRITE(listSendingAllocationAmounts);
 		READWRITE(nBalance);
+		READWRITE(nAccumulatedBalanceSinceLastInterestClaim);
 		READWRITE(vchMemo);
 	}
 	inline friend bool operator==(const CAssetAllocation &a, const CAssetAllocation &b) {
@@ -135,6 +138,7 @@ public:
 		listSendingAllocationInputs = b.listSendingAllocationInputs;
 		listSendingAllocationAmounts = b.listSendingAllocationAmounts;
 		nBalance = b.nBalance;
+		nAccumulatedBalanceSinceLastInterestClaim = b.nAccumulatedBalanceSinceLastInterestClaim;
 		vchMemo = b.vchMemo;
 		return *this;
 	}
@@ -142,7 +146,7 @@ public:
 	inline friend bool operator!=(const CAssetAllocation &a, const CAssetAllocation &b) {
 		return !(a == b);
 	}
-	inline void SetNull() { vchMemo.clear(); nLastInterestClaimHeight = 0; nBalance = 0; listSendingAllocationAmounts.clear();  listSendingAllocationInputs.clear(); listAllocationInputs.clear(); vchAsset.clear(); nHeight = 0; txHash.SetNull(); vchAlias.clear(); }
+	inline void SetNull() { nAccumulatedBalanceSinceLastInterestClaim = 0; vchMemo.clear(); nLastInterestClaimHeight = 0; nBalance = 0; listSendingAllocationAmounts.clear();  listSendingAllocationInputs.clear(); listAllocationInputs.clear(); vchAsset.clear(); nHeight = 0; txHash.SetNull(); vchAlias.clear(); }
 	inline bool IsNull() const { return (vchAsset.empty()); }
 	bool UnserializeFromTx(const CTransaction &tx);
 	bool UnserializeFromData(const std::vector<unsigned char> &vchData, const std::vector<unsigned char> &vchHash);
@@ -209,4 +213,5 @@ bool GetAssetAllocation(const CAssetAllocationTuple& assetAllocationTuple,CAsset
 bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const bool bGetInputs, UniValue& oName);
 bool BuildAssetAllocationIndexerJson(const CAssetAllocation& assetallocation,UniValue& oName);
 bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove, const uint256 &txHash, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations);
+bool CalculateAverageBalanceSinceLastInterestClaim(CAssetAllocation & assetAllocation, const int64_t& nHeight);
 #endif // ASSETALLOCATION_H

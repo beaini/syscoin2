@@ -269,18 +269,18 @@ bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove,
 	
 }
 // calculate annual interest on an asset allocation
-// only add interest since the last time this asset allocation sent/received
 CAmount GetAssetAllocationInterest(const CAsset& asset, const CAssetAllocation & assetAllocation, const int64_t& nHeight) {
-	const int64_t &nTimeDifference = chainActive[nHeight]->GetMedianTimePast() - chainActive[assetAllocation.nLastInterestClaimHeight]->GetMedianTimePast();
-	if (nTimeDifference <= 0)
+	const int64_t &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
+	if (nBlockDifference < ONE_YEAR_IN_BLOCKS)
 		return 0;
-	// convert seconds to years
-	const int nYears = floorf(nTimeDifference / ONE_YEAR_IN_SECONDS);
-	// ensure that user has waited atleast 1 year to collect interest
-	if (nYears <= 0)
+	// need to do one more average balance calculation since the last update to this asset allocation
+	if (!CalculateAverageBalanceSinceLastInterestClaim(assetAllocation, nHeight))
 		return 0;
-	// apply simple annual interest Prt (Principle*rate*time) to get total interest since last time(in years) interest was collected
-	return asset.nBalance*asset.fInterestRate*nYears;
+	const float fYears = nBlockDifference / ONE_YEAR_IN_BLOCKS;
+	// apply compound annual interest to get total interest since last time interest was collected
+	const CAmount& nBalanceOverTimeDifference = assetAllocation.nAccumulatedBalanceSinceLastInterestClaim / nBlockDifference;
+	// get interest only and apply externally to this function
+	return ((nBalanceOverTimeDifference*pow((1 + (asset.fInterestRate)), fYears))) - nBalanceOverTimeDifference;
 }
 bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight) {
 	CAmount nInterest = GetAssetAllocationInterest(asset, assetAllocation, nHeight);
@@ -294,6 +294,20 @@ bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetA
 	}
 	assetAllocation.nBalance += nInterest;
 	assetAllocation.nLastInterestClaimHeight = nHeight;
+	// average balance from 0 again since we have claimed
+	assetAllocation.nAccumulatedBalanceSinceLastInterestClaim = 0;
+	return true;
+}
+// keep track of average balance within the interest claim period
+bool CalculateAverageBalanceSinceLastInterestClaim(CAssetAllocation & assetAllocation, const int64_t& nHeight) {
+	const int64_t &nBlocksSinceLastUpdate = (nHeight - assetAllocation.nHeight);
+	if (nBlocksSinceLastUpdate <= 0)
+		return false;
+	// formula is 1/N * (blocks since last update * previous balance) where N is the number of blocks in the total time period
+	const CAmount &nNewRunningAverage = assetAllocation.nBalance*nBlocksSinceLastUpdate;
+	if (!MoneyRange(nNewRunningAverage))
+		return false;
+	assetAllocation.nAccumulatedBalanceSinceLastInterestClaim += nNewRunningAverage;
 	return true;
 }
 bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vchAlias,
@@ -526,6 +540,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 					}
 					if (!bBalanceOverrun) {
 						receiverAllocation.txHash = tx.GetHash();
+						if (receiverAllocation.nHeight > 0) {
+							CalculateAverageBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+						}
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
 						receiverAllocation.nBalance += amountTuple.second;
@@ -620,6 +637,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 					}
 					if (!bBalanceOverrun) {
 						receiverAllocation.txHash = tx.GetHash();
+						if (receiverAllocation.nHeight > 0) {
+							CalculateAverageBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+						}
 						receiverAllocation.nHeight = nHeight;
 						// figure out receivers added ranges and balance
 						vector<CRange> outputMerge;

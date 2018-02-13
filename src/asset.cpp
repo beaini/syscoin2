@@ -548,6 +548,9 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 							receiverAllocation.vchAsset = receiverAllocationTuple.vchAsset;
 						}
 						receiverAllocation.txHash = tx.GetHash();
+						if (receiverAllocation.nHeight > 0) {
+							CalculateAverageBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+						}
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
 						receiverAllocation.nBalance += amountTuple.second;
@@ -607,6 +610,9 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						}
 						
 						receiverAllocation.txHash = tx.GetHash();
+						if (receiverAllocation.nHeight > 0) {
+							CalculateAverageBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+						}
 						receiverAllocation.nHeight = nHeight;
 						// figure out receivers added ranges and balance
 						vector<CRange> outputMerge;
@@ -614,7 +620,8 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						mergeRanges(receiverAllocation.listAllocationInputs, outputMerge);
 						receiverAllocation.listAllocationInputs = outputMerge;
 						receiverAllocation.nBalance += rangeTotals[i];
-					
+		
+
 						// figure out senders subtracted ranges and balance
 						vector<CRange> outputSubtract;
 						subtractRanges(dbAsset.listAllocationInputs, input.second, outputSubtract);
