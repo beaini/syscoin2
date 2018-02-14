@@ -465,6 +465,7 @@ bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			if (op == OP_ALIAS_UPDATE)
 			{
 				errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5018 - " + _("Failed to read from alias DB");
+				bDestCheckFailed = true;
 				return true;
 			}
 		}
@@ -508,10 +509,9 @@ bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			if (vvchPrevArgs.size() <= 0 || vvchPrevArgs[0] != vvchArgs[0] || vvchPrevArgs[1] != vvchArgs[1] || !pprevCoins->IsAvailable(prevOutputIndex) || !ExtractDestination(pprevCoins->vout[prevOutputIndex].scriptPubKey, aliasDest))
 			{
 				errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5020 - " + _("Cannot extract destination of alias input");
+				bDestCheckFailed = true;
 				if (!theAliasNull)
 					theAlias = dbAlias;
-				else
-					bDestCheckFailed = true;
 			}
 			else
 			{
@@ -519,20 +519,19 @@ bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				if (EncodeBase58(dbAlias.vchAddress) != prevaddy.ToString())
 				{
 					errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5021 - " + _("You are not the owner of this alias");
+					bDestCheckFailed = true;
 					if (!theAliasNull)
 						theAlias = dbAlias;
-					else
-						bDestCheckFailed = true;
 				}
 			}
 
 			if (dbAlias.vchGUID != vvchArgs[1] || dbAlias.vchAlias != vvchArgs[0])
 			{
 				errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5022 - " + _("Cannot edit this alias, guid mismatch");
+				bDestCheckFailed = true;
 				if (!theAliasNull)
 					theAlias = dbAlias;
-				else
-					bDestCheckFailed = true;
+					
 			}
 			if (!theAliasNull) {
 				COfferLinkWhitelist whiteList;
