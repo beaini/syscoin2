@@ -277,4 +277,130 @@ BOOST_AUTO_TEST_CASE(generate_range_stress_subtract2)
 	BOOST_CHECK_EQUAL(vecRange_o.size(), 499991);
 	printf("CheckRangeSubtract Completed %ldms\n", ms2-ms1);
 }
+
+BOOST_AUTO_TEST_CASE(generate_big_assetdata)
+{
+	printf("Running generate_big_assetdata...\n");
+	GenerateBlocks(5);
+	AliasNew("node1", "jagassetbig1", "data");
+	// 256 bytes long
+	string gooddata = "SfsddfdfsdsfSfsdfdfsdsfDsdsdsdsfsfsdsfsdsfdsfsdsfdsfsdsfsdSfsdfdfsdsfSfsdfdfsdsfDsdsdsdsfsfsdsfsdsfdsfsdsfdsfsdsfsdSfsdfdfsdsfSfsdfdfsdsfDsdsdsdsfsfsdsfsdsfdsfsdsfdsfsdsfsdSfsdfdfsdsfSfsdfdfsdsfDsdsdsdsfsfsdsfsdsfdsfsdsfdsfsdsfsdSfsdfdfsdsfSfsdfdfsdsDfdfdd";
+	// 257 bytes long
+	string baddata = gooddata + "a";
+	string guid = AssetNew("node1", "newasset", "jagassetbig1", gooddata);
+	//"assetnew [name] [alias] [public] [category=assets] [supply] [max_supply] [use_inputranges] [interest_rate] [can_adjust_interest_rate] [witness]\n"
+	BOOST_CHECK_THROW(CallRPC("node1", "assetnew newasset jagassetbig1 " + baddata + " assets 1 1 false 0 false ''"), runtime_error);
+}
+BOOST_AUTO_TEST_CASE(generate_big_assetname)
+{
+	printf("Running generate_big_assetname...\n");
+	GenerateBlocks(5);
+	AliasNew("node1", "jagassetbig2", "data");
+	// 20 bytes long
+	string goodname = "12345678901234567890";
+	// 256 bytes long
+	string gooddata = "SfsddfdfsdsfSfsdfdfsdsfDsdsdsdsfsfsdsfsdsfdsfsdsfdsfsdsfsdSfsdfdfsdsfSfsdfdfsdsfDsdsdsdsfsfsdsfsdsfdsfsdsfdsfsdsfsdSfsdfdfsdsfSfsdfdfsdsfDsdsdsdsfsfsdsfsdsfdsfsdsfdsfsdsfsdSfsdfdfsdsfSfsdfdfsdsfDsdsdsdsfsfsdsfsdsfdsfsdsfdsfsdsfsdSfsdfdfsdsfSfsdfdfsdsDfdfdd";
+	// 21 bytes long
+	string badname = goodname + "1";
+	AssetNew("node1", goodname, "jagassetbig2", gooddata);
+	BOOST_CHECK_THROW(CallRPC("node1", "assetnew " + badname + " jagassetbig2 " + gooddata + " assets 1 1 false 0 false ''"), runtime_error);
+}
+BOOST_AUTO_TEST_CASE(generate_assetupdate)
+{
+	printf("Running generate_assetupdate...\n");
+	AliasNew("node1", "jagassetupdate", "data");
+	AssetNew("node1", "assetupdatename", "jagassetupdate", "data");
+	// update an asset that isn't yours
+	UniValue r;
+	//"assetupdate [asset] [public] [category=assets] [supply] [interest_rate] [witness]\n"
+	BOOST_CHECK_NO_THROW(r = CallRPC("node2", "assetupdate assetupdatename jagassetupdate assets 1 0 ''"));
+	UniValue arr = r.get_array();
+	BOOST_CHECK_NO_THROW(r = CallRPC("node2", "signrawtransaction " + arr[0].get_str()));
+	BOOST_CHECK(!find_value(r.get_obj(), "complete").get_bool());
+
+	AssetUpdate("node1", "assetupdatename", "pub1");
+	// shouldnt update data, just uses prev data because it hasnt changed
+	AssetUpdate("node1", "assetupdatename");
+	// update supply, ensure balance gets updated properly
+	// update interest rate
+	// set can adjust rate to false and ensure can't update interest rate
+	// can't update adjust interest rate
+	// can't update input ranges flag after creation
+	// can't change supply > max supply
+	// if max supply is -1 ensure supply can goto int32 max
+	// if use input ranges update supply and ensure adds to end of allocation, ensure balance gets updated properly
+
+
+}
+BOOST_AUTO_TEST_CASE(generate_assettransfer)
+{
+	printf("Running generate_assettransfer...\n");
+	GenerateBlocks(5, "node2");
+	GenerateBlocks(5, "node3");
+	AliasNew("node1", "jagasset1", "changeddata1");
+	AliasNew("node2", "jagasset2", "changeddata2");
+	AliasNew("node3", "jagasset3", "changeddata3");
+
+	AssetNew("node1", "asset1", "jagasset1", "pubdata");
+	AssetNew("node1",  "asset2", "jagasset1", "pubdata");
+	AssetUpdate("node1", "asset1", "pub3");
+	UniValue r;
+	AssetTransfer("node1", "node2", "asset1", "jagasset2");
+	AssetTransfer("node1", "node3", "asset2", "jagasset3");
+
+	// xfer an asset that isn't yours
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assettransfer asset1 jagasset2 ''"));
+	UniValue arr = r.get_array();
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "signrawtransaction " + arr[0].get_str()));
+	BOOST_CHECK(!find_value(r.get_obj(), "complete").get_bool());
+	// update xferred asset
+	AssetUpdate("node2", "asset1", "public");
+
+	// retransfer asset
+	AssetTransfer("node2", "node3", "asset1", "jagasset3");
+}
+BOOST_AUTO_TEST_CASE(generate_assetpruning)
+{
+	// asset's should not expire or be pruned
+	UniValue r;
+	// makes sure services expire in 100 blocks instead of 1 year of blocks for testing purposes
+	printf("Running generate_assetpruning...\n");
+	AliasNew("node1", "jagprunealias1", "changeddata1");
+	// stop node2 create a service,  mine some blocks to expire the service, when we restart the node the service data won't be synced with node2
+	StopNode("node2");
+	AssetNew("node1", "jagprune1", "jagprunealias1", "pubdata");
+	// we can find it as normal first
+	BOOST_CHECK_EQUAL(AssetFilter("node1", "jagprune1"), true);
+	// make sure our offer alias doesn't expire
+	string hex_str = AssetUpdate("node1", "jagprune1");
+	BOOST_CHECK(hex_str.empty());
+	GenerateBlocks(5, "node1");
+	ExpireAlias("jagprune1");
+	StartNode("node2");
+	GenerateBlocks(5, "node2");
+
+	BOOST_CHECK_EQUAL(AssetFilter("node1", "jagprune1"), true);
+
+	// shouldn't be pruned
+	BOOST_CHECK_NO_THROW(CallRPC("node2", "assetinfo " + "jagprune1"));
+
+	// stop node3
+	StopNode("node3");
+	
+	AliasNew("node1", "jagprunealias1", "changeddata1");
+	hex_str = AssetUpdate("node1", "jagprune1");
+	BOOST_CHECK(hex_str.empty());
+
+	// stop and start node1
+	StopNode("node1");
+	StartNode("node1");
+	GenerateBlocks(5, "node1");
+
+	BOOST_CHECK_NO_THROW(CallRPC("node1", "assetinfo " + "jagprune1"));
+
+	BOOST_CHECK_EQUAL(AssetFilter("node1", guid), true);
+
+	// try to create asset with same name
+	BOOST_CHECK_THROW(CallRPC("node1", "assetnew jagprune1 jagprunealias1 pubdata assets 1 1 false 0 false ''"), runtime_error);
+}
 BOOST_AUTO_TEST_SUITE_END ()

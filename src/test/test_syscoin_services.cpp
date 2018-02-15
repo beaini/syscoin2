@@ -1074,6 +1074,24 @@ bool CertFilter(const string& node, const string& cert)
 	const UniValue &arr = r.get_array();
 	return !arr.empty();
 }
+bool AssetFilter(const string& node, const string& cert)
+{
+	UniValue r;
+	int64_t currentTime = GetTime();
+	string query = "\"{\\\"_id\\\":\\\"" + cert + "\\\"}\"";
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinquery asset " + query));
+	const UniValue &arr = r.get_array();
+	return !arr.empty();
+}
+bool AssetAllocationFilter(const string& node, const string& cert)
+{
+	UniValue r;
+	int64_t currentTime = GetTime();
+	string query = "\"{\\\"_id\\\":\\\"" + cert + "\\\"}\"";
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinquery assetallocatiion " + query));
+	const UniValue &arr = r.get_array();
+	return !arr.empty();
+}
 bool EscrowFilter(const string& node, const string& escrow)
 {
 	UniValue r;
@@ -1097,6 +1115,186 @@ UniValue EscrowBidFilterFromGUID(const string& node, const string& guid)
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinquery escrowbid " + query));
 	const UniValue &arr = r.get_array();
 	return arr;
+}
+const string AssetNew(const string& node, const string& name, const string& alias, const string& pubdata, const string& supply, const string& maxsupply, const string& useinputranges, const string& interestrate, const string& canadjustinterest, const string& witness)
+{
+	string otherNode1, otherNode2;
+	GetOtherNodes(node, otherNode1, otherNode2);
+	UniValue r;
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "aliasinfo " + alias));
+
+	// "assetnew [name] [alias] [public] [category=assets] [supply] [max_supply] [use_inputranges] [interest_rate] [can_adjust_interest_rate] [witness]\n"
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetnew " + name + " " + alias + " " + pubdata + " " + " assets " + supply + " " + maxsupply + " " + useinputranges + " " + interestrate + " " + canadjustinterest + " " + witness));
+	UniValue arr = r.get_array();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "signrawtransaction " + arr[0].get_str()));
+	string hex_str = find_value(r.get_obj(), "hex").get_str();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinsendrawtransaction " + hex_str));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
+	string txid = find_value(r.get_obj(), "txid").get_str();
+
+	GenerateBlocks(5, node);
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name));
+
+	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + name);
+	BOOST_CHECK(!txHistoryResult.empty());
+	UniValue ret;
+	BOOST_CHECK(ret.read(txHistoryResult[0].get_str()));
+	const UniValue &historyResultObj = ret.get_obj();
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "user1").get_str(), alias);
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "_id").get_str(), txid + "-" + name);
+
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "type").get_str(), "Asset Activated");
+
+	BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
+	BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == alias);
+	BOOST_CHECK(find_value(r.get_obj(), "publicvalue").get_str() == pubdata);
+	BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "balance")) == AmountFromValue(supply));
+	BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "total_supply")) == AmountFromValue(supply));
+	BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "max_supply")) == AmountFromValue(maxsupply));
+	BOOST_CHECK_EQUAL(((int)(find_value(r.get_obj(), "interest_rate").get_real() * 1000 + 0.5)), ((int)(boost::lexical_cast<float>(interestrate) * 1000)));
+	bool storedCanAdjustRates = find_value(r.get_obj(), "can_adjust_interest_rate").get_bool();
+	bool paramCanAdjustRates = canadjustinterest == "true" ? true : false;
+	BOOST_CHECK(storedCanAdjustRates == paramCanAdjustRates);
+
+
+	GenerateBlocks(5, node);
+	if (!otherNode1.empty())
+	{
+		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode1, "assetinfo " + name));
+		BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
+		BOOST_CHECK(find_value(r.get_obj(), "publicvalue").get_str() == pubdata);
+		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "balance")) == AmountFromValue(supply));
+		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "total_supply")) == AmountFromValue(supply));
+		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "max_supply")) == AmountFromValue(maxsupply));
+		BOOST_CHECK_EQUAL(((int)(find_value(r.get_obj(), "interest_rate").get_real() * 1000 + 0.5)), ((int)(boost::lexical_cast<float>(interestrate) * 1000)));
+		bool storedCanAdjustRates = find_value(r.get_obj(), "can_adjust_interest_rate").get_bool();
+		bool paramCanAdjustRates = canadjustinterest == "true" ? true : false;
+		BOOST_CHECK(storedCanAdjustRates == paramCanAdjustRates);
+	}
+	if (!otherNode2.empty())
+	{
+		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode2, "assetinfo " + name));
+		BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
+		BOOST_CHECK(find_value(r.get_obj(), "publicvalue").get_str() == pubdata);
+		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "balance")) == AmountFromValue(supply));
+		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "total_supply")) == AmountFromValue(supply));
+		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "max_supply")) == AmountFromValue(maxsupply));
+		BOOST_CHECK_EQUAL(((int)(find_value(r.get_obj(), "interest_rate").get_real() * 1000 + 0.5)), ((int)(boost::lexical_cast<float>(interestrate) * 1000)));
+		bool storedCanAdjustRates = find_value(r.get_obj(), "can_adjust_interest_rate").get_bool();
+		bool paramCanAdjustRates = canadjustinterest == "true" ? true : false;
+		BOOST_CHECK(storedCanAdjustRates == paramCanAdjustRates);
+	}
+
+	return guid;
+}
+void AssetUpdate(const string& node, const string& name, const string& pubdata, const string& supply, const string& interest, const string& witness)
+{
+	string otherNode1, otherNode2;
+	GetOtherNodes(node, otherNode1, otherNode2);
+	UniValue r;
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name));
+	string oldalias = find_value(r.get_obj(), "alias").get_str();
+	string oldpubdata = find_value(r.get_obj(), "publicvalue").get_str();
+	string oldsupply = find_value(r.get_obj(), "supply").get_str();
+	string oldinterest = find_value(r.get_obj(), "interest_rate").get_str();
+
+	string newpubdata = pubdata == "''" ? oldpubdata : pubdata;
+	string newsupply = supply == "''" ? oldsupply : supply;
+	string newinterest = interest == "''" ? oldinterest : interest;
+
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "aliasinfo " + oldalias));
+	// "assetupdate [asset] [public] [category=assets] [supply] [interest_rate] [witness]\n"
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetupdate " + name + " " + newpubdata + " assets " + newsupply + " " + newinterest + " " + witness));
+	UniValue arr = r.get_array();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "signrawtransaction " + arr[0].get_str()));
+	string hex_str = find_value(r.get_obj(), "hex").get_str();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinsendrawtransaction " + hex_str));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
+	string txid = find_value(r.get_obj(), "txid").get_str();
+
+	GenerateBlocks(5, node);
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name));
+
+	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + name);
+	BOOST_CHECK(!txHistoryResult.empty());
+	UniValue ret;
+	BOOST_CHECK(ret.read(txHistoryResult[0].get_str()));
+	const UniValue &historyResultObj = ret.get_obj();
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "user1").get_str(), oldalias);
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "_id").get_str(), txid + "-" + name);
+
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "type").get_str(), "Asset Updated");
+
+
+	BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
+	BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == oldalias);
+	BOOST_CHECK_EQUAL(((int)(find_value(r.get_obj(), "interest_rate").get_real() * 1000 + 0.5)), ((int)(boost::lexical_cast<float>(newinterest) * 1000)));
+	BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "total_supply")) == AmountFromValue(supply));
+	GenerateBlocks(5, node);
+	if (!otherNode1.empty())
+	{
+		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode1, "assetinfo " + name));
+		BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
+		BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == oldalias);
+		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "publicvalue").get_str(), newpubdata);
+		BOOST_CHECK_EQUAL(((int)(find_value(r.get_obj(), "interest_rate").get_real() * 1000 + 0.5)), ((int)(boost::lexical_cast<float>(newinterest) * 1000)));
+		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "total_supply")) == AmountFromValue(supply));
+
+	}
+	if (!otherNode2.empty())
+	{
+		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode2, "assetinfo " + name));
+		BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
+		BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == oldalias);
+		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "publicvalue").get_str(), newpubdata);
+		BOOST_CHECK_EQUAL(((int)(find_value(r.get_obj(), "interest_rate").get_real() * 1000 + 0.5)), ((int)(boost::lexical_cast<float>(newinterest) * 1000)));
+		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "total_supply")) == AmountFromValue(supply));
+
+	}
+
+}
+void AssetTransfer(const string& node, const string &tonode, const string& name, const string& toalias, const string& witness)
+{
+	UniValue r;
+
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + guid));
+	string oldalias = find_value(r.get_obj(), "alias").get_str();
+
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "aliasinfo " + toalias));
+
+
+	// "assettransfer [asset] [alias] [witness]\n"
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assettransfer " + name + " " + toalias + " " + witness));
+	UniValue arr = r.get_array();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "signrawtransaction " + arr[0].get_str()));
+	string hex_str = find_value(r.get_obj(), "hex").get_str();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinsendrawtransaction " + hex_str));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
+	string txid = find_value(r.get_obj(), "txid").get_str();
+
+	GenerateBlocks(5, node);
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + guid));
+
+	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + guid);
+	BOOST_CHECK(!txHistoryResult.empty());
+	UniValue ret;
+	BOOST_CHECK(ret.read(txHistoryResult[0].get_str()));
+	const UniValue &historyResultObj = ret.get_obj();
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "user1").get_str(), oldalias);
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "user2").get_str(), toalias);
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "_id").get_str(), txid + "-" + guid);
+
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "type").get_str(), "Asset Transferred");
+
+
+	BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == guid);
+
+	GenerateBlocks(5, node);
+
+	BOOST_CHECK_NO_THROW(r = CallRPC(tonode, "assetinfo " + guid));
+	BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == toalias);
+
+
 }
 const string CertNew(const string& node, const string& alias, const string& title, const string& pubdata, const string& witness)
 {
