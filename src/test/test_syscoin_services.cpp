@@ -1209,7 +1209,7 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 	string oldinterest = boost::lexical_cast<string>(find_value(r.get_obj(), "interest_rate").get_real());
 
 	string newpubdata = pubdata == "''" ? oldpubdata : pubdata;
-	string newsupply = supply == "''" ? oldsupply : supply;
+	string newsupply = supply == "''" ? "0" : supply;
 	string newinterest = interest == "''" ? oldinterest : interest;
 
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "aliasinfo " + oldalias));
