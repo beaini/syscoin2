@@ -330,11 +330,18 @@ BOOST_AUTO_TEST_CASE(generate_assetupdate)
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetupdatename false"));
 	BOOST_CHECK_EQUAL(AmountFromValue(find_value(r.get_obj(), "balance")), 6*COIN);
 	// update interest rate
-	// set can adjust rate to false and ensure can't update interest rate
-	// can't update can adjust interest rate
-	// can't update input ranges flag after creation
-	// can't change supply > max supply
-	// if max supply is -1 ensure supply can goto int32 max
+	AssetNew("node1", "assetupdateinterest", "jagassetupdate", "data", "1", "10", "false", "0.1", "true");
+	AssetUpdate("node1", "assetupdateinterest", "pub12", "0", "0.25");
+	// set can adjust rate to false and ensure can't update interest rate (use initial asset which has can adjust rate set to false)
+	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 1 0.11 ''"), runtime_error);
+	// can't change supply > max supply (current balance already 6, max is 10)
+	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 5 0 ''"), runtime_error);
+	// if max supply is -1 ensure supply can goto int64 max
+	AssetNew("node1", "assetupdatemaxsupply", "jagassetupdate", "data", "1", "-1");
+	string int64maxstr = sprintf("%lld", INT64_MAX);
+	AssetUpdate("node1", "assetupdatename", "pub12", int64maxstr);
+	// can't go above int64 max
+	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 1 0 ''"), runtime_error);
 	// if use input ranges update supply and ensure adds to end of allocation, ensure balance gets updated properly
 
 

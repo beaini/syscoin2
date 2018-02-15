@@ -488,6 +488,11 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				mergeRanges(dbAsset.listAllocationInputs, outputMerge);
 				theAsset.listAllocationInputs = outputMerge;
 			}
+			if(theAsset.nTotalSupply >= INT64_MAX)
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Max possible supply reached");
+				return true;
+			}
 			theAsset.nBalance += increaseBalanceByAmount;
 			// increase total supply
 			theAsset.nTotalSupply += increaseBalanceByAmount;
@@ -496,6 +501,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Total supply cannot exceed maximum supply");
 				return true;
 			}
+
 		}
 		else if (op != OP_ASSET_ACTIVATE) {
 			theAsset.nBalance = dbAsset.nBalance;
