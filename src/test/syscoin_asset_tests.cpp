@@ -325,13 +325,13 @@ BOOST_AUTO_TEST_CASE(generate_assetupdate)
 	AssetUpdate("node1", "assetupdatename", "pub1");
 	// shouldnt update data, just uses prev data because it hasnt changed
 	AssetUpdate("node1", "assetupdatename");
-	// update supply, ensure balance gets updated properly
+	// update supply, ensure balance gets updated properly, 5+1, 1 comes from the initial assetnew, 1 above doesn't actually get set because asset wasn't yours so total should be 6
 	AssetUpdate("node1", "assetupdatename", "pub12", "5");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetupdatename false"));
-	BOOST_CHECK_EQUAL(AmountFromValue(find_value(r.get_obj(), "balance")), 7*COIN);
+	BOOST_CHECK_EQUAL(AmountFromValue(find_value(r.get_obj(), "balance")), 6*COIN);
 	// update interest rate
 	// set can adjust rate to false and ensure can't update interest rate
-	// can't update adjust interest rate
+	// can't update can adjust interest rate
 	// can't update input ranges flag after creation
 	// can't change supply > max supply
 	// if max supply is -1 ensure supply can goto int32 max

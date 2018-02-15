@@ -465,7 +465,6 @@ bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			if (op == OP_ALIAS_UPDATE)
 			{
 				errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5018 - " + _("Failed to read from alias DB");
-				bDestCheckFailed = true;
 				return true;
 			}
 		}
