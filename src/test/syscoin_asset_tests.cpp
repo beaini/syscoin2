@@ -338,7 +338,7 @@ BOOST_AUTO_TEST_CASE(generate_assetupdate)
 	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 5 0 ''"), runtime_error);
 	// if max supply is -1 ensure supply can goto int64 max
 	AssetNew("node1", "assetupdatemaxsupply", "jagassetupdate", "data", "0", "-1");
-	string int64maxstr = strprintf("%"PRId64, INT64_MAX);
+	string int64maxstr = strprintf("%" PRId64 ", INT64_MAX);
 	AssetUpdate("node1", "assetupdatename", "pub12", int64maxstr);
 	// can't go above int64 max
 	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 1 0 ''"), runtime_error);
