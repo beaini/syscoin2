@@ -1116,7 +1116,7 @@ UniValue EscrowBidFilterFromGUID(const string& node, const string& guid)
 	const UniValue &arr = r.get_array();
 	return arr;
 }
-const void AssetNew(const string& node, const string& name, const string& alias, const string& pubdata, const string& supply, const string& maxsupply, const string& useinputranges, const string& interestrate, const string& canadjustinterest, const string& witness)
+void AssetNew(const string& node, const string& name, const string& alias, const string& pubdata, const string& supply, const string& maxsupply, const string& useinputranges, const string& interestrate, const string& canadjustinterest, const string& witness)
 {
 	string otherNode1, otherNode2;
 	GetOtherNodes(node, otherNode1, otherNode2);

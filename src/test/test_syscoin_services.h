@@ -37,7 +37,7 @@ void AliasAddWhitelist(const string& node, const string& aliasowner, const strin
 void AliasRemoveWhitelist(const string& node, const string& aliasowner, const string& aliasname, const string& discount, const string& witness = "''");
 void AliasClearWhitelist(const string& node, const string& aliasowner, const string& witness = "''");
 int FindAliasDiscount(const string& node, const string& owneralias, const string &aliasname);
-const void AssetNew(const string& node, const string& name, const string& alias, const string& pubdata = "''", const string& supply = "1", const string& maxsupply = "1", const string& useinputranges = "false", const string& interestrate = "0", const string& canadjustinterest = "false", const string& witness = "''");
+void AssetNew(const string& node, const string& name, const string& alias, const string& pubdata = "''", const string& supply = "1", const string& maxsupply = "1", const string& useinputranges = "false", const string& interestrate = "0", const string& canadjustinterest = "false", const string& witness = "''");
 void AssetUpdate(const string& node, const string& name, const string& pubdata = "''", const string& supply = "''", const string& interest = "''", const string& witness = "''");
 void AssetTransfer(const string& node, const string &tonode, const string& name, const string& toalias, const string& witness = "''");
 const string CertNew(const string& node, const string& alias, const string& title, const string& pubdata, const string& witness="''");
