@@ -382,7 +382,7 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 	BOOST_CHECK_EQUAL(AssetFilter("node1", "jagprune1"), true);
 
 	// shouldn't be pruned
-	BOOST_CHECK_NO_THROW(CallRPC("node2", "assetinfo " + "jagprune1"));
+	BOOST_CHECK_NO_THROW(CallRPC("node2", "assetinfo jagprune1"));
 
 	// stop node3
 	StopNode("node3");
@@ -396,9 +396,9 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 	StartNode("node1");
 	GenerateBlocks(5, "node1");
 
-	BOOST_CHECK_NO_THROW(CallRPC("node1", "assetinfo " + "jagprune1"));
+	BOOST_CHECK_NO_THROW(CallRPC("node1", "assetinfo jagprune1"));
 
-	BOOST_CHECK_EQUAL(AssetFilter("node1", guid), true);
+	BOOST_CHECK_EQUAL(AssetFilter("node1", "jagprune1"), true);
 
 	// try to create asset with same name
 	BOOST_CHECK_THROW(CallRPC("node1", "assetnew jagprune1 jagprunealias1 pubdata assets 1 1 false 0 false ''"), runtime_error);
