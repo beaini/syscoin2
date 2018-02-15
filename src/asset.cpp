@@ -359,9 +359,9 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 		}
 		switch (op) {
 		case OP_ASSET_ACTIVATE:
-			if (theAsset.vchAsset.size() > MAX_GUID_LENGTH)
+			if (theAsset.vchAsset.size() > MAX_ID_LENGTH)
 			{
-				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2004 - " + _("asset hex guid too long");
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2004 - " + _("asset name too long");
 				return error(errorMessage.c_str());
 			}
 			if(!boost::algorithm::starts_with(stringFromVch(theAsset.sCategory), "assets"))
