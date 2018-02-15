@@ -732,7 +732,9 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 	strCategory = params[3].get_str();
 	vector<unsigned char> vchWitness;
 	CAmount nBalance = AmountFromValue(params[4]);
-	CAmount nMaxSupply = AmountFromValue(params[5]);
+	CAmount nMaxSupply = -1;
+	if(params[5].get_str() != "-1")
+		nMaxSupply = AmountFromValue(params[5]);
 	bool bUseInputRanges = params[6].get_bool();
 	float fInterestRate = params[7].get_real();
 	bool bCanAdjustInterestRate = params[8].get_bool();
