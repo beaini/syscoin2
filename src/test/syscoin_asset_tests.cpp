@@ -378,14 +378,14 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 	// make sure our offer alias doesn't expire
 	AssetUpdate("node1", "jagprune1");
 	GenerateBlocks(5, "node1");
-	ExpireAlias("jagprune1");
+	ExpireAlias("jagprunealias1");
 	StartNode("node2");
 	GenerateBlocks(5, "node2");
 
 	BOOST_CHECK_EQUAL(AssetFilter("node1", "jagprune1"), true);
 
 	// shouldn't be pruned
-	BOOST_CHECK_NO_THROW(CallRPC("node2", "assetinfo jagprune1"));
+	BOOST_CHECK_NO_THROW(CallRPC("node2", "assetinfo jagprune1 false"));
 
 	// stop node3
 	StopNode("node3");
@@ -398,7 +398,7 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 	StartNode("node1");
 	GenerateBlocks(5, "node1");
 
-	BOOST_CHECK_NO_THROW(CallRPC("node1", "assetinfo jagprune1"));
+	BOOST_CHECK_NO_THROW(CallRPC("node1", "assetinfo jagprune1 false"));
 
 	BOOST_CHECK_EQUAL(AssetFilter("node1", "jagprune1"), true);
 
