@@ -1257,7 +1257,7 @@ void AssetTransfer(const string& node, const string &tonode, const string& name,
 {
 	UniValue r;
 
-	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + guid));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name));
 	string oldalias = find_value(r.get_obj(), "alias").get_str();
 
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "aliasinfo " + toalias));
@@ -1273,25 +1273,25 @@ void AssetTransfer(const string& node, const string &tonode, const string& name,
 	string txid = find_value(r.get_obj(), "txid").get_str();
 
 	GenerateBlocks(5, node);
-	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + guid));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name));
 
-	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + guid);
+	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + name);
 	BOOST_CHECK(!txHistoryResult.empty());
 	UniValue ret;
 	BOOST_CHECK(ret.read(txHistoryResult[0].get_str()));
 	const UniValue &historyResultObj = ret.get_obj();
 	BOOST_CHECK_EQUAL(find_value(historyResultObj, "user1").get_str(), oldalias);
 	BOOST_CHECK_EQUAL(find_value(historyResultObj, "user2").get_str(), toalias);
-	BOOST_CHECK_EQUAL(find_value(historyResultObj, "_id").get_str(), txid + "-" + guid);
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "_id").get_str(), txid + "-" + name);
 
 	BOOST_CHECK_EQUAL(find_value(historyResultObj, "type").get_str(), "Asset Transferred");
 
 
-	BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == guid);
+	BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
 
 	GenerateBlocks(5, node);
 
-	BOOST_CHECK_NO_THROW(r = CallRPC(tonode, "assetinfo " + guid));
+	BOOST_CHECK_NO_THROW(r = CallRPC(tonode, "assetinfo " + name));
 	BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == toalias);
 
 
