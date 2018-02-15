@@ -1185,6 +1185,12 @@ void AssetNew(const string& node, const string& name, const string& alias, const
 		BOOST_CHECK(storedCanAdjustRates == paramCanAdjustRates);
 	}
 }
+static UniValue ValueFromString(const std::string &str)
+{
+	UniValue value;
+	BOOST_CHECK(value.setNumStr(str));
+	return value;
+}
 void AssetUpdate(const string& node, const string& name, const string& pubdata, const string& supply, const string& interest, const string& witness)
 {
 	string otherNode1, otherNode2;
