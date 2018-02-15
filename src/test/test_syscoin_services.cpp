@@ -1193,7 +1193,7 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name + " false"));
 	string oldalias = find_value(r.get_obj(), "alias").get_str();
 	string oldpubdata = find_value(r.get_obj(), "publicvalue").get_str();
-	string oldsupply = find_value(r.get_obj(), "supply").get_str();
+	string oldsupply = find_value(r.get_obj(), "total_supply").get_str();
 	string oldinterest = find_value(r.get_obj(), "interest_rate").get_str();
 
 	string newpubdata = pubdata == "''" ? oldpubdata : pubdata;
