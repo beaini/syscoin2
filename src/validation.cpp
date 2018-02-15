@@ -500,7 +500,8 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
 		if (txout.nValue > MAX_MONEY)
 			return state.DoS(100, false, REJECT_INVALID, "bad-txns-vout-toolarge");
 		nValueOut += txout.nValue;
-		if (!MoneyRange(nValueOut))
+		// SYSCOIN
+		if (nValueOut > MAX_MONEY)
 			return state.DoS(100, false, REJECT_INVALID, "bad-txns-txouttotal-toolarge");
 	}
 
@@ -1714,7 +1715,8 @@ namespace Consensus {
 
 			// Check for negative or overflow input values
 			nValueIn += coins->vout[prevout.n].nValue;
-			if (!MoneyRange(coins->vout[prevout.n].nValue) || !MoneyRange(nValueIn))
+			// SYSCOIN
+			if (coins->vout[prevout.n].nValue  < 0 || nValueIn > MAX_MONEY)
 				return state.DoS(100, false, REJECT_INVALID, "bad-txns-inputvalues-outofrange");
 
 		}
@@ -1728,7 +1730,8 @@ namespace Consensus {
 		if (nTxFee < 0)
 			return state.DoS(100, false, REJECT_INVALID, "bad-txns-fee-negative");
 		nFees += nTxFee;
-		if (!MoneyRange(nFees))
+		// SYSCOIN
+		if (nFees > MAX_MONEY)
 			return state.DoS(100, false, REJECT_INVALID, "bad-txns-fee-outofrange");
 		return true;
 	}

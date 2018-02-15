@@ -116,7 +116,8 @@ CAmount CTransaction::GetValueOut() const
     for (std::vector<CTxOut>::const_iterator it(vout.begin()); it != vout.end(); ++it)
     {
         nValueOut += it->nValue;
-        if (!MoneyRange(it->nValue) || !MoneyRange(nValueOut))
+		// SYSCOIN
+        if (it->nValue < 0 || it->nValue > MAX_MONEY || nValueOut > MAX_MONEY)
             throw std::runtime_error("CTransaction::GetValueOut(): value out of range");
     }
     return nValueOut;
