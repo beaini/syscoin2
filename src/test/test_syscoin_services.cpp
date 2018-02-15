@@ -1133,7 +1133,7 @@ void AssetNew(const string& node, const string& name, const string& alias, const
 	string txid = find_value(r.get_obj(), "txid").get_str();
 
 	GenerateBlocks(5, node);
-	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name + " false"));
 
 	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + name);
 	BOOST_CHECK(!txHistoryResult.empty());
@@ -1160,7 +1160,7 @@ void AssetNew(const string& node, const string& name, const string& alias, const
 	GenerateBlocks(5, node);
 	if (!otherNode1.empty())
 	{
-		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode1, "assetinfo " + name));
+		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode1, "assetinfo " + name + " false"));
 		BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
 		BOOST_CHECK(find_value(r.get_obj(), "publicvalue").get_str() == pubdata);
 		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "balance")) == AmountFromValue(supply));
@@ -1173,7 +1173,7 @@ void AssetNew(const string& node, const string& name, const string& alias, const
 	}
 	if (!otherNode2.empty())
 	{
-		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode2, "assetinfo " + name));
+		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode2, "assetinfo " + name + " false"));
 		BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
 		BOOST_CHECK(find_value(r.get_obj(), "publicvalue").get_str() == pubdata);
 		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "balance")) == AmountFromValue(supply));
@@ -1190,7 +1190,7 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 	string otherNode1, otherNode2;
 	GetOtherNodes(node, otherNode1, otherNode2);
 	UniValue r;
-	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name + " false"));
 	string oldalias = find_value(r.get_obj(), "alias").get_str();
 	string oldpubdata = find_value(r.get_obj(), "publicvalue").get_str();
 	string oldsupply = find_value(r.get_obj(), "supply").get_str();
@@ -1211,7 +1211,7 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 	string txid = find_value(r.get_obj(), "txid").get_str();
 
 	GenerateBlocks(5, node);
-	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name + " false"));
 
 	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + name);
 	BOOST_CHECK(!txHistoryResult.empty());
@@ -1231,7 +1231,7 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 	GenerateBlocks(5, node);
 	if (!otherNode1.empty())
 	{
-		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode1, "assetinfo " + name));
+		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode1, "assetinfo " + name + " false"));
 		BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
 		BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == oldalias);
 		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "publicvalue").get_str(), newpubdata);
@@ -1241,7 +1241,7 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 	}
 	if (!otherNode2.empty())
 	{
-		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode2, "assetinfo " + name));
+		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode2, "assetinfo " + name + " false"));
 		BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
 		BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == oldalias);
 		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "publicvalue").get_str(), newpubdata);
@@ -1255,7 +1255,7 @@ void AssetTransfer(const string& node, const string &tonode, const string& name,
 {
 	UniValue r;
 
-	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name + " false"));
 	string oldalias = find_value(r.get_obj(), "alias").get_str();
 
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "aliasinfo " + toalias));
@@ -1271,7 +1271,7 @@ void AssetTransfer(const string& node, const string &tonode, const string& name,
 	string txid = find_value(r.get_obj(), "txid").get_str();
 
 	GenerateBlocks(5, node);
-	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name + " false"));
 
 	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + name);
 	BOOST_CHECK(!txHistoryResult.empty());
@@ -1289,7 +1289,7 @@ void AssetTransfer(const string& node, const string &tonode, const string& name,
 
 	GenerateBlocks(5, node);
 
-	BOOST_CHECK_NO_THROW(r = CallRPC(tonode, "assetinfo " + name));
+	BOOST_CHECK_NO_THROW(r = CallRPC(tonode, "assetinfo " + name + " false"));
 	BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == toalias);
 
 
