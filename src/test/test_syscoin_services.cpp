@@ -1122,7 +1122,7 @@ void AssetNew(const string& node, const string& name, const string& alias, const
 	GetOtherNodes(node, otherNode1, otherNode2);
 	UniValue r;
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "aliasinfo " + alias));
-	CAmount maxsupplycheck = maxsupply == "-1" ? -1 * COIN : AmountFromValue(maxsupply);
+	CAmount maxsupplycheck = maxsupply == "-1" ? -1 : AmountFromValue(maxsupply);
 	// "assetnew [name] [alias] [public] [category=assets] [supply] [max_supply] [use_inputranges] [interest_rate] [can_adjust_interest_rate] [witness]\n"
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetnew " + name + " " + alias + " " + pubdata + " " + " assets " + supply + " " + maxsupply + " " + useinputranges + " " + interestrate + " " + canadjustinterest + " " + witness));
 	UniValue arr = r.get_array();
@@ -1185,12 +1185,6 @@ void AssetNew(const string& node, const string& name, const string& alias, const
 		BOOST_CHECK(storedCanAdjustRates == paramCanAdjustRates);
 	}
 }
-static UniValue ValueFromString(const std::string &str)
-{
-	UniValue value;
-	BOOST_CHECK(value.setNumStr(str));
-	return value;
-}
 void AssetUpdate(const string& node, const string& name, const string& pubdata, const string& supply, const string& interest, const string& witness)
 {
 	string otherNode1, otherNode2;
@@ -1203,7 +1197,7 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 	CAmount oldsupplyamount = AmountFromValue(find_value(r.get_obj(), "total_supply"));
 	CAmount supplyamount = 0;
 	if(supply != "''")
-		supplyamount = AmountFromValue(ValueFromString(supply));
+		supplyamount = AmountFromValue(supply);
 	CAmount newamount = oldsupplyamount + supplyamount;
 
 	string oldinterest = boost::lexical_cast<string>(find_value(r.get_obj(), "interest_rate").get_real());
