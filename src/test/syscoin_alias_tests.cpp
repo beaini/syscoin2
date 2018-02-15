@@ -22,7 +22,6 @@ const unsigned int MAX_ALIAS_UPDATES_PER_BLOCK = 5;
 BOOST_AUTO_TEST_CASE (generate_big_aliasdata)
 {
 	UniValue r;
-	ECC_Start();
 		// rate converstion to SYS
 	pegRates["USD"] = 2690.1;
 	pegRates["EUR"] = 2695.2;
