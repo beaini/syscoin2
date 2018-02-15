@@ -327,8 +327,8 @@ BOOST_AUTO_TEST_CASE(generate_assetupdate)
 	AssetUpdate("node1", "assetupdatename");
 	// update supply, ensure balance gets updated properly
 	AssetUpdate("node1", "assetupdatename", "pub12", "5");
-	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo assetupdatename false"));
-	BOOST_CHECK_EQUAL(AmountFromValue(find_value(r.get_obj(), "balance")), AmountFromValue(ValueFromString("7")));
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetupdatename false"));
+	BOOST_CHECK_EQUAL(AmountFromValue(find_value(r.get_obj(), "balance")), 7*COIN));
 	// update interest rate
 	// set can adjust rate to false and ensure can't update interest rate
 	// can't update adjust interest rate
