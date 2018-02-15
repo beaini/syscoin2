@@ -385,6 +385,16 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2013 - " + _("Interest must be between 0 and 1");
 				return error(errorMessage.c_str());
 			}
+			if (!MoneyRange(theAsset.nBalance))
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Initial balance out of money range");
+				return true;
+			}
+			if (theAsset.nMaxSupply > 0 && !MoneyRange(theAsset.nMaxSupply))
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Max supply out of money range");
+				return true;
+			}
 			break;
 
 		case OP_ASSET_UPDATE:
@@ -488,14 +498,14 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				mergeRanges(dbAsset.listAllocationInputs, outputMerge);
 				theAsset.listAllocationInputs = outputMerge;
 			}
-			if(theAsset.nTotalSupply >= INT64_MAX)
-			{
-				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Max possible supply reached");
-				return true;
-			}
 			theAsset.nBalance += increaseBalanceByAmount;
 			// increase total supply
 			theAsset.nTotalSupply += increaseBalanceByAmount;
+			if (!MoneyRange(theAsset.nTotalSupply))
+			{
+				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Total supply out of money range");
+				return true;
+			}
 			if (dbAsset.nMaxSupply > 0 && theAsset.nTotalSupply > dbAsset.nMaxSupply)
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Total supply cannot exceed maximum supply");
