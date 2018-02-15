@@ -1200,7 +1200,7 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 	string oldalias = find_value(r.get_obj(), "alias").get_str();
 	string oldpubdata = find_value(r.get_obj(), "publicvalue").get_str();
 	string oldsupply = find_value(r.get_obj(), "total_supply").write();
-	CAmount oldsupplyamount = find_value(r.get_obj(), "total_supply");
+	CAmount oldsupplyamount = AmountFromValue(find_value(r.get_obj(), "total_supply"));
 	CAmount supplyamount = 0;
 	if(supply != "''")
 		supplyamount = AmountFromValue(ValueFromString(supply));
