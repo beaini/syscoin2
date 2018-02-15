@@ -372,8 +372,7 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 	// we can find it as normal first
 	BOOST_CHECK_EQUAL(AssetFilter("node1", "jagprune1"), true);
 	// make sure our offer alias doesn't expire
-	string hex_str = AssetUpdate("node1", "jagprune1");
-	BOOST_CHECK(hex_str.empty());
+	AssetUpdate("node1", "jagprune1");
 	GenerateBlocks(5, "node1");
 	ExpireAlias("jagprune1");
 	StartNode("node2");
@@ -388,8 +387,7 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 	StopNode("node3");
 	
 	AliasNew("node1", "jagprunealias1", "changeddata1");
-	hex_str = AssetUpdate("node1", "jagprune1");
-	BOOST_CHECK(hex_str.empty());
+	AssetUpdate("node1", "jagprune1");
 
 	// stop and start node1
 	StopNode("node1");
