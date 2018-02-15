@@ -462,8 +462,8 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 		}
 		if (op == OP_ASSET_UPDATE) {
 			CAmount increaseBalanceByAmount = theAsset.nBalance;
+			theAsset.nBalance = dbAsset.nBalance;
 			if (!theAsset.listAllocationInputs.empty()) {
-				theAsset.nBalance = dbAsset.nBalance;
 				if(!dbAsset.bUseInputRanges)
 				{
 					errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("This asset does not use input ranges");
@@ -487,9 +487,8 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				dbAsset.listAllocationInputs.insert(std::end(dbAsset.listAllocationInputs), std::begin(theAsset.listAllocationInputs), std::end(theAsset.listAllocationInputs));
 				mergeRanges(dbAsset.listAllocationInputs, outputMerge);
 				theAsset.listAllocationInputs = outputMerge;
-				theAsset.nBalance += increaseBalanceByAmount;
 			}
-			
+			theAsset.nBalance += increaseBalanceByAmount;
 			// increase total supply
 			theAsset.nTotalSupply += increaseBalanceByAmount;
 			if (dbAsset.nMaxSupply > 0 && theAsset.nTotalSupply > dbAsset.nMaxSupply)
