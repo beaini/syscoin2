@@ -29,7 +29,8 @@ extern const std::string CURRENCY_UNIT;
  * for the creation of coins out of thin air modification could lead to a fork.
  * */
 static const CAmount MAX_MONEY = 888000000 * COIN;
-inline bool MoneyRange(const CAmount& nValue) { return (nValue >= 0 && nValue <= INT64_MAX); }
+static const CAmount INT64_MAX_AMOUNT = (INT64_MAX / COIN);
+inline bool MoneyRange(const CAmount& nValue) { return (nValue >= 0 && nValue <= INT64_MAX_AMOUNT); }
 
 /** Type-safe wrapper class for fee rates
  * (how much to pay based on transaction size)
