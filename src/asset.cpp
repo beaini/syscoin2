@@ -385,12 +385,12 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2013 - " + _("Interest must be between 0 and 1");
 				return error(errorMessage.c_str());
 			}
-			if (theAsset.nBalance <= 0 || !MoneyRange(theAsset.nBalance))
+			if (theAsset.nBalance <= 0 || !AssetRange(theAsset.nBalance))
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Initial balance out of money range");
 				return true;
 			}
-			if (theAsset.nMaxSupply > 0 && !MoneyRange(theAsset.nMaxSupply))
+			if (theAsset.nMaxSupply > 0 && !AssetRange(theAsset.nMaxSupply))
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Max supply out of money range");
 				return true;
@@ -501,7 +501,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			theAsset.nBalance += increaseBalanceByAmount;
 			// increase total supply
 			theAsset.nTotalSupply += increaseBalanceByAmount;
-			if (!MoneyRange(theAsset.nTotalSupply))
+			if (!AssetRange(theAsset.nTotalSupply))
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Total supply out of money range");
 				return true;
