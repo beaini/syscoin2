@@ -182,9 +182,12 @@ static const CRPCConvertParam vRPCConvertParams[] =
 	{ "escrowfeedback", 3 },
 	{ "assetallocationinfo", 2 },
 	{ "assetallocationsend", 2 },
+	{ "assetnew", 4 },
+	{ "assetnew", 5 },
 	{ "assetnew", 6 },
 	{ "assetnew", 7 },
 	{ "assetnew", 8 },
+	{ "assetupdate", 3 },
 	{ "assetupdate", 4 },
 	{ "assetinfo", 1 },
 	{ "assetsend", 2 }
