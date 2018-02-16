@@ -1179,7 +1179,7 @@ bool BuildAssetJson(const CAsset& asset, const bool bGetInputs, UniValue& oAsset
 	oAsset.push_back(Pair("alias", stringFromVch(asset.vchAlias)));
 	oAsset.push_back(Pair("balance", ValueFromAmount(asset.nBalance)));
 	oAsset.push_back(Pair("total_supply", ValueFromAmount(asset.nTotalSupply)));
-	oAsset.push_back(Pair("max_supply", asset.nMaxSupply));
+	oAsset.push_back(Pair("max_supply", ValueFromAmount(asset.nMaxSupply)));
 	oAsset.push_back(Pair("interest_rate", asset.fInterestRate));
 	oAsset.push_back(Pair("can_adjust_interest_rate", asset.bCanAdjustInterestRate));
 
