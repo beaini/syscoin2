@@ -336,15 +336,15 @@ BOOST_AUTO_TEST_CASE(generate_assetupdate)
 	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 1 0.11 ''"), runtime_error);
 	// can't change supply > max supply (current balance already 6, max is 10)
 	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 5 0 ''"), runtime_error);
-	// if max supply is -1 ensure supply can goto int64 max-1
+	// if max supply is -1 ensure supply can goto int64 max
 	AssetNew("node1", "assetupdatemaxsupply", "jagassetupdate", "data", "0", "-1");
-	string int64maxstr = boost::lexical_cast<string>(INT64_MAX-1);
+	string int64maxstr = boost::lexical_cast<string>(INT64_MAX);
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets " + int64maxstr + " 0 ''"));
 	GenerateBlocks(5, "node1");
-	// can't go above int64 max-1
+	// can't go above int64 max
 	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 1 0 ''"), runtime_error);
 	// if use input ranges update supply and ensure adds to end of allocation, ensure balance gets updated properly
-	AssetNew("node1", "assetupdatename1", "jagassetupdate", "data", "10", "20", "true");
+	AssetNew("node1", "assetupdatename", "jagassetupdate", "data", "10", "20", "true");
 
 
 }
