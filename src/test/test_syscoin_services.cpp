@@ -1197,7 +1197,7 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 	CAmount oldsupplyamount = AmountFromValue(find_value(r.get_obj(), "total_supply"));
 	CAmount supplyamount = 0;
 	if(supply != "''")
-		supplyamount = boost::lexical_cast<int64_t>(supply)*COIN;
+		supplyamount = AmountFromValue(supply);
 	CAmount newamount = oldsupplyamount + supplyamount;
 
 	string oldinterest = boost::lexical_cast<string>(find_value(r.get_obj(), "interest_rate").get_real());
