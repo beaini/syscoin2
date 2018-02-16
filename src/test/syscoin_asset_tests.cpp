@@ -339,8 +339,7 @@ BOOST_AUTO_TEST_CASE(generate_assetupdate)
 	// if max supply is -1 ensure supply can goto int64 max
 	AssetNew("node1", "assetupdatemaxsupply", "jagassetupdate", "data", "0", "-1");
 	string int64maxstr = boost::lexical_cast<string>(INT64_MAX/COIN);
-	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets " + int64maxstr + " 0 ''"));
-	GenerateBlocks(5, "node1");
+	AssetUpdate("node1", "assetupdatename", "pub12", int64maxstr);
 	// can't go above int64 max
 	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 1 0 ''"), runtime_error);
 	// can't create asset with more than int64 balance or max supply
