@@ -385,7 +385,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2013 - " + _("Interest must be between 0 and 1");
 				return error(errorMessage.c_str());
 			}
-			if (!MoneyRange(theAsset.nBalance))
+			if (theAsset.nBalance <= 0 || !MoneyRange(theAsset.nBalance))
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Initial balance out of money range");
 				return true;
