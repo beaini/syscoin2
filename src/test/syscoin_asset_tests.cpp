@@ -338,12 +338,12 @@ BOOST_AUTO_TEST_CASE(generate_assetupdate)
 	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 5 0 ''"), runtime_error);
 	// if max supply is -1 ensure supply can goto 1b max
 	AssetNew("node1", "assetupdatemaxsupply", "jagassetupdate", "data", "0", "-1");
-	string maxstr = boost::lexical_cast<string>(MAX_MONEY/COIN);
+	string maxstr = ValueFromAmount(MAX_MONEY).write();
 	AssetUpdate("node1", "assetupdatename", "pub12", maxstr);
 	// can't go above 1b max
 	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 2 0 ''"), runtime_error);
 	// can't create asset with more than 1b balance or max supply
-	string maxstrplusone = boost::lexical_cast<string>(MAX_MONEY/COIN + 1);
+	string maxstrplusone = ValueFromAmount(MAX_MONEY+1).write();
 	BOOST_CHECK_THROW(CallRPC("node1", "assetnew assetupdatename2 assetupdatename pub assets " + maxstrplusone + " -1 false 0 false ''"), runtime_error);
 	BOOST_CHECK_THROW(CallRPC("node1", "assetnew assetupdatename2 assetupdatename pub assets 1 " + maxstrplusone + " false 0 false ''"), runtime_error);
 	// if use input ranges update supply and ensure adds to end of allocation, ensure balance gets updated properly
