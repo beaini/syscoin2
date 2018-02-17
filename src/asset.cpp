@@ -506,7 +506,8 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Total supply out of money range");
 				return true;
 			}
-			if (dbAsset.nMaxSupply > 0 && theAsset.nTotalSupply > dbAsset.nMaxSupply)
+			const CAmount &nMaxSupply = dbAsset.nMaxSupply > 0 ? dbAsset.nMaxSupply : MAX_ASSET;
+			if (theAsset.nTotalSupply > nMaxSupply)
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2026 - " + _("Total supply cannot exceed maximum supply");
 				return true;
