@@ -741,10 +741,10 @@ UniValue assetnew(const UniValue& params, bool fHelp) {
 	string strCategory = "assets";
 	strCategory = params[3].get_str();
 	vector<unsigned char> vchWitness;
-	CAmount nBalance = AmountFromValue(params[4]);
+	CAmount nBalance = AssetAmountFromValue(params[4]);
 	CAmount nMaxSupply = -1*COIN;
 	if(params[5].get_str() != "-1")
-		nMaxSupply = AmountFromValue(params[5]);
+		nMaxSupply = AssetAmountFromValue(params[5]);
 	bool bUseInputRanges = params[6].get_bool();
 	float fInterestRate = params[7].get_real();
 	bool bCanAdjustInterestRate = params[8].get_bool();
@@ -840,7 +840,7 @@ UniValue assetupdate(const UniValue& params, bool fHelp) {
 	string strCategory = "";
 	strPubData = params[1].get_str();
 	strCategory = params[2].get_str();
-	CAmount nBalance = AmountFromValue(params[3]);
+	CAmount nBalance = AssetAmountFromValue(params[3]);
 	float fInterestRate = params[4].get_real();
 	vector<unsigned char> vchWitness;
 	vchWitness = vchFromValue(params[5]);
@@ -1075,7 +1075,7 @@ UniValue assetsend(const UniValue& params, bool fHelp) {
 			theAssetAllocation.listSendingAllocationInputs.push_back(make_pair(vchAliasTo, vectorOfRanges));
 		}
 		else if (amountObj.isNum()){
-			const CAmount &amount = AmountFromValue(amountObj);
+			const CAmount &amount = AssetAmountFromValue(amountObj);
 			if (amount < 0)
 				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "amount must be positive");
 			theAssetAllocation.listSendingAllocationAmounts.push_back(make_pair(vchAliasTo, amount));
@@ -1255,6 +1255,17 @@ void AssetTxToJSON(const int op, const std::vector<unsigned char> &vchData, cons
 	}
 	entry.push_back(Pair("allocations", oAssetAllocationReceiversArray));
 
+}
+CAmount AssetAmountFromValue(const UniValue& value)
+{
+	if (!value.isNum() && !value.isStr())
+		throw JSONRPCError(RPC_TYPE_ERROR, "Amount is not a number or string");
+	CAmount amount;
+	if (!ParseFixedPoint(value.getValStr(), 8, &amount))
+		throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount");
+	if (!AssetRange(amount))
+		throw JSONRPCError(RPC_TYPE_ERROR, "Amount out of range");
+	return amount;
 }
 
 

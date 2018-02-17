@@ -142,4 +142,5 @@ bool GetAsset(const std::vector<unsigned char> &vchAsset,CAsset& txPos);
 bool BuildAssetJson(const CAsset& asset, const bool bGetInputs, UniValue& oName);
 bool BuildAssetIndexerJson(const CAsset& asset,UniValue& oName);
 bool BuildAssetIndexerHistoryJson(const CAsset& asset, UniValue& oName);
+CAmount AssetAmountFromValue(const UniValue& value);
 #endif // ASSET_H

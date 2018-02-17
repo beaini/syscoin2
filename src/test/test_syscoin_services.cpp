@@ -1122,7 +1122,7 @@ void AssetNew(const string& node, const string& name, const string& alias, const
 	GetOtherNodes(node, otherNode1, otherNode2);
 	UniValue r;
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "aliasinfo " + alias));
-	CAmount maxsupplycheck = maxsupply == "-1" ? -1*COIN : AmountFromValue(maxsupply);
+	CAmount maxsupplycheck = maxsupply == "-1" ? -1*COIN : AssetAmountFromValue(maxsupply);
 	// "assetnew [name] [alias] [public] [category=assets] [supply] [max_supply] [use_inputranges] [interest_rate] [can_adjust_interest_rate] [witness]\n"
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetnew " + name + " " + alias + " " + pubdata + " " + " assets " + supply + " " + maxsupply + " " + useinputranges + " " + interestrate + " " + canadjustinterest + " " + witness));
 	UniValue arr = r.get_array();
@@ -1148,8 +1148,8 @@ void AssetNew(const string& node, const string& name, const string& alias, const
 	BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
 	BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == alias);
 	BOOST_CHECK(find_value(r.get_obj(), "publicvalue").get_str() == pubdata);
-	BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "balance")) == AmountFromValue(supply));
-	BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "total_supply")) == AmountFromValue(supply));
+	BOOST_CHECK(AssetAmountFromValue(find_value(r.get_obj(), "balance")) == AssetAmountFromValue(supply));
+	BOOST_CHECK(AssetAmountFromValue(find_value(r.get_obj(), "total_supply")) == AssetAmountFromValue(supply));
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64() , maxsupplycheck);
 	BOOST_CHECK_EQUAL(((int)(find_value(r.get_obj(), "interest_rate").get_real() * 1000 + 0.5)), ((int)(boost::lexical_cast<float>(interestrate) * 1000)));
 	bool storedCanAdjustRates = find_value(r.get_obj(), "can_adjust_interest_rate").get_bool();
@@ -1163,8 +1163,8 @@ void AssetNew(const string& node, const string& name, const string& alias, const
 		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode1, "assetinfo " + name + " false"));
 		BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
 		BOOST_CHECK(find_value(r.get_obj(), "publicvalue").get_str() == pubdata);
-		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "balance")) == AmountFromValue(supply));
-		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "total_supply")) == AmountFromValue(supply));
+		BOOST_CHECK(AssetAmountFromValue(find_value(r.get_obj(), "balance")) == AssetAmountFromValue(supply));
+		BOOST_CHECK(AssetAmountFromValue(find_value(r.get_obj(), "total_supply")) == AssetAmountFromValue(supply));
 		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64() , maxsupplycheck);
 		BOOST_CHECK_EQUAL(((int)(find_value(r.get_obj(), "interest_rate").get_real() * 1000 + 0.5)), ((int)(boost::lexical_cast<float>(interestrate) * 1000)));
 		bool storedCanAdjustRates = find_value(r.get_obj(), "can_adjust_interest_rate").get_bool();
@@ -1176,8 +1176,8 @@ void AssetNew(const string& node, const string& name, const string& alias, const
 		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode2, "assetinfo " + name + " false"));
 		BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
 		BOOST_CHECK(find_value(r.get_obj(), "publicvalue").get_str() == pubdata);
-		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "balance")) == AmountFromValue(supply));
-		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "total_supply")) == AmountFromValue(supply));
+		BOOST_CHECK(AssetAmountFromValue(find_value(r.get_obj(), "balance")) == AssetAmountFromValue(supply));
+		BOOST_CHECK(AssetAmountFromValue(find_value(r.get_obj(), "total_supply")) == AssetAmountFromValue(supply));
 		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64() , maxsupplycheck);
 		BOOST_CHECK_EQUAL(((int)(find_value(r.get_obj(), "interest_rate").get_real() * 1000 + 0.5)), ((int)(boost::lexical_cast<float>(interestrate) * 1000)));
 		bool storedCanAdjustRates = find_value(r.get_obj(), "can_adjust_interest_rate").get_bool();
@@ -1194,10 +1194,10 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 	string oldalias = find_value(r.get_obj(), "alias").get_str();
 	string oldpubdata = find_value(r.get_obj(), "publicvalue").get_str();
 	string oldsupply = find_value(r.get_obj(), "total_supply").write();
-	CAmount oldsupplyamount = AmountFromValue(find_value(r.get_obj(), "total_supply"));
+	CAmount oldsupplyamount = AssetAmountFromValue(find_value(r.get_obj(), "total_supply"));
 	CAmount supplyamount = 0;
 	if(supply != "''")
-		supplyamount = AmountFromValue(supply);
+		supplyamount = AssetAmountFromValue(supply);
 	CAmount newamount = oldsupplyamount + supplyamount;
 
 	string oldinterest = boost::lexical_cast<string>(find_value(r.get_obj(), "interest_rate").get_real());
@@ -1235,7 +1235,7 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 	BOOST_CHECK(find_value(r.get_obj(), "_id").get_str() == name);
 	BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == oldalias);
 	BOOST_CHECK_EQUAL(((int)(find_value(r.get_obj(), "interest_rate").get_real() * 1000 + 0.5)), ((int)(boost::lexical_cast<float>(newinterest) * 1000)));
-	BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "total_supply")) == newamount);
+	BOOST_CHECK(AssetAmountFromValue(find_value(r.get_obj(), "total_supply")) == newamount);
 	GenerateBlocks(5, node);
 	if (!otherNode1.empty())
 	{
@@ -1244,7 +1244,7 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 		BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == oldalias);
 		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "publicvalue").get_str(), newpubdata);
 		BOOST_CHECK_EQUAL(((int)(find_value(r.get_obj(), "interest_rate").get_real() * 1000 + 0.5)), ((int)(boost::lexical_cast<float>(newinterest) * 1000)));
-		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "total_supply")) == newamount);
+		BOOST_CHECK(AssetAmountFromValue(find_value(r.get_obj(), "total_supply")) == newamount);
 
 	}
 	if (!otherNode2.empty())
@@ -1254,7 +1254,7 @@ void AssetUpdate(const string& node, const string& name, const string& pubdata, 
 		BOOST_CHECK(find_value(r.get_obj(), "alias").get_str() == oldalias);
 		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "publicvalue").get_str(), newpubdata);
 		BOOST_CHECK_EQUAL(((int)(find_value(r.get_obj(), "interest_rate").get_real() * 1000 + 0.5)), ((int)(boost::lexical_cast<float>(newinterest) * 1000)));
-		BOOST_CHECK(AmountFromValue(find_value(r.get_obj(), "total_supply")) == newamount);
+		BOOST_CHECK(AssetAmountFromValue(find_value(r.get_obj(), "total_supply")) == newamount);
 
 	}
 

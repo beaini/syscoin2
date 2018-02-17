@@ -329,7 +329,7 @@ BOOST_AUTO_TEST_CASE(generate_assetupdate)
 	// update supply, ensure balance gets updated properly, 5+1, 1 comes from the initial assetnew, 1 above doesn't actually get set because asset wasn't yours so total should be 6
 	AssetUpdate("node1", "assetupdatename", "pub12", "5");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetupdatename false"));
-	BOOST_CHECK_EQUAL(AmountFromValue(find_value(r.get_obj(), "balance")), 6*COIN);
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 6*COIN);
 	// update interest rate
 	AssetNew("node1", "assetupdateinterest", "jagassetupdate", "data", "1", "10", "false", "0.1", "true");
 	AssetUpdate("node1", "assetupdateinterest", "pub12", "0", "0.25");
