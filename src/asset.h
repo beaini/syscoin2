@@ -28,7 +28,7 @@ void AssetTxToJSON(const int op, const std::vector<unsigned char> &vchData, cons
 std::string assetFromOp(int op);
 bool RemoveAssetScriptPrefix(const CScript& scriptIn, CScript& scriptOut);
 // 10b max asset circulation
-static const CAmount MAX_ASSET = 10000000000 * COIN;
+static const CAmount MAX_ASSET = (10000000000 * COIN) - COIN;
 inline bool AssetRange(const CAmount& nValue) { return (nValue >= 0 && nValue <= MAX_ASSET); }
 
 class CAsset {
