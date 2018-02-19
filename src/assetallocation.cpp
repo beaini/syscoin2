@@ -979,7 +979,7 @@ bool DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& 
 			continue;
 
 		// if this tx arrived within the minimum latency period flag it as potentially conflicting
-		if (((arrivalTime.second / 1000) - lastArrivalTime.second) < ZDAG_MINIMUM_LATENCY_SECONDS) {
+		if ((arrivalTime.second - lastArrivalTime.second) < (ZDAG_MINIMUM_LATENCY_SECONDS*1000)) {
 			return true;
 		}
 		lastArrivalTime = arrivalTime;
