@@ -21,6 +21,7 @@ BOOST_FIXTURE_TEST_SUITE (syscoin_alias_tests, BasicSyscoinTestingSetup)
 const unsigned int MAX_ALIAS_UPDATES_PER_BLOCK = 5;
 BOOST_AUTO_TEST_CASE (generate_big_aliasdata)
 {
+	ECC_Start();
 	GenerateBlocks(200, "node1");
 	GenerateBlocks(200, "node2");
 	GenerateBlocks(200, "node3");
