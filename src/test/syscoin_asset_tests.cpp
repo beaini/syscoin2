@@ -344,7 +344,7 @@ BOOST_AUTO_TEST_CASE(generate_assetupdate)
 	// can't go above 10b max
 	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatemaxsupply jagassetupdate assets 1 0 ''"), runtime_error);
 	// can't create asset with more than 10b balance or max supply
-	string maxstrplusone = ValueFromAmount(MAX_ASSET+COIN).write();
+	string maxstrplusone = ValueFromAmount(MAX_ASSET+1).write();
 	BOOST_CHECK_THROW(CallRPC("node1", "assetnew assetupdatename2 assetupdatename pub assets " + maxstrplusone + " -1 false 0 false ''"), runtime_error);
 	BOOST_CHECK_THROW(CallRPC("node1", "assetnew assetupdatename2 assetupdatename pub assets 1 " + maxstrplusone + " false 0 false ''"), runtime_error);
 	// if use input ranges update supply and ensure adds to end of allocation, ensure balance gets updated properly
