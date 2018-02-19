@@ -22,8 +22,6 @@ const unsigned int MAX_ALIAS_UPDATES_PER_BLOCK = 5;
 BOOST_AUTO_TEST_CASE (generate_big_aliasdata)
 {
 	GenerateBlocks(200, "node1");
-	GenerateBlocks(200, "node2");
-	GenerateBlocks(200, "node3");
 	UniValue r;
 		// rate converstion to SYS
 	pegRates["USD"] = 2690.1;
@@ -189,6 +187,8 @@ BOOST_AUTO_TEST_CASE (generate_aliasmultiupdate)
 
 BOOST_AUTO_TEST_CASE (generate_sendmoneytoalias)
 {
+	GenerateBlocks(500, "node2");
+	GenerateBlocks(500, "node3");
 	printf("Running generate_sendmoneytoalias...\n");
 	GenerateBlocks(5, "node2");
 	AliasNew("node2", "sendnode2", "changeddata2");
