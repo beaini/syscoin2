@@ -950,16 +950,39 @@ bool DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& 
 	// ensure that this transaction exists in the arrivalTimes DB (which is the running stored lists of all real-time asset allocation sends not in POW)
 	// the arrivalTimes DB is only added to for valid asset allocation sends that happen in real-time and it is removed once there is POW on that transaction
 	passetallocationdb->ReadISArrivalTimes(assetAllocationTuple, arrivalTimes);
+	
+	// sort the arrivalTimesMap ascending based on arrival time value
+
+	// Declaring the type of Predicate for comparing arrivalTimesMap
+	typedef std::function<bool(std::pair<uint256, int64_t>, std::pair<uint256, int64_t>)> Comparator;
+
+	// Defining a lambda function to compare two pairs. It will compare two pairs using second field
+	Comparator compFunctor =
+		[](std::pair<uint256, int64_t> elem1, std::pair<uint256, int64_t> elem2)
+	{
+		return elem1.second < elem2.second;
+	};
+
+	// Declaring a set that will store the pairs using above comparision logic
+	std::set<std::pair<uint256, int64_t>, Comparator> arrivalTimesSet(
+		arrivalTimes.begin(), arrivalTimes.end(), compFunctor);
+
 	LOCK(cs_main);
 	// go through arrival times and check that balances don't overrun the POW balance
 	CAmount nRealtimeBalanceRequired = 0;
-	for(auto& arrivalTime: arrivalTimes)
+	pair<uint256, int64_t> lastArrivalTime;
+	for(auto& arrivalTime: arrivalTimesSet)
 	{
 		CTransaction tx;
 		// ensure mempool has this transaction and it is not yet mined, get the transaction in question
 		if (!mempool.lookup(arrivalTime.first, tx))
 			continue;
 
+		// if this tx arrived within the minimum latency period flag it as potentially conflicting
+		if (((arrivalTime.second / 1000) - lastArrivalTime.second) < ZDAG_MINIMUM_LATENCY_SECONDS) {
+			return true;
+		}
+		lastArrivalTime = arrivalTime;
 		// get asset allocation object from this tx, if for some reason it doesn't have it, just skip (shouldn't happen)
 		CAssetAllocation assetallocation(tx);
 		if (assetallocation.IsNull())
