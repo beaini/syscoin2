@@ -1003,7 +1003,7 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 					return ZDAG_MINOR_CONFLICT_OK;
 				}
 				// even if the sender may be flagged, the order of events suggests that this receiver should get his money confirmed upon pow because real-time balance is sufficient for this receiver
-				else (assetAllocation == assetAllocationTupleReceiver) {
+				else if(assetAllocation == assetAllocationTupleReceiver) {
 					return ZDAG_STATUS_OK;
 				}
 			}
@@ -1015,13 +1015,13 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 				if (rangeCount == 0)
 					continue;
 				senderBalance -= rangeCount*COIN;
-				mapBalances[amountTuple.first] += rangeCount*COIN;
+				mapBalances[inputTuple.first] += rangeCount*COIN;
 				// if running balance overruns the stored balance then we have a potential conflict
 				if (senderBalance < 0) {
 					return ZDAG_MINOR_CONFLICT_OK;
 				}
 				// even if the sender may be flagged, the order of events suggests that this receiver should get his money confirmed upon pow because real-time balance is sufficient for this receiver
-				else (assetAllocation == assetAllocationTupleReceiver) {
+				else if(assetAllocation == assetAllocationTupleReceiver) {
 					return ZDAG_STATUS_OK;
 				}
 			}
