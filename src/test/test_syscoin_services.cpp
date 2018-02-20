@@ -1375,7 +1375,7 @@ void AssetSend(const string& node, const string& name, const UniValue& valueTo, 
 
 	BOOST_CHECK_EQUAL(find_value(historyResultObj, "type").get_str(), "Asset Sent");
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "total_supply").write(), fromsupply);
-	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")) , newamount);
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")) , newfromamount);
 	GenerateBlocks(5, node);
 	if (!otherNode1.empty())
 	{
