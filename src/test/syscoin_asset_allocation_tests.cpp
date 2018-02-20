@@ -20,6 +20,7 @@ using namespace boost::chrono;
 using namespace std;
 BOOST_GLOBAL_FIXTURE( SyscoinTestingSetup );
 
+BOOST_FIXTURE_TEST_SUITE(syscoin_asset_allocation_tests, BasicSyscoinTestingSetup)
 BOOST_AUTO_TEST_CASE(generate_asset_allocation_send)
 {
 	printf("Running generate_asset_send...\n");
