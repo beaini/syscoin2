@@ -370,7 +370,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend)
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo assetsendname jagassetsend1 true"));
 	inputs = find_value(r.get_obj(), "inputs");
 	BOOST_CHECK(inputs.isArray());
-	UniValue inputsArray = inputs.get_array();
+	inputsArray = inputs.get_array();
 	BOOST_CHECK(inputsArray.size() == 0);
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 7 * COIN);
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "memo").get_str(), "memoassetsend");
@@ -384,7 +384,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend)
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64(), 20 * COIN);
 	inputs = find_value(r.get_obj(), "inputs");
 	BOOST_CHECK(inputs.isArray());
-	UniValue inputsArray = inputs.get_array();
+	inputsArray = inputs.get_array();
 	BOOST_CHECK(inputsArray.size() == 0);
 	AssetUpdate("node1", "assetsendname", "pub12", "9");
 	// check balance is added to end
@@ -449,7 +449,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend_ranges)
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64(), 20 * COIN);
 	inputs = find_value(r.get_obj(), "inputs");
 	BOOST_CHECK(inputs.isArray());
-	UniValue inputsArray = inputs.get_array();
+	inputsArray = inputs.get_array();
 	BOOST_CHECK(inputsArray.size() == 3);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "start"), 0);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "end"), 0);
@@ -466,7 +466,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend_ranges)
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64(), 20 * COIN);
 	inputs = find_value(r.get_obj(), "inputs");
 	BOOST_CHECK(inputs.isArray());
-	UniValue inputsArray = inputs.get_array();
+	inputsArray = inputs.get_array();
 	BOOST_CHECK(inputsArray.size() == 3);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "start"), 0);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "end"), 0);
@@ -482,7 +482,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend_ranges)
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64(), 20 * COIN);
 	inputs = find_value(r.get_obj(), "inputs");
 	BOOST_CHECK(inputs.isArray());
-	UniValue inputsArray = inputs.get_array();
+	inputsArray = inputs.get_array();
 	BOOST_CHECK(inputsArray.size() == 3);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "start"), 0);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "end"), 0);
