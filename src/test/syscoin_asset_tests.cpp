@@ -347,6 +347,7 @@ BOOST_AUTO_TEST_CASE(generate_assetupdate)
 }
 BOOST_AUTO_TEST_CASE(generate_assetsend)
 {
+	UniValue r;
 	printf("Running generate_assetsend...\n");
 	AliasNew("node1", "jagassetsend", "data");
 	AliasNew("node2", "jagassetsend1", "data");
