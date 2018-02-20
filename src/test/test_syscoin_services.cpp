@@ -1302,7 +1302,7 @@ void AssetTransfer(const string& node, const string &tonode, const string& name,
 
 
 }
-void AssetSend(const string& node, const string& name, const UniValue& valueTo, const string& witness)
+void AssetSend(const string& node, const string& name, const UniValue& valueTo, const string& memo, const string& witness)
 {
 	CAssetAllocation theAssetAllocation;
 	BOOST_CHECK(valueTo.isArray());
@@ -1354,8 +1354,6 @@ void AssetSend(const string& node, const string& name, const UniValue& valueTo, 
 	string fromsupply = find_value(r.get_obj(), "total_supply").write();
 	CAmount newfromamount = AssetAmountFromValue(find_value(r.get_obj(), "balance")) - inputamount*COIN;
 
-
-	string memo = "";
 	// "assetsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [memo] [witness]\n"
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetsend " + name + " " + fromalias + " " + valueTo.write() + " " + memo + " " + witness));
 	UniValue arr = r.get_array();

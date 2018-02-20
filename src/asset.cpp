@@ -1246,16 +1246,11 @@ void AssetTxToJSON(const int op, const std::vector<unsigned char> &vchData, cons
 	if (!asset.sCategory.empty() && asset.sCategory != dbAsset.sCategory)
 		entry.push_back(Pair("category", stringFromVch(asset.sCategory)));
 
-	UniValue oAssetAllocationReceiversArray(UniValue::VARR);
-	if (!asset.listAllocationInputs.empty()) {
-		for (auto& inputRange : asset.listAllocationInputs) {
-			UniValue oAssetAllocationReceiversObj(UniValue::VOBJ);
-			oAssetAllocationReceiversObj.push_back(Pair("start", (int)inputRange.start));
-			oAssetAllocationReceiversObj.push_back(Pair("end", (int)inputRange.end));
-			oAssetAllocationReceiversArray.push_back(oAssetAllocationReceiversObj);
-		}
-	}
-	entry.push_back(Pair("allocations", oAssetAllocationReceiversArray));
+	if (asset.fInterestRate != dbAsset.fInterestRate)
+		entry.push_back(Pair("interest_rate", asset.fInterestRate));
+
+	if (asset.nBalance != dbAsset.nBalance)
+		entry.push_back(Pair("balance", ValueFromAmount(asset.nBalance)));
 
 }
 CAmount AssetAmountFromValue(const UniValue& value)

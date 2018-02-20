@@ -1066,6 +1066,7 @@ bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const boo
     oAssetAllocation.push_back(Pair("height", (int)assetallocation.nHeight));
 	oAssetAllocation.push_back(Pair("alias", stringFromVch(assetallocation.vchAlias)));
 	oAssetAllocation.push_back(Pair("balance", ValueFromAmount(assetallocation.nBalance)));
+	oAssetAllocation.push_back(Pair("memo", stringFromVch(assetallocation.vchMemo)));
 	if (bGetInputs) {
 		UniValue oAssetAllocationInputsArray(UniValue::VARR);
 		for (auto& input : assetallocation.listAllocationInputs) {
@@ -1098,11 +1099,12 @@ void AssetAllocationTxToJSON(const int op, const std::vector<unsigned char> &vch
 	entry.push_back(Pair("_id", CAssetAllocationTuple(assetallocation.vchAsset, assetallocation.vchAlias).ToString()));
 	entry.push_back(Pair("asset", stringFromVch(assetallocation.vchAsset)));
 	entry.push_back(Pair("alias", stringFromVch(assetallocation.vchAlias)));
+	entry.push_back(Pair("memo", stringFromVch(assetallocation.vchMemo)));
 	UniValue oAssetAllocationReceiversArray(UniValue::VARR);
 	if (!assetallocation.listSendingAllocationAmounts.empty()) {
 		for (auto& amountTuple : assetallocation.listSendingAllocationAmounts) {
 			UniValue oAssetAllocationReceiversObj(UniValue::VOBJ);
-			oAssetAllocationReceiversObj.push_back(Pair("alias", stringFromVch(amountTuple.first)));
+			oAssetAllocationReceiversObj.push_back(Pair("aliasto", stringFromVch(amountTuple.first)));
 			oAssetAllocationReceiversObj.push_back(Pair("amount", ValueFromAmount(amountTuple.second)));
 			oAssetAllocationReceiversArray.push_back(oAssetAllocationReceiversObj);
 		}
