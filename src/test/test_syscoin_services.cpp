@@ -1302,6 +1302,100 @@ void AssetTransfer(const string& node, const string &tonode, const string& name,
 
 
 }
+void AssetSend(const string& node, const string& name, const UniValue& valueTo, const string& witness)
+{
+	CAssetAllocation theAssetAllocation;
+	BOOST_CHECK(valueTo.isArray());
+	UniValue receivers = valueTo.get_array();
+	CAmount inputamount = 0;
+	for (unsigned int idx = 0; idx < receivers.size(); idx++) {
+		const UniValue& receiver = receivers[idx];
+		BOOST_CHECK(receiver.isObject());
+			
+
+		UniValue receiverObj = receiver.get_obj();
+		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "aliasto"));
+		
+		UniValue inputRangeObj = find_value(receiverObj, "ranges");
+		UniValue amountObj = find_value(receiverObj, "amount");
+		if (inputRangeObj.isArray()) {
+			UniValue inputRanges = inputRangeObj.get_array();
+			vector<CRange> vectorOfRanges;
+			for (unsigned int rangeIndex = 0; rangeIndex < inputRanges.size(); rangeIndex++) {
+				const UniValue& inputRangeObj = inputRanges[rangeIndex];
+				BOOST_CHECK(inputRangeObj.isObject());
+				UniValue startRangeObj = find_value(inputRangeObj, "start");
+				UniValue endRangeObj = find_value(inputRangeObj, "end");
+				BOOST_CHECK(startRangeObj.isNum());
+				BOOST_CHECK(endRangeObj.isNum());
+				CRange myRange(startRangeObj.get_int(), endRangeObj.get_int());
+				vectorOfRanges.push_back(myRange);
+				const unsigned int rangeTotal = validateRangesAndGetCount(myRange);
+				BOOST_CHECK(rangeTotal < 0);
+				inputamount += rangeTotal*COIN;
+			}
+			theAssetAllocation.listSendingAllocationInputs.push_back(make_pair(vchAliasTo, vectorOfRanges));
+		}
+		else if (amountObj.isNum()) {
+			const CAmount &amount = AssetAmountFromValue(amountObj);
+			inputamount += amount;
+			BOOST_CHECK(amount > 0);
+			theAssetAllocation.listSendingAllocationAmounts.push_back(make_pair(vchAliasTo, amount));
+		}
+		
+
+	}
+
+	string otherNode1, otherNode2;
+	GetOtherNodes(node, otherNode1, otherNode2);
+	UniValue r;
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name + " false"));
+	string fromalias = find_value(r.get_obj(), "alias").get_str();
+	string fromsupply = find_value(r.get_obj(), "total_supply").write();
+	CAmount newfromamount = AssetAmountFromValue(find_value(r.get_obj(), "balance")) - inputamount*COIN;
+
+
+	string memo = "";
+	// "assetsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [memo] [witness]\n"
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetsend " + name + " " + fromalias + " " + valueTo.write() + " " + memo + " " + witness));
+	UniValue arr = r.get_array();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "signrawtransaction " + arr[0].get_str()));
+	string hex_str = find_value(r.get_obj(), "hex").get_str();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinsendrawtransaction " + hex_str));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
+	string txid = find_value(r.get_obj(), "txid").get_str();
+
+	GenerateBlocks(5, node);
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name + " false"));
+
+	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + name);
+	BOOST_CHECK(!txHistoryResult.empty());
+	UniValue ret;
+	BOOST_CHECK(ret.read(txHistoryResult[0].get_str()));
+	const UniValue &historyResultObj = ret.get_obj();
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "user1").get_str(), fromalias);
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "_id").get_str(), txid + "-" + name);
+
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "type").get_str(), "Asset Sent");
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "total_supply").write(), fromsupply);
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")) , newamount);
+	GenerateBlocks(5, node);
+	if (!otherNode1.empty())
+	{
+		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode1, "assetinfo " + name + " false"));
+		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "total_supply").write(), fromsupply);
+		BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")) , newfromamount);
+
+	}
+	if (!otherNode2.empty())
+	{
+		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode2, "assetinfo " + name + " false"));
+		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "total_supply").write(), fromsupply);
+		BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")) , newfromamount);
+
+	}
+
+}
 const string CertNew(const string& node, const string& alias, const string& title, const string& pubdata, const string& witness)
 {
 	string otherNode1, otherNode2;

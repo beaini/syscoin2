@@ -712,10 +712,13 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	if (fHelp || params.size() != 5)
 		throw runtime_error(
-			"assetallocationsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [memo] [witness]\n"
+			"assetallocationsend [asset] [aliasfrom] ( [{\"aliasto\":\"aliasname\",\"amount\":amount},...] or [{\"aliasto\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [memo] [witness]\n"
 			"Send an asset allocation you own to another alias.\n"
 			"<asset> Asset name.\n"
-			"<aliasfrom> alias to transfer from.\n"
+			"<aliasfrom> Alias to transfer from.\n"
+			"<aliasto> Alias to transfer to.\n"
+			"<amount> Quantity of asset to send.\n"
+			"<ranges> Ranges of inputs to send in integers specified in the start and end fields.\n"
 			"<memo> Message to include in this asset allocation transfer.\n"
 			"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
 			"The third parameter can be either an array of alias and amounts if sending amount pairs or an array of alias and array of start/end pairs of indexes for input ranges.\n"
@@ -739,10 +742,10 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	for (unsigned int idx = 0; idx < receivers.size(); idx++) {
 		const UniValue& receiver = receivers[idx];
 		if (!receiver.isObject())
-			throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "expected object with {\"alias'\",\"inputranges\" or \"amount\"}");
+			throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "expected object with {\"aliasto'\",\"inputranges\" or \"amount\"}");
 
 		UniValue receiverObj = receiver.get_obj();
-		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "alias"));
+		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "aliasto"));
 		if (!GetAlias(vchAliasTo, toAlias))
 			throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2509 - " + _("Failed to read recipient alias from DB"));
 
@@ -767,7 +770,7 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 		}
 		else if (amountObj.isNum()) {
 			const CAmount &amount = AmountFromValue(amountObj);
-			if (amount < 0)
+			if (amount <= 0)
 				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "amount must be positive");
 			theAssetAllocation.listSendingAllocationAmounts.push_back(make_pair(vchAliasTo, amount));
 		}
@@ -794,18 +797,18 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	CScript scriptPubKey;
 
 	CAssetAllocationTuple assetAllocationTuple(vchAsset, vchAliasFrom);
-	if (!GetBoolArg("-unittest", false)) {
-		// check to see if a transaction for this asset/alias tuple has arrived before minimum latency period
-		ArrivalTimesMap arrivalTimes;
-		passetallocationdb->ReadISArrivalTimes(assetAllocationTuple, arrivalTimes);
-		const int64_t & nNow = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
-		for (auto& arrivalTime : arrivalTimes) {
-			// if this tx arrived within the minimum latency period flag it as potentially conflicting
-			if ((nNow - (arrivalTime.second / 1000)) < ZDAG_MINIMUM_LATENCY_SECONDS) {
-				throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2510 - " + _("Please wait a few more seconds and try again..."));
-			}
+
+	// check to see if a transaction for this asset/alias tuple has arrived before minimum latency period
+	ArrivalTimesMap arrivalTimes;
+	passetallocationdb->ReadISArrivalTimes(assetAllocationTuple, arrivalTimes);
+	const int64_t & nNow = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+	for (auto& arrivalTime : arrivalTimes) {
+		// if this tx arrived within the minimum latency period flag it as potentially conflicting
+		if ((nNow - (arrivalTime.second / 1000)) < GetBoolArg("-unittest", false)? 0.5: ZDAG_MINIMUM_LATENCY_SECONDS) {
+			throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2510 - " + _("Please wait a few more seconds and try again..."));
 		}
 	}
+	
 	if (assetAllocationConflicts.find(assetAllocationTuple) != assetAllocationConflicts.end())
 		throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2510 - " + _("This asset allocation is involved in a conflict which must be resolved with Proof-Of-Work. Please wait for a block confirmation and try again..."));
 	

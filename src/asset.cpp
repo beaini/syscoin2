@@ -1006,12 +1006,13 @@ UniValue assettransfer(const UniValue& params, bool fHelp) {
 UniValue assetsend(const UniValue& params, bool fHelp) {
 	if (fHelp || params.size() != 5)
 		throw runtime_error(
-			"assetsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [memo] [witness]\n"
+			"assetsend [asset] [aliasfrom] ( [{\"aliasto\":\"aliasname\",\"amount\":amount},...] or [{\"aliasto\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [memo] [witness]\n"
 			"Send an asset allocation you own to another alias.\n"
 			"<asset> Asset name.\n"
-			"<aliasfrom> alias to transfer from.\n"
-			"<aliasto> alias to transfer to.\n"
-			"<amount> quantity of asset to send.\n"
+			"<aliasfrom> Alias to transfer from.\n"
+			"<aliasto> Alias to transfer to.\n"
+			"<amount> Quantity of asset to send.\n"
+			"<ranges> Ranges of inputs to send in integers specified in the start and end fields.\n"
 			"<memo> Message to include in this asset allocation transfer.\n"
 			"<witness> Witness alias name that will sign for web-of-trust notarization of this transaction.\n"
 			"The third parameter can be either an array of alias and amounts if sending amount pairs or an array of alias and array of start/end pairs of indexes for input ranges.\n"
@@ -1052,7 +1053,7 @@ UniValue assetsend(const UniValue& params, bool fHelp) {
 
 	
 		UniValue receiverObj = receiver.get_obj();
-		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "alias"));
+		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "aliasto"));
 		if (!GetAlias(vchAliasTo, toAlias))
 			throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2509 - " + _("Failed to read recipient alias from DB"));
 
@@ -1077,7 +1078,7 @@ UniValue assetsend(const UniValue& params, bool fHelp) {
 		}
 		else if (amountObj.isNum()){
 			const CAmount &amount = AssetAmountFromValue(amountObj);
-			if (amount < 0)
+			if (amount <= 0)
 				throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "amount must be positive");
 			theAssetAllocation.listSendingAllocationAmounts.push_back(make_pair(vchAliasTo, amount));
 		}

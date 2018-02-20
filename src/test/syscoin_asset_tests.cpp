@@ -310,6 +310,7 @@ BOOST_AUTO_TEST_CASE(generate_assetupdate)
 {
 	printf("Running generate_assetupdate...\n");
 	AliasNew("node1", "jagassetupdate", "data");
+	AliasNew("node2", "jagassetupdate1", "data");
 	AssetNew("node1", "assetupdatename", "jagassetupdate", "data");
 	// update an asset that isn't yours
 	UniValue r;
@@ -323,30 +324,143 @@ BOOST_AUTO_TEST_CASE(generate_assetupdate)
 	// shouldnt update data, just uses prev data because it hasnt changed
 	AssetUpdate("node1", "assetupdatename");
 	// update supply, ensure balance gets updated properly, 5+1, 1 comes from the initial assetnew, 1 above doesn't actually get set because asset wasn't yours so total should be 6
-	AssetUpdate("node1", "assetupdatename", "pub12", "5");
-	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetupdatename false"));
-	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 6*COIN);
-	// update interest rate
-	AssetNew("node1", "assetupdateinterest", "jagassetupdate", "data", "1", "10", "false", "0.1", "true");
-	AssetUpdate("node1", "assetupdateinterest", "pub12", "0", "0.25");
-	// set can adjust rate to false and ensure can't update interest rate (use initial asset which has can adjust rate set to false)
-	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 1 0.11 ''"), runtime_error);
-	// can't change supply > max supply (current balance already 6, max is 10)
-	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 5 0 ''"), runtime_error);
+		AssetUpdate("node1", "assetupdatename", "pub12", "5");
+		BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetupdatename false"));
+		BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 6*COIN);
+		// update interest rate
+		AssetNew("node1", "assetupdateinterest", "jagassetupdate", "data", "1", "10", "false", "0.1", "true");
+		AssetUpdate("node1", "assetupdateinterest", "pub12", "0", "0.25");
+		// set can adjust rate to false and ensure can't update interest rate (use initial asset which has can adjust rate set to false)
+		BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 1 0.11 ''"), runtime_error);
+		// can't change supply > max supply (current balance already 6, max is 10)
+		BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatename jagassetupdate assets 5 0 ''"), runtime_error);
 	// if max supply is -1 ensure supply can goto 10b max
-	AssetNew("node1", "assetupdatemaxsupply", "jagassetupdate", "data", "1", "-1");
-	string maxstr = ValueFromAmount(MAX_ASSET-COIN).write();
-	AssetUpdate("node1", "assetupdatemaxsupply", "pub12", maxstr);
-	// can't go above 10b max
-	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatemaxsupply jagassetupdate assets 1 0 ''"), runtime_error);
-	// can't create asset with more than 10b balance or max supply
-	string maxstrplusone = ValueFromAmount(MAX_ASSET+1).write();
-	BOOST_CHECK_THROW(CallRPC("node1", "assetnew assetupdatename2 assetupdatename pub assets " + maxstrplusone + " -1 false 0 false ''"), runtime_error);
-	BOOST_CHECK_THROW(CallRPC("node1", "assetnew assetupdatename2 assetupdatename pub assets 1 " + maxstrplusone + " false 0 false ''"), runtime_error);
+		AssetNew("node1", "assetupdatemaxsupply", "jagassetupdate", "data", "1", "-1");
+		string maxstr = ValueFromAmount(MAX_ASSET-COIN).write();
+		AssetUpdate("node1", "assetupdatemaxsupply", "pub12", maxstr);
+		// can't go above 10b max
+		BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetupdatemaxsupply jagassetupdate assets 1 0 ''"), runtime_error);
+		// can't create asset with more than 10b balance or max supply
+		string maxstrplusone = ValueFromAmount(MAX_ASSET+1).write();
+		BOOST_CHECK_THROW(CallRPC("node1", "assetnew assetupdatename2 assetupdatename pub assets " + maxstrplusone + " -1 false 0 false ''"), runtime_error);
+		BOOST_CHECK_THROW(CallRPC("node1", "assetnew assetupdatename2 assetupdatename pub assets 1 " + maxstrplusone + " false 0 false ''"), runtime_error);
+}
+BOOST_AUTO_TEST_CASE(generate_assetsend)
+{
+	printf("Running generate_assetsend...\n");
+	AliasNew("node1", "jagassetsend", "data");
+	AliasNew("node2", "jagassetsend1", "data");
+	AssetNew("node1", "assetsendname", "jagassetsend", "data", "10", "20");
+	// [{\"aliasto\":\"aliasname\",\"amount\":amount},...]
+	UniValue valueTo(UniValue::VARR);
+	valueTo.push_back(Pair("aliasto", "jagassetsend1"));
+	valueTo.push_back(Pair("amount", ValueFromAmount(7*COIN)));
+	AssetSend("node1", "assetsendname", valueTo);
+	// ensure amounts are correct
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetsendname true"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 3 * COIN);
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "total_supply")), 10 * COIN);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64(), 20 * COIN);
+	UniValue inputs = find_value(r.get_obj(), "inputs");
+	BOOST_CHECK(inputs.isArray());
+	BOOST_CHECK(inputs.size() == 0);
+	
+	// add balances
+	AssetUpdate("node1", "assetsendname", "pub12", "1");
+	// check balance is added to end
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetsendname true"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 4 * COIN);
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "total_supply")), 11 * COIN);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64(), 20 * COIN);
+	inputs = find_value(r.get_obj(), "inputs");
+	BOOST_CHECK(inputs.isArray());
+	BOOST_CHECK(inputs.size() == 0);
+	AssetUpdate("node1", "assetsendname", "pub12", "9");
+	// check balance is added to end
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetsendname true"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 13 * COIN);
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "total_supply")), 20 * COIN);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64(), 20 * COIN);
+	inputs = find_value(r.get_obj(), "inputs");
+	BOOST_CHECK(inputs.isArray());
+	BOOST_CHECK(inputs.size() == 0);
+	// can't go over 20 supply
+	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetsendname jagassetsend assets 1 0 ''"), runtime_error);
+}
+BOOST_AUTO_TEST_CASE(generate_assetsend_ranges)
+{
+	printf("Running generate_assetsend...\n");
+	AliasNew("node1", "jagassetsendranges", "data");
+	AliasNew("node2", "jagassetsendranges1", "data");
 	// if use input ranges update supply and ensure adds to end of allocation, ensure balance gets updated properly
-	AssetNew("node1", "assetupdatename1", "jagassetupdate", "data", "10", "20", "true");
-
-
+	AssetNew("node1", "assetsendnameranges", "jagassetsendranges", "data", "10", "20", "true");
+	// send range 1-2, 4-6, 8-9 and then add 1 balance and expect it to add to 10, add 9 more and expect it to add to 11, try to add one more and won't let you due to max 20 supply
+	// [{\"aliasto\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...]
+	UniValue valueTo(UniValue::VARR);
+	valueTo.push_back(Pair("aliasto", "jagassetsendranges1"));
+	UniValue rangeArr(UniValue::VARR);
+	UniValue rangeObj(UniValue::VOBJ);
+	rangeObj.push_back(Pair("start", 1));
+	rangeObj.push_back(Pair("end", 2));
+	rangeArr.push_back(rangeObj);
+	UniValue rangeObj1(UniValue::VOBJ);
+	rangeObj1.push_back(Pair("start", 4));
+	rangeObj1.push_back(Pair("end", 6));
+	rangeArr.push_back(rangeObj1);
+	UniValue rangeObj2(UniValue::VOBJ);
+	rangeObj2.push_back(Pair("start", 8));
+	rangeObj2.push_back(Pair("end", 9));
+	rangeArr.push_back(rangeObj2);
+	valueTo.push_back(Pair("ranges", rangeArr));
+	// break ranges into 0, 3, 7
+	AssetSend("node1", "assetsendnameranges", valueTo);
+	// ensure ranges are correct
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetsendnameranges true"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 3 * COIN);
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "total_supply")), 10 * COIN);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64(), 20 * COIN);
+	UniValue inputs = find_value(r.get_obj(), "inputs");
+	BOOST_CHECK(inputs.isArray());
+	BOOST_CHECK(inputs.size() == 3);
+	BOOST_CHECK_EQUAL(find_value(inputs[0].get_obj(), "start"), 0);
+	BOOST_CHECK_EQUAL(find_value(inputs[0].get_obj(), "end"), 0);
+	BOOST_CHECK_EQUAL(find_value(inputs[1].get_obj(), "start"), 3);
+	BOOST_CHECK_EQUAL(find_value(inputs[1].get_obj(), "end"), 3);
+	BOOST_CHECK_EQUAL(find_value(inputs[2].get_obj(), "start"), 7);
+	BOOST_CHECK_EQUAL(find_value(inputs[2].get_obj(), "end"), 7);
+	// add balances
+	AssetUpdate("node1", "assetsendnameranges", "pub12", "1");
+	// check balance is added to end
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetsendnameranges true"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 4 * COIN);
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "total_supply")), 11 * COIN);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64(), 20 * COIN);
+	inputs = find_value(r.get_obj(), "inputs");
+	BOOST_CHECK(inputs.isArray());
+	BOOST_CHECK(inputs.size() == 3);
+	BOOST_CHECK_EQUAL(find_value(inputs[0].get_obj(), "start"), 0);
+	BOOST_CHECK_EQUAL(find_value(inputs[0].get_obj(), "end"), 0);
+	BOOST_CHECK_EQUAL(find_value(inputs[1].get_obj(), "start"), 3);
+	BOOST_CHECK_EQUAL(find_value(inputs[1].get_obj(), "end"), 3);
+	BOOST_CHECK_EQUAL(find_value(inputs[2].get_obj(), "start"), 7);
+	BOOST_CHECK_EQUAL(find_value(inputs[2].get_obj(), "end"), 8);
+	AssetUpdate("node1", "assetsendnameranges", "pub12", "9");
+	// check balance is added to end
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetsendnameranges true"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 13 * COIN);
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "total_supply")), 20 * COIN);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64(), 20 * COIN);
+	inputs = find_value(r.get_obj(), "inputs");
+	BOOST_CHECK(inputs.isArray());
+	BOOST_CHECK(inputs.size() == 3);
+	BOOST_CHECK_EQUAL(find_value(inputs[0].get_obj(), "start"), 0);
+	BOOST_CHECK_EQUAL(find_value(inputs[0].get_obj(), "end"), 0);
+	BOOST_CHECK_EQUAL(find_value(inputs[1].get_obj(), "start"), 3);
+	BOOST_CHECK_EQUAL(find_value(inputs[1].get_obj(), "end"), 3);
+	BOOST_CHECK_EQUAL(find_value(inputs[2].get_obj(), "start"), 7);
+	BOOST_CHECK_EQUAL(find_value(inputs[2].get_obj(), "end"), 17);
+	// can't go over 20 supply
+	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetsendnameranges jagassetsendranges assets 1 0 ''"), runtime_error);
 }
 BOOST_AUTO_TEST_CASE(generate_assettransfer)
 {
