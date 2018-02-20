@@ -394,7 +394,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend)
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "max_supply").get_int64(), 20 * COIN);
 	inputs = find_value(r.get_obj(), "inputs");
 	BOOST_CHECK(inputs.isArray());
-	UniValue inputsArray = inputs.get_array();
+	inputsArray = inputs.get_array();
 	BOOST_CHECK(inputsArray.size() == 0);
 	// can't go over 20 supply
 	BOOST_CHECK_THROW(r = CallRPC("node1", "assetupdate assetsendname jagassetsend assets 1 0 ''"), runtime_error);
