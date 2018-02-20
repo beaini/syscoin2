@@ -1328,12 +1328,11 @@ void AssetSend(const string& node, const string& name, const UniValue& valueTo, 
 				UniValue endRangeObj = find_value(inputRangeObj, "end");
 				BOOST_CHECK(startRangeObj.isNum());
 				BOOST_CHECK(endRangeObj.isNum());
-				CRange myRange(startRangeObj.get_int(), endRangeObj.get_int());
-				vectorOfRanges.push_back(myRange);
-				const unsigned int rangeTotal = validateRangesAndGetCount(myRange);
-				BOOST_CHECK(rangeTotal < 0);
-				inputamount += rangeTotal*COIN;
+				vectorOfRanges.push_back(CRange(startRangeObj.get_int(), endRangeObj.get_int()));
 			}
+			const unsigned int rangeTotal = validateRangesAndGetCount(vectorOfRanges);
+			BOOST_CHECK(rangeTotal < 0);
+			inputamount += rangeTotal*COIN;
 			theAssetAllocation.listSendingAllocationInputs.push_back(make_pair(vchAliasTo, vectorOfRanges));
 		}
 		else if (amountObj.isNum()) {
