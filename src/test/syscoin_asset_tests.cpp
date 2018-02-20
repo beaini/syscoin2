@@ -416,5 +416,6 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 
 	// try to create asset with same name
 	BOOST_CHECK_THROW(CallRPC("node1", "assetnew jagprune1 jagprunealias1 pubdata assets 1 1 false 0 false ''"), runtime_error);
+	ECC_Stop();
 }
 BOOST_AUTO_TEST_SUITE_END ()

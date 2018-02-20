@@ -937,19 +937,19 @@ UniValue assetallocationinfo(const UniValue& params, bool fHelp) {
 		oAssetAllocation.clear();
     return oAssetAllocation;
 }
-bool DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& assetAllocationTuple) {
+int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& assetAllocationTupleSender, const CAssetAllocationTuple& assetAllocationTupleReceiver) {
 	CAssetAllocation dbAssetAllocation;
 	ArrivalTimesMap arrivalTimes;
 	// get last POW asset allocation balance to ensure we use POW balance to check for potential conflicts in mempool (real-time balances).
 	// The idea is that real-time spending amounts can in some cases overrun the POW balance safely whereas in some cases some of the spends are 
 	// put in another block due to not using enough fees or for other reasons that miners don't mine them.
 	// We just want to flag them as level 1 so it warrants deeper investigation on receiver side if desired (if fund amounts being transferred are not negligible)
-	if (!passetallocationdb || !passetallocationdb->ReadLastAssetAllocation(assetAllocationTuple, dbAssetAllocation))
-		return false;
+	if (!passetallocationdb || !passetallocationdb->ReadLastAssetAllocation(assetAllocationTupleSender, dbAssetAllocation))
+		return ZDAG_STATUS_OK;
 
 	// ensure that this transaction exists in the arrivalTimes DB (which is the running stored lists of all real-time asset allocation sends not in POW)
 	// the arrivalTimes DB is only added to for valid asset allocation sends that happen in real-time and it is removed once there is POW on that transaction
-	passetallocationdb->ReadISArrivalTimes(assetAllocationTuple, arrivalTimes);
+	passetallocationdb->ReadISArrivalTimes(assetAllocationTupleSender, arrivalTimes);
 	
 	// sort the arrivalTimesMap ascending based on arrival time value
 
@@ -971,6 +971,11 @@ bool DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& 
 	// go through arrival times and check that balances don't overrun the POW balance
 	CAmount nRealtimeBalanceRequired = 0;
 	pair<uint256, int64_t> lastArrivalTime;
+	map<vector<unsigned char>, CAmount> mapBalances;
+	// init sender balance, track balances by alias
+	// this is important because asset allocations can be sent/received within blocks and will overrun balances prematurely if not tracked properly, for example pow balance 3, sender sends 3, gets 2 sends 2 (total send 3+2=5 > balance of 3 from last stored state, this is a valid scenario and shouldn't be flagged)
+	CAmount &senderBalance = mapBalances[assetAllocationTupleSender.vchAlias];
+	senderBalance = dbAssetAllocation.nBalance;
 	for(auto& arrivalTime: arrivalTimesSet)
 	{
 		CTransaction tx;
@@ -980,7 +985,7 @@ bool DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& 
 
 		// if this tx arrived within the minimum latency period flag it as potentially conflicting
 		if ((arrivalTime.second - lastArrivalTime.second) < (ZDAG_MINIMUM_LATENCY_SECONDS*1000)) {
-			return true;
+			return ZDAG_MINOR_CONFLICT_OK;
 		}
 		lastArrivalTime = arrivalTime;
 		// get asset allocation object from this tx, if for some reason it doesn't have it, just skip (shouldn't happen)
@@ -990,11 +995,16 @@ bool DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& 
 
 		if (!assetallocation.listSendingAllocationAmounts.empty()) {
 			for (auto& amountTuple : assetallocation.listSendingAllocationAmounts) {
-				nRealtimeBalanceRequired += amountTuple.second;
+				const CAssetAllocationTuple assetAllocation(assetAllocationTupleReceiver.vchAsset, amountTuple.first);
+				senderBalance -= amountTuple.second;
+				mapBalances[amountTuple.first] += amountTuple.second;
 				// if running balance overruns the stored balance then we have a potential conflict
-				// only if nRealtimeBalanceRequired != amountTuple.second meaning we are processing multiple realtime balance requirements before next block
-				if (nRealtimeBalanceRequired != amountTuple.second && nRealtimeBalanceRequired > dbAssetAllocation.nBalance) {
-					return true;
+				if (senderBalance < 0) {
+					return ZDAG_MINOR_CONFLICT_OK;
+				}
+				// even if the sender may be flagged, the order of events suggests that this receiver should get his money confirmed upon pow because real-time balance is sufficient for this receiver
+				else (assetAllocation == assetAllocationTupleReceiver) {
+					return ZDAG_STATUS_OK;
 				}
 			}
 		}
@@ -1003,36 +1013,42 @@ bool DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& 
 				const unsigned int rangeCount = validateRangesAndGetCount(inputTuple.second);
 				if (rangeCount == 0)
 					continue;
-				nRealtimeBalanceRequired += rangeCount*COIN;
+				senderBalance -= rangeCount*COIN;
+				mapBalances[amountTuple.first] += rangeCount*COIN;
 				// if running balance overruns the stored balance then we have a potential conflict
-				// only if nRealtimeBalanceRequired != amountTuple.second meaning we are processing multiple realtime balance requirements before next block
-				if (nRealtimeBalanceRequired != rangeCount && nRealtimeBalanceRequired > dbAssetAllocation.nBalance) {
-					return true;
+				if (senderBalance < 0) {
+					return ZDAG_MINOR_CONFLICT_OK;
+				}
+				// even if the sender may be flagged, the order of events suggests that this receiver should get his money confirmed upon pow because real-time balance is sufficient for this receiver
+				else (assetAllocation == assetAllocationTupleReceiver) {
+					return ZDAG_STATUS_OK;
 				}
 			}
 		}
 	}
-	return false;
+	return ZDAG_STATUS_OK;
 }
 UniValue assetallocationsenderstatus(const UniValue& params, bool fHelp) {
-	if (fHelp || 2 != params.size())
-		throw runtime_error("assetallocationsenderstatus <asset> <alias>\n"
-			"Show status as it pertains to any current Z-DAG conflicts or warnings related to a sender of an asset allocation.\n"
+	if (fHelp || 3 != params.size())
+		throw runtime_error("assetallocationsenderstatus <asset> <sender> <receiver>\n"
+			"Show status as it pertains to any current Z-DAG conflicts or warnings related to a sender or sender/receiver combination of an asset allocation transfer. Leave receiver empty if you are not checking for a specific sender/reciever transfer.\n"
 			"Return value is in the status field and can represent 3 levels(0, 1 or 2)\n"
 			"Level 0 means OK.\n"
 			"Level 1 means warning (checked that in the mempool there are more spending balances than current POW sender balance). An active stance should be taken and perhaps a deeper analysis as to potential conflicts related to the sender.\n"
 			"Level 2 means an active double spend was found and any depending asset allocation sends are also flagged as dangerous and should wait for POW confirmation before proceeding.\n");
 
 	vector<unsigned char> vchAsset = vchFromValue(params[0]);
-	vector<unsigned char> vchAlias = vchFromValue(params[1]);
+	vector<unsigned char> vchAliasSender = vchFromValue(params[1]);
+	vector<unsigned char> vchAliasReceiver = vchFromValue(params[1]);
 	UniValue oAssetAllocationStatus(UniValue::VOBJ);
 
-	CAssetAllocationTuple assetAllocationTuple(vchAsset, vchAlias);
+	CAssetAllocationTuple assetAllocationTupleSender(vchAsset, vchAliasSender);
+	CAssetAllocationTuple assetAllocationTupleReceiver(vchAsset, vchAliasReceiver);
 	int nStatus = ZDAG_STATUS_OK;
-	if (assetAllocationConflicts.find(assetAllocationTuple) != assetAllocationConflicts.end())
+	if (assetAllocationConflicts.find(assetAllocationTupleSender) != assetAllocationConflicts.end())
 		nStatus = ZDAG_MAJOR_CONFLICT_OK;
-	else if (DetectPotentialAssetAllocationSenderConflicts(assetAllocationTuple)) {
-		nStatus = ZDAG_MINOR_CONFLICT_OK;
+	else {
+		nStatus = DetectPotentialAssetAllocationSenderConflicts(assetAllocationTupleSender, assetAllocationTupleReceiver);
 	}
 	oAssetAllocationStatus.push_back(Pair("status", nStatus));
 	return oAssetAllocationStatus;
