@@ -1010,7 +1010,7 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 		}
 		else if (!assetallocation.listSendingAllocationInputs.empty()) {
 			for (auto& inputTuple : assetallocation.listSendingAllocationInputs) {
-				const CAssetAllocationTuple assetAllocation(assetAllocationTupleReceiver.vchAsset, amountTuple.first);
+				const CAssetAllocationTuple assetAllocation(assetAllocationTupleReceiver.vchAsset, inputTuple.first);
 				const unsigned int rangeCount = validateRangesAndGetCount(inputTuple.second);
 				if (rangeCount == 0)
 					continue;
