@@ -371,7 +371,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend)
 	BOOST_CHECK(inputs.isArray());
 	BOOST_CHECK(inputs.size() == 0);
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 7 * COIN);
-	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "memo"), "memoassetsend");
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "memo").get_str(), "memoassetsend");
 
 	// add balances
 	AssetUpdate("node1", "assetsendname", "pub12", "1");
