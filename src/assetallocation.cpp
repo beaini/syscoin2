@@ -271,16 +271,14 @@ bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove,
 // calculate annual interest on an asset allocation
 CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight) {
 	const int64_t &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
-	if (nBlockDifference < ONE_YEAR_IN_BLOCKS)
-		return 0;
 	// need to do one more average balance calculation since the last update to this asset allocation
 	if (!AccumulateBalanceSinceLastInterestClaim(assetAllocation, nHeight))
 		return 0;
 	const float fYears = nBlockDifference / ONE_YEAR_IN_BLOCKS;
 	// apply compound annual interest to get total interest since last time interest was collected
 	const CAmount& nBalanceOverTimeDifference = assetAllocation.nAccumulatedBalanceSinceLastInterestClaim / nBlockDifference;
-	// get interest only and apply externally to this function
-	return ((nBalanceOverTimeDifference*pow((1 + (asset.fInterestRate)), fYears))) - nBalanceOverTimeDifference;
+	// get interest only and apply externally to this function, compound to every block to allow people to claim interest at any time per block
+	return ((nBalanceOverTimeDifference*pow((1 + (asset.fInterestRate / ONE_YEAR_IN_BLOCKS)), (ONE_YEAR_IN_BLOCKS*fYears)))) - nBalanceOverTimeDifference;
 }
 bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight) {
 	CAmount nInterest = GetAssetAllocationInterest(asset, assetAllocation, nHeight);
