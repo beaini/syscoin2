@@ -1721,7 +1721,7 @@ bool BuildAliasIndexerTxHistoryJson(const string &user1, const string &user2, co
 	oName.push_back(Pair("user2", user2));
 	oName.push_back(Pair("user3", user3));
 	oName.push_back(Pair("type", type));
-	oName.push_back(Pair("height", nHeight));
+	oName.push_back(Pair("height", (int)nHeight));
 	int64_t nTime = 0;
 	if (chainActive.Height() >= nHeight) {
 		CBlockIndex *pindex = chainActive[nHeight];
