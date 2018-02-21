@@ -1321,7 +1321,7 @@ void AssetClaimInterest(const string& node, const string& name, const string& al
 	UniValue ret;
 	BOOST_CHECK(ret.read(txHistoryResult[0].get_str()));
 	const UniValue &historyResultObj = ret.get_obj();
-	BOOST_CHECK_EQUAL(find_value(historyResultObj, "user1").get_str(), fromalias);
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "user1").get_str(), alias);
 	CAssetAllocationTuple allocationTuple(vchFromString(name), vchFromString(alias));
 	BOOST_CHECK_EQUAL(find_value(historyResultObj, "_id").get_str(), txid + "-" + allocationTuple.ToString());
 	BOOST_CHECK_EQUAL(find_value(historyResultObj, "type").get_str(), "Asset Collect Interest");
