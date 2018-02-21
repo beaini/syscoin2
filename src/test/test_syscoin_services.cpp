@@ -1302,6 +1302,30 @@ void AssetTransfer(const string& node, const string &tonode, const string& name,
 
 
 }
+void AssetClaimInterest(const string& node, const string& name, const string& alias, const string& witness) {
+	string otherNode1, otherNode2;
+	GetOtherNodes(node, otherNode1, otherNode2);
+	UniValue r;
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetallocationcollectinterest " + name + " " + alias + " " + witness));
+	UniValue arr = r.get_array();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "signrawtransaction " + arr[0].get_str()));
+	string hex_str = find_value(r.get_obj(), "hex").get_str();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinsendrawtransaction " + hex_str));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
+	string txid = find_value(r.get_obj(), "txid").get_str();
+
+	GenerateBlocks(1, node);
+
+	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + name);
+	BOOST_CHECK(!txHistoryResult.empty());
+	UniValue ret;
+	BOOST_CHECK(ret.read(txHistoryResult[0].get_str()));
+	const UniValue &historyResultObj = ret.get_obj();
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "user1").get_str(), fromalias);
+	CAssetAllocationTuple allocationTuple(vchFromString(name), vchFromString(alias));
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "_id").get_str(), txid + "-" + allocationTuple.ToString());
+	BOOST_CHECK_EQUAL(find_value(historyResultObj, "type").get_str(), "Asset Collect Interest");
+}
 void AssetSend(const string& node, const string& name, const string& inputs, const string& memo, const string& witness)
 {
 	CAssetAllocation theAssetAllocation;

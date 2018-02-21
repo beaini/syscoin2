@@ -275,12 +275,13 @@ CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & asset
 		return 0;
 	if (assetAllocation.nLastInterestClaimHeight >= nHeight)
 		return 0;
+	const int &nInterestBlockTerm = GetBoolArg("-unittest", false)? ONE_HOUR_IN_BLOCKS: ONE_YEAR_IN_BLOCKS;
 	const int64_t &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
-	const float &fYears = nBlockDifference / ONE_YEAR_IN_BLOCKS;
+	const float &fTerms = nBlockDifference / nInterestBlockTerm;
 	// apply compound annual interest to get total interest since last time interest was collected
 	const CAmount& nBalanceOverTimeDifference = assetAllocation.nAccumulatedBalanceSinceLastInterestClaim / nBlockDifference;
 	// get interest only and apply externally to this function, compound to every block to allow people to claim interest at any time per block
-	return ((nBalanceOverTimeDifference*pow((1 + (asset.fInterestRate / ONE_YEAR_IN_BLOCKS)), (ONE_YEAR_IN_BLOCKS*fYears)))) - nBalanceOverTimeDifference;
+	return ((nBalanceOverTimeDifference*pow((1 + (asset.fInterestRate / nInterestBlockTerm)), (nInterestBlockTerm*fTerms)))) - nBalanceOverTimeDifference;
 }
 bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight) {
 	CAmount nInterest = GetAssetAllocationInterest(asset, assetAllocation, nHeight);
@@ -425,6 +426,13 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 		}
 		if(dontaddtodb)
 			theAssetAllocation = dbAssetAllocation;
+		else {
+			if (fJustCheck) {
+				if (strResponse != "") {
+					paliasdb->WriteAliasIndexTxHistory(user1, user2, user3, tx.GetHash(), nHeight, strResponseEnglish, assetAllocationTuple.ToString());
+				}
+			}
+		}
 	}
 	else if (op == OP_ASSET_ALLOCATION_SEND)
 	{
@@ -849,10 +857,10 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	res.push_back(EncodeHexTx(wtx));
 	return res;
 }
-UniValue assetallocationcollectioninterest(const UniValue& params, bool fHelp) {
+UniValue assetallocationcollectinterest(const UniValue& params, bool fHelp) {
 	if (fHelp || params.size() != 3)
 		throw runtime_error(
-			"assetallocationcollectioninterest [asset] [alias] [witness]\n"
+			"assetallocationcollectinterest [asset] [alias] [witness]\n"
 			"Collect interest on this asset allocation if an interest rate is set on this asset.\n"
 			"<asset> Asset name.\n"
 			"<alias> alias which owns this asset allocation.\n"

@@ -79,6 +79,7 @@ typedef std::map<uint256, int64_t> ArrivalTimesMap;
 static const int ZDAG_MINIMUM_LATENCY_SECONDS = 10;
 static const int MAX_MEMO_LENGTH = 128;
 static const int ONE_YEAR_IN_BLOCKS = 525600;
+static const int ONE_HOUR_IN_BLOCKS = 60;
 static sorted_vector<CAssetAllocationTuple> assetAllocationConflicts;
 enum {
 	ZDAG_STATUS_OK = 0,
