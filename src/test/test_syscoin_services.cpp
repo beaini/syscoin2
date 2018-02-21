@@ -1302,9 +1302,11 @@ void AssetTransfer(const string& node, const string &tonode, const string& name,
 
 
 }
-void AssetSend(const string& node, const string& name, const UniValue& valueTo, const string& memo, const string& witness)
+void AssetSend(const string& node, const string& name, const string& inputs, const string& memo, const string& witness)
 {
 	CAssetAllocation theAssetAllocation;
+	UniValue valueTo;
+	BOOST_CHECK(valueTo.read(inputs))
 	BOOST_CHECK(valueTo.isArray());
 	UniValue receivers = valueTo.get_array();
 	CAmount inputamount = 0;
@@ -1354,7 +1356,7 @@ void AssetSend(const string& node, const string& name, const UniValue& valueTo, 
 	CAmount newfromamount = AssetAmountFromValue(find_value(r.get_obj(), "balance")) - inputamount*COIN;
 
 	// "assetsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [memo] [witness]\n"
-	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetsend " + name + " " + fromalias + " " + valueTo.write() + " " + memo + " " + witness));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetsend " + name + " " + fromalias + " " + inputs + " " + memo + " " + witness));
 	UniValue arr = r.get_array();
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "signrawtransaction " + arr[0].get_str()));
 	string hex_str = find_value(r.get_obj(), "hex").get_str();

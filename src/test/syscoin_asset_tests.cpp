@@ -357,12 +357,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend)
 	AliasNew("node2", "jagassetsend1", "data");
 	AssetNew("node1", "assetsendname", "jagassetsend", "data", "10", "20");
 	// [{\"aliasto\":\"aliasname\",\"amount\":amount},...]
-	UniValue valueTo(UniValue::VARR);
-	UniValue valueObj(UniValue::VOBJ);
-	valueObj.push_back(Pair("aliasto", "jagassetsend1"));
-	valueObj.push_back(Pair("amount", ValueFromAmount(7*COIN)));
-	valueTo.push_back(valueObj);
-	AssetSend("node1", "assetsendname", valueTo, "memoassetsend");
+	AssetSend("node1", "assetsendname", "\"[{\\\"aliasto\\\":\\\"jagassetsend1\\\",\\\"amount\\\":\\\"" + ValueFromAmount(7 * COIN).write() + "\\\"}]\"", "memoassetsend");
 	// ensure amounts are correct
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetsendname true"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 3 * COIN);
@@ -415,26 +410,8 @@ BOOST_AUTO_TEST_CASE(generate_assetsend_ranges)
 	AssetNew("node1", "assetsendnameranges", "jagassetsendranges", "data", "10", "20", "true");
 	// send range 1-2, 4-6, 8-9 and then add 1 balance and expect it to add to 10, add 9 more and expect it to add to 11, try to add one more and won't let you due to max 20 supply
 	// [{\"aliasto\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...]
-	UniValue valueTo(UniValue::VARR);
-	UniValue valueObj(UniValue::VOBJ);
-	valueObj.push_back(Pair("aliasto", "jagassetsendranges1"));
-	UniValue rangeArr(UniValue::VARR);
-	UniValue rangeObj(UniValue::VOBJ);
-	rangeObj.push_back(Pair("start", 1));
-	rangeObj.push_back(Pair("end", 2));
-	rangeArr.push_back(rangeObj);
-	UniValue rangeObj1(UniValue::VOBJ);
-	rangeObj1.push_back(Pair("start", 4));
-	rangeObj1.push_back(Pair("end", 6));
-	rangeArr.push_back(rangeObj1);
-	UniValue rangeObj2(UniValue::VOBJ);
-	rangeObj2.push_back(Pair("start", 8));
-	rangeObj2.push_back(Pair("end", 9));
-	rangeArr.push_back(rangeObj2);
-	valueObj.push_back(Pair("ranges", rangeArr));
-	valueTo.push_back(valueObj);
 	// break ranges into 0, 3, 7
-	AssetSend("node1", "assetsendnameranges", valueTo, "memoassetsendranges");
+	AssetSend("node1", "assetsendnameranges", "\"[{\\\"aliasto\\\":\\\"jagassetsendranges1\\\",\\\"ranges\\\":[{\\\"start\\\":\\\"1\\\",\\\"end\\\":\\\"2\\\"},{\\\"start\\\":\\\"4\\\",\\\"end\\\":\\\"5\\\"},{\\\"start\\\":\\\"8\\\",\\\"end\\\":\\\"9\\\"}]", "memoassetsendranges");
 	// ensure receiver get's it
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo assetsendnameranges jagassetsendranges1 true"));
 	UniValue inputs = find_value(r.get_obj(), "inputs");
