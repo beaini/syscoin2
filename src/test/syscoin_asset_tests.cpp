@@ -417,7 +417,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend_ranges)
 	UniValue inputs = find_value(r.get_obj(), "inputs");
 	BOOST_CHECK(inputs.isArray());
 	UniValue inputsArray = inputs.get_array();
-	BOOST_CHECK(inputsArray.size() == 3);
+	BOOST_CHECK_EQUAL(inputsArray.size() , 3);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "start").get_int(), 1);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "end").get_int(), 2);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[1].get_obj(), "start").get_int(), 4);
@@ -435,7 +435,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend_ranges)
 	inputs = find_value(r.get_obj(), "inputs");
 	BOOST_CHECK(inputs.isArray());
 	inputsArray = inputs.get_array();
-	BOOST_CHECK(inputsArray.size() == 3);
+	BOOST_CHECK_EQUAL(inputsArray.size() , 3);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "start").get_int(), 0);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "end").get_int(), 0);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[1].get_obj(), "start").get_int(), 3);
@@ -452,7 +452,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend_ranges)
 	inputs = find_value(r.get_obj(), "inputs");
 	BOOST_CHECK(inputs.isArray());
 	inputsArray = inputs.get_array();
-	BOOST_CHECK(inputsArray.size() == 3);
+	BOOST_CHECK_EQUAL(inputsArray.size() , 3);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "start").get_int(), 0);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "end").get_int(), 0);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[1].get_obj(), "start").get_int(), 3);
@@ -468,7 +468,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend_ranges)
 	inputs = find_value(r.get_obj(), "inputs");
 	BOOST_CHECK(inputs.isArray());
 	inputsArray = inputs.get_array();
-	BOOST_CHECK(inputsArray.size() == 3);
+	BOOST_CHECK_EQUAL(inputsArray.size() , 3);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "start").get_int(), 0);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[0].get_obj(), "end").get_int(), 0);
 	BOOST_CHECK_EQUAL(find_value(inputsArray[1].get_obj(), "start").get_int(), 3);
