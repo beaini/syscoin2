@@ -1357,7 +1357,7 @@ void AssetSend(const string& node, const string& name, const string& inputs, con
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name + " false"));
 	string fromalias = find_value(r.get_obj(), "alias").get_str();
 	string fromsupply = find_value(r.get_obj(), "total_supply").write();
-	CAmount newfromamount = AssetAmountFromValue(find_value(r.get_obj(), "balance")) - inputamount*COIN;
+	CAmount newfromamount = AssetAmountFromValue(find_value(r.get_obj(), "balance")) - inputamount;
 
 	// "assetsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [memo] [witness]\n"
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetsend " + name + " " + fromalias + " " + inputs + " " + memo + " " + witness));
