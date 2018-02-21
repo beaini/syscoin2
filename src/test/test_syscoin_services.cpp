@@ -1306,7 +1306,7 @@ void AssetSend(const string& node, const string& name, const string& inputs, con
 {
 	CAssetAllocation theAssetAllocation;
 	UniValue valueTo;
-	BOOST_CHECK(valueTo.read(inputs))
+	BOOST_CHECK(valueTo.read(inputs));
 	BOOST_CHECK(valueTo.isArray());
 	UniValue receivers = valueTo.get_array();
 	CAmount inputamount = 0;
