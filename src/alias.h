@@ -23,6 +23,7 @@ class CSyscoinAddress;
 class COutPoint;
 class CCoinControl;
 struct CRecipient;
+
 static const unsigned int MAX_GUID_LENGTH = 71;
 static const unsigned int MAX_NAME_LENGTH = 256;
 static const unsigned int MAX_VALUE_LENGTH = 512;
@@ -166,7 +167,7 @@ public:
 	std::vector<unsigned char> vchAlias;
 	std::vector<unsigned char> vchGUID;
     uint256 txHash;
-    uint64_t nHeight;
+    unsigned int nHeight;
 	uint64_t nExpireTime;
 	std::vector<unsigned char> vchAddress;
 	std::vector<unsigned char> vchEncryptionPublicKey;
@@ -278,7 +279,7 @@ public:
 	void WriteAliasIndexHistory(const CAliasIndex& alias, const int &op);
 	void EraseAliasIndexHistory(const std::vector<unsigned char>& vchAlias, bool cleanup);
 	void EraseAliasIndexHistory(const std::string& id);
-	void WriteAliasIndexTxHistory(const std::string &user1, const std::string &user2, const std::string &user3, const uint256 &txHash, const uint64_t& nHeight, const std::string &type, const std::string &guid);
+	void WriteAliasIndexTxHistory(const std::string &user1, const std::string &user2, const std::string &user3, const uint256 &txHash, const unsigned int& nHeight, const std::string &type, const std::string &guid);
 	void EraseAliasIndexTxHistory(const std::vector<unsigned char>& vchAlias, bool cleanup);
 	void EraseAliasIndexTxHistory(const std::string& id);
 };

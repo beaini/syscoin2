@@ -38,7 +38,7 @@ public:
 	// if allocations are tracked by individual inputs
 	std::vector<CRange> listAllocationInputs;
     uint256 txHash;
-    uint64_t nHeight;
+	unsigned int nHeight;
 	std::vector<unsigned char> vchPubData;
 	std::vector<unsigned char> sCategory;
 	CAmount nBalance;

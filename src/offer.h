@@ -105,7 +105,7 @@ public:
 	std::vector<unsigned char> vchOffer;
 	std::vector<unsigned char> vchAlias;
     uint256 txHash;
-    uint64_t nHeight;
+	unsigned int nHeight;
 	float fPrice;
 	float fUnits;
 	char nCommission;

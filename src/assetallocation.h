@@ -92,8 +92,8 @@ public:
 	std::vector<unsigned char> vchAsset;
 	std::vector<unsigned char> vchAlias;
 	uint256 txHash;
-	uint64_t nHeight;
-	uint64_t nLastInterestClaimHeight;
+	unsigned int nHeight;
+	unsigned int nLastInterestClaimHeight;
 	// if allocations are tracked by individual inputs
 	std::vector<CRange> listAllocationInputs;
 	RangeInputArrayTuples listSendingAllocationInputs;

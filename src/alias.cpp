@@ -1714,7 +1714,7 @@ void CAliasDB::EraseAliasIndex(const std::vector<unsigned char>& vchAlias, bool 
 	EraseAliasIndexHistory(vchAlias, cleanup);
 	EraseAliasIndexTxHistory(vchAlias, cleanup);
 }
-bool BuildAliasIndexerTxHistoryJson(const string &user1, const string &user2, const string &user3, const uint256 &txHash, const uint64_t& nHeight, const string &type, const string &guid, UniValue& oName)
+bool BuildAliasIndexerTxHistoryJson(const string &user1, const string &user2, const string &user3, const uint256 &txHash, const unsigned int& nHeight, const string &type, const string &guid, UniValue& oName)
 {
 	oName.push_back(Pair("_id", txHash.GetHex()+"-"+guid));
 	oName.push_back(Pair("user1", user1));
@@ -1732,7 +1732,7 @@ bool BuildAliasIndexerTxHistoryJson(const string &user1, const string &user2, co
 	oName.push_back(Pair("time", nTime));
 	return true;
 }
-void CAliasDB::WriteAliasIndexTxHistory(const string &user1, const string &user2, const string &user3, const uint256 &txHash, const uint64_t& nHeight, const string &type, const string &guid) {
+void CAliasDB::WriteAliasIndexTxHistory(const string &user1, const string &user2, const string &user3, const uint256 &txHash, const unsigned int& nHeight, const string &type, const string &guid) {
 	if (!aliastxhistory_collection)
 		return;
 	bson_error_t error;

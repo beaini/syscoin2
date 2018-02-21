@@ -41,7 +41,7 @@ public:
     uint256 txHash;
 	uint256 extTxId;
 	uint256 redeemTxId;
-    uint64_t nHeight;
+	unsigned int nHeight;
 	uint64_t nPaymentOption;
 	unsigned int nQty;
 	unsigned int op;

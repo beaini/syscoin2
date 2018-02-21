@@ -30,7 +30,7 @@ public:
 	std::vector<unsigned char> vchCert;
 	std::vector<unsigned char> vchAlias;
     uint256 txHash;
-    uint64_t nHeight;
+	unsigned int nHeight;
 	// 1 can edit, 2 can edit/transfer
 	unsigned char nAccessFlags;
 	std::vector<unsigned char> vchTitle;
