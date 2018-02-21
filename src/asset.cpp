@@ -562,6 +562,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						if (receiverAllocation.IsNull()) {
 							receiverAllocation.vchAlias = receiverAllocationTuple.vchAlias;
 							receiverAllocation.vchAsset = receiverAllocationTuple.vchAsset;
+							receiverAllocation.nLastInterestClaimHeight = nHeight;
 						}
 						receiverAllocation.txHash = tx.GetHash();
 						if (theAsset.fInterestRate > 0) {
@@ -625,6 +626,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 							receiverAllocation.SetNull();
 							receiverAllocation.vchAlias = receiverAllocationTuple.vchAlias;
 							receiverAllocation.vchAsset = receiverAllocationTuple.vchAsset;
+							receiverAllocation.nLastInterestClaimHeight = nHeight;
 						}
 						
 						receiverAllocation.txHash = tx.GetHash();

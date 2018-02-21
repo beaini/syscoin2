@@ -273,7 +273,7 @@ CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & asset
 	// need to do one more average balance calculation since the last update to this asset allocation
 	if (!AccumulateBalanceSinceLastInterestClaim(assetAllocation, nHeight))
 		return 0;
-	if (assetAllocation.nLastInterestClaimHeight >= nHeight)
+	if (assetAllocation.nLastInterestClaimHeight >= nHeight || assetAllocation.nLastInterestClaimHeight == 0)
 		return 0;
 	const int &nInterestBlockTerm = GetBoolArg("-unittest", false)? ONE_HOUR_IN_BLOCKS: ONE_YEAR_IN_BLOCKS;
 	const int64_t &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
@@ -543,6 +543,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						receiverAllocation.SetNull();
 						receiverAllocation.vchAlias = receiverAllocationTuple.vchAlias;
 						receiverAllocation.vchAsset = receiverAllocationTuple.vchAsset;
+						receiverAllocation.nLastInterestClaimHeight = nHeight;
 					}
 					if (!bBalanceOverrun) {
 						receiverAllocation.txHash = tx.GetHash();
@@ -644,6 +645,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						receiverAllocation.SetNull();
 						receiverAllocation.vchAlias = receiverAllocationTuple.vchAlias;
 						receiverAllocation.vchAsset = receiverAllocationTuple.vchAsset;
+						receiverAllocation.nLastInterestClaimHeight = nHeight;
 					}
 					if (!bBalanceOverrun) {
 						receiverAllocation.txHash = tx.GetHash();
