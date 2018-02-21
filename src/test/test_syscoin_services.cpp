@@ -1337,7 +1337,7 @@ void AssetSend(const string& node, const string& name, const string& inputs, con
 				vectorOfRanges.push_back(CRange(startRangeObj.get_int(), endRangeObj.get_int()));
 			}
 			const unsigned int rangeTotal = validateRangesAndGetCount(vectorOfRanges);
-			BOOST_CHECK(rangeTotal < 0);
+			BOOST_CHECK(rangeTotal > 0);
 			inputamount += rangeTotal*COIN;
 			theAssetAllocation.listSendingAllocationInputs.push_back(make_pair(vchAliasTo, vectorOfRanges));
 		}

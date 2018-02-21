@@ -647,6 +647,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 							AccumulateBalanceSinceLastInterestClaim(theAssetAllocation, nHeight);
 						}
 						receiverAllocation.nHeight = nHeight;
+						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
 						// figure out receivers added ranges and balance
 						vector<CRange> outputMerge;
 						receiverAllocation.listAllocationInputs.insert(std::end(receiverAllocation.listAllocationInputs), std::begin(input.second), std::end(input.second));
