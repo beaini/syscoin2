@@ -306,6 +306,9 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest)
 	// setup asset with 10% interest hourly (unit test mode calculates interest hourly not annually)
 	AssetNew("node1", "newassetcollection", "jagassetcollection", "data", "10000", "-1", "false", "0.05");
 	AssetSend("node1", "newassetcollection", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionreceiver\\\",\\\"amount\\\":5000}]\"", "memoassetinterest");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 5000 * COIN);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
 	// 10 hours later
 	GenerateBlocks(60 * 10);
 	// calc interest expect 5000 (1 + 0.05 / 60) ^ (60(10)) = 8241.89006772
@@ -323,6 +326,9 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_every_block)
 	// setup asset with 10% interest hourly (unit test mode calculates interest hourly not annually)
 	AssetNew("node1", "newassetcollection1", "jagassetcollection1", "data", "10000", "-1", "false", "0.05");
 	AssetSend("node1", "newassetcollection1", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionreceiver1\\\",\\\"amount\\\":5000}]\"", "memoassetinterest1");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 5000 * COIN);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
 	// 10 hours later
 	// calc interest expect 5000 (1 + 0.05 / 60) ^ (60(10)) = 8241.89006772
 	for (int i = 0; i < 60 * 10; i++) {
@@ -411,6 +417,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend)
 	BOOST_CHECK(inputsArray.size() == 0);
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 7 * COIN);
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "memo").get_str(), "memoassetsend");
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
 
 	// add balances
 	AssetUpdate("node1", "assetsendname", "pub12", "1");
@@ -462,6 +469,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend_ranges)
 	BOOST_CHECK_EQUAL(find_value(inputsArray[2].get_obj(), "end").get_int(), 9);
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 7 * COIN);
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "memo").get_str(), "memoassetsendranges");
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
 
 	// ensure ranges are correct
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetinfo assetsendnameranges true"));
