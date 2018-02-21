@@ -402,7 +402,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 	{
 		if (!GetAssetAllocation(assetAllocationTuple, dbAssetAllocation))
 		{
-			errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find sender asset allocation");
+			errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2024 - " + _("Cannot find asset allocation to collect interest on");
 			return true;
 		}
 		if (!GetAsset(dbAssetAllocation.vchAsset, dbAsset))

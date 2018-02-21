@@ -309,7 +309,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest)
 	// 10 hours later
 	GenerateBlocks(60 * 10);
 	// calc interest expect 5000 (1 + 0.05 / 60) ^ (60(10)) = 8241.89006772
-	AssetClaimInterest("node1", "newassetcollection", "jagassetcollection");
+	AssetClaimInterest("node1", "newassetcollection", "jagassetcollectionreceiver");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 8241.89006772 * COIN);
 }
@@ -326,7 +326,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_every_block)
 	// 10 hours later
 	// calc interest expect 5000 (1 + 0.05 / 60) ^ (60(10)) = 8241.89006772
 	for (int i = 0; i < 60 * 10; i++) {
-		AssetClaimInterest("node1", "newassetcollection1", "jagassetcollection1");
+		AssetClaimInterest("node1", "newassetcollection1", "jagassetcollectionreceiver1");
 	}
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection1 jagassetcollectionreceiver1 false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 8241.89006772 * COIN);
