@@ -552,11 +552,6 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 					if (!dontaddtodb) {
 						CAssetAllocation receiverAllocation;
 						const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, amountTuple.first);
-						if (!RevertAssetAllocation(receiverAllocationTuple, tx.GetHash(), revertedAssetAllocations))
-						{
-							errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to revert asset allocation");
-							return error(errorMessage.c_str());
-						}
 						// don't need to check for existance of allocation because it may not exist, may be creating it here for the first time for receiver
 						GetAssetAllocation(receiverAllocationTuple, receiverAllocation);
 						if (receiverAllocation.IsNull()) {
