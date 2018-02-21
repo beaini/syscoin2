@@ -1315,14 +1315,14 @@ void AssetClaimInterest(const string& node, const string& name, const string& al
 	string txid = find_value(r.get_obj(), "txid").get_str();
 
 	GenerateBlocks(1, node);
-
-	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + name);
+	CAssetAllocationTuple allocationTuple(vchFromString(name), vchFromString(alias));
+	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + allocationTuple.ToString());
 	BOOST_CHECK(!txHistoryResult.empty());
 	UniValue ret;
 	BOOST_CHECK(ret.read(txHistoryResult[0].get_str()));
 	const UniValue &historyResultObj = ret.get_obj();
 	BOOST_CHECK_EQUAL(find_value(historyResultObj, "user1").get_str(), alias);
-	CAssetAllocationTuple allocationTuple(vchFromString(name), vchFromString(alias));
+	
 	BOOST_CHECK_EQUAL(find_value(historyResultObj, "_id").get_str(), txid + "-" + allocationTuple.ToString());
 	BOOST_CHECK_EQUAL(find_value(historyResultObj, "type").get_str(), "Asset Collect Interest");
 }
