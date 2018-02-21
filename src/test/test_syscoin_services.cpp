@@ -1314,7 +1314,7 @@ void AssetClaimInterest(const string& node, const string& name, const string& al
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
 	string txid = find_value(r.get_obj(), "txid").get_str();
 
-	GenerateBlocks(1, node);
+	GenerateBlocks(5, node);
 	CAssetAllocationTuple allocationTuple(vchFromString(name), vchFromString(alias));
 	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + allocationTuple.ToString());
 	BOOST_CHECK(!txHistoryResult.empty());
@@ -1392,7 +1392,7 @@ void AssetSend(const string& node, const string& name, const string& inputs, con
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
 	string txid = find_value(r.get_obj(), "txid").get_str();
 
-	GenerateBlocks(5, node);
+	GenerateBlocks(1, node);
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name + " false"));
 
 	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + name);
@@ -1406,7 +1406,7 @@ void AssetSend(const string& node, const string& name, const string& inputs, con
 	BOOST_CHECK_EQUAL(find_value(historyResultObj, "type").get_str(), "Asset Sent");
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "total_supply").write(), fromsupply);
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")) , newfromamount);
-	GenerateBlocks(5, node);
+
 	if (!otherNode1.empty())
 	{
 		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode1, "assetinfo " + name + " false"));
