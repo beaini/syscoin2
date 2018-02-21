@@ -1306,9 +1306,10 @@ void AssetSend(const string& node, const string& name, const string& inputs, con
 {
 	CAssetAllocation theAssetAllocation;
 	UniValue valueTo;
-	string inputsTmp = inputs.replace("\\\\"", "\"");
-	inputsTmp = inputs.replace("\"[", "[");
-	inputsTmp = inputs.replace("]\"", "]");
+	string inputsTmp = inputs;
+	inputsTmp.replace(inputsTmp.begin(), inputsTmp.end(), "\\\\"", "\\"");
+	inputs.replace(inputsTmp.begin(), inputsTmp.end(), "\"[", "[");
+	inputs.replace(inputsTmp.begin(), inputsTmp.end(), "]\"", "]");
 	BOOST_CHECK(valueTo.read(inputsTmp));
 	BOOST_CHECK(valueTo.isArray());
 	UniValue receivers = valueTo.get_array();
