@@ -281,14 +281,14 @@ CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & asset
 		return 0;
 	}
 	const int &nInterestBlockTerm = GetBoolArg("-unittest", false)? ONE_HOUR_IN_BLOCKS: ONE_YEAR_IN_BLOCKS;
-	const int64_t &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
+	const int &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
 	const float &fTerms = nBlockDifference / nInterestBlockTerm;
 	// apply compound annual interest to get total interest since last time interest was collected
 	const CAmount& nBalanceOverTimeDifference = assetAllocation.nAccumulatedBalanceSinceLastInterestClaim / nBlockDifference;
 	// get interest only and apply externally to this function, compound to every block to allow people to claim interest at any time per block
 	return ((nBalanceOverTimeDifference*pow((1 + (asset.fInterestRate / nInterestBlockTerm)), (nInterestBlockTerm*fTerms)))) - nBalanceOverTimeDifference;
 }
-bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight, string& errorMessage) {
+bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight, string& errorMessage) {
 	CAmount nInterest = GetAssetAllocationInterest(asset, assetAllocation, nHeight, errorMessage);
 	if (nInterest <= 0) {
 		return false;
@@ -309,8 +309,8 @@ bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetA
 	return true;
 }
 // keep track of average balance within the interest claim period
-bool AccumulateBalanceSinceLastInterestClaim(CAssetAllocation & assetAllocation, const int64_t& nHeight) {
-	const int64_t &nBlocksSinceLastUpdate = (nHeight - assetAllocation.nHeight);
+bool AccumulateBalanceSinceLastInterestClaim(CAssetAllocation & assetAllocation, const int& nHeight) {
+	const int &nBlocksSinceLastUpdate = (nHeight - assetAllocation.nHeight);
 	if (nBlocksSinceLastUpdate <= 0)
 		return false;
 	// formula is 1/N * (blocks since last update * previous balance) where N is the number of blocks in the total time period
