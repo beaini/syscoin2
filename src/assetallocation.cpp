@@ -281,8 +281,8 @@ CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & asset
 		return 0;
 	}
 	const int &nInterestBlockTerm = GetBoolArg("-unittest", false)? ONE_HOUR_IN_BLOCKS: ONE_YEAR_IN_BLOCKS;
-	const float &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
-	const float &fTerms = nBlockDifference / nInterestBlockTerm;
+	const int &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
+	const float &fTerms = (float)nBlockDifference / (float)nInterestBlockTerm;
 	// apply compound annual interest to get total interest since last time interest was collected
 	const CAmount& nBalanceOverTimeDifference = assetAllocation.nAccumulatedBalanceSinceLastInterestClaim / nBlockDifference;
 	// get interest only and apply externally to this function, compound to every block to allow people to claim interest at any time per block

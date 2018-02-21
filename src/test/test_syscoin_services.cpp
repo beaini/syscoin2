@@ -1314,7 +1314,7 @@ void AssetClaimInterest(const string& node, const string& name, const string& al
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
 	string txid = find_value(r.get_obj(), "txid").get_str();
 
-	GenerateBlocks(5, node);
+	GenerateBlocks(1, node);
 	CAssetAllocationTuple allocationTuple(vchFromString(name), vchFromString(alias));
 	const UniValue &txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + allocationTuple.ToString());
 	BOOST_CHECK(!txHistoryResult.empty());
