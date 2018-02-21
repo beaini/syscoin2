@@ -1069,8 +1069,8 @@ bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const boo
 	oAssetAllocation.push_back(Pair("balance", ValueFromAmount(assetallocation.nBalance)));
 	oAssetAllocation.push_back(Pair("interest_claim_height", assetallocation.nLastInterestClaimHeight));
 	CAmount nBalanceOverTimeDifference = assetallocation.nBalance;
-	if (assetAllocation.nLastInterestClaimHeight < assetallocation.nHeight) {
-		const int64_t &nBlockDifference = assetallocation.nHeight - assetAllocation.nLastInterestClaimHeight;
+	if (assetallocation.nLastInterestClaimHeight < assetallocation.nHeight) {
+		const int64_t &nBlockDifference = assetallocation.nHeight - assetallocation.nLastInterestClaimHeight;
 		nBalanceOverTimeDifference = assetallocation.nAccumulatedBalanceSinceLastInterestClaim / nBlockDifference;
 	}
 	oAssetAllocation.push_back(Pair("average_balance_since_interest_claim", ValueFromAmount(nBalanceOverTimeDifference)));
