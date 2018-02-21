@@ -232,7 +232,7 @@ bool RemoveAssetAllocationScriptPrefix(const CScript& scriptIn, CScript& scriptO
 	return true;
 }
 // revert allocation to previous state and remove 
-bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove, const uint256 &txHash, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations) {
+bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove, const uint256 &txHash, const int& nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations) {
 	paliasdb->EraseAliasIndexTxHistory(txHash.GetHex() + "-" + assetAllocationToRemove.ToString());
 	// only revert asset allocation once
 	if (revertedAssetAllocations.find(assetAllocationToRemove) != revertedAssetAllocations.end())
@@ -244,6 +244,7 @@ bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove,
 		dbAssetAllocation.SetNull();
 		dbAssetAllocation.vchAlias = assetAllocationToRemove.vchAlias;
 		dbAssetAllocation.vchAsset = assetAllocationToRemove.vchAsset;
+		dbAssetAllocation.nLastInterestClaimHeight = nHeight;
 	}
 	LogPrintf("RevertAssetAllocations %s\n", assetAllocationToRemove.ToString().c_str());
 	// write the state back to previous state
@@ -447,7 +448,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 		if (!dontaddtodb) {
 			bRevert = !fJustCheck;
 			if (bRevert) {
-				if (!RevertAssetAllocation(assetAllocationTuple, tx.GetHash(), revertedAssetAllocations))
+				if (!RevertAssetAllocation(assetAllocationTuple, tx.GetHash(), nHeight, revertedAssetAllocations))
 				{
 					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to revert asset allocation");
 					return error(errorMessage.c_str());
@@ -500,7 +501,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, amountTuple.first);
 				// one of the first things we do per receiver is revert it to last pow state on the pow(!fJustCheck)
 				if (bRevert) {
-					if (!RevertAssetAllocation(receiverAllocationTuple, tx.GetHash(), revertedAssetAllocations))
+					if (!RevertAssetAllocation(receiverAllocationTuple, tx.GetHash(), nHeight, revertedAssetAllocations))
 					{
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to revert asset allocation");
 						return error(errorMessage.c_str());
@@ -594,7 +595,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 				const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, inputTuple.first);
 				// one of the first things we do per receiver is revert it to last pow state on the pow(!fJustCheck)
 				if (bRevert) {
-					if (!RevertAssetAllocation(receiverAllocationTuple, tx.GetHash(), revertedAssetAllocations))
+					if (!RevertAssetAllocation(receiverAllocationTuple, tx.GetHash(), nHeight, revertedAssetAllocations))
 					{
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to revert asset allocation");
 						return error(errorMessage.c_str());
