@@ -269,12 +269,16 @@ bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove,
 	
 }
 // calculate annual interest on an asset allocation
-CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight) {
+CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight, string& errorMessage) {
 	// need to do one more average balance calculation since the last update to this asset allocation
-	if (!AccumulateBalanceSinceLastInterestClaim(assetAllocation, nHeight))
+	if (!AccumulateBalanceSinceLastInterestClaim(assetAllocation, nHeight)) {
+		errorMessage = _("Not enough blocks in-between interest claims");
 		return 0;
-	if (assetAllocation.nLastInterestClaimHeight >= nHeight || assetAllocation.nLastInterestClaimHeight == 0)
+	}
+	if (assetAllocation.nLastInterestClaimHeight >= nHeight || assetAllocation.nLastInterestClaimHeight == 0) {
+		errorMessage = _("Last interest claim block height is invalid");
 		return 0;
+	}
 	const int &nInterestBlockTerm = GetBoolArg("-unittest", false)? ONE_HOUR_IN_BLOCKS: ONE_YEAR_IN_BLOCKS;
 	const int64_t &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
 	const float &fTerms = nBlockDifference / nInterestBlockTerm;
@@ -283,16 +287,19 @@ CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & asset
 	// get interest only and apply externally to this function, compound to every block to allow people to claim interest at any time per block
 	return ((nBalanceOverTimeDifference*pow((1 + (asset.fInterestRate / nInterestBlockTerm)), (nInterestBlockTerm*fTerms)))) - nBalanceOverTimeDifference;
 }
-bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight) {
-	CAmount nInterest = GetAssetAllocationInterest(asset, assetAllocation, nHeight);
-	if (nInterest <= 0)
+bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight, string& errorMessage) {
+	CAmount nInterest = GetAssetAllocationInterest(asset, assetAllocation, nHeight, errorMessage);
+	if (nInterest <= 0) {
 		return false;
+	}
 	// if interest cross max supply, reduce interest to fill up to max supply
 	const CAmount &nMaxSupply = asset.nMaxSupply > 0 ? asset.nMaxSupply : MAX_ASSET;
 	if ((nInterest + asset.nTotalSupply) > nMaxSupply) {
 		nInterest = nMaxSupply - asset.nTotalSupply;
-		if (nInterest <= 0)
+		if (nInterest <= 0) {
+			errorMessage = _("Total Supply exceeded max supply");
 			return false;
+		}
 	}
 	assetAllocation.nBalance += nInterest;
 	assetAllocation.nLastInterestClaimHeight = nHeight;
@@ -418,9 +425,10 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 		theAssetAllocation = dbAssetAllocation;
 		// only apply interest on PoW
 		if (!fJustCheck) {
-			if(!ApplyAssetAllocationInterest(dbAsset, theAssetAllocation, nHeight))
+			string errorMessageCollection = "";
+			if(!ApplyAssetAllocationInterest(dbAsset, theAssetAllocation, nHeight, errorMessageCollection))
 			{
-				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2022 - " + _("You cannot collect interest on this asset. You must wait atleast 1 year to try to collect interest");
+				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2022 - " + _("You cannot collect interest on this asset: ") + errorMessageCollection;
 				return true;
 			}
 		}
