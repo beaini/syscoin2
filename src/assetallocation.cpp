@@ -270,11 +270,13 @@ bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove,
 }
 // calculate annual interest on an asset allocation
 CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight) {
-	const int64_t &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
 	// need to do one more average balance calculation since the last update to this asset allocation
 	if (!AccumulateBalanceSinceLastInterestClaim(assetAllocation, nHeight))
 		return 0;
-	const float fYears = nBlockDifference / ONE_YEAR_IN_BLOCKS;
+	if (assetAllocation.nLastInterestClaimHeight >= nHeight)
+		return 0;
+	const int64_t &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
+	const float &fYears = nBlockDifference / ONE_YEAR_IN_BLOCKS;
 	// apply compound annual interest to get total interest since last time interest was collected
 	const CAmount& nBalanceOverTimeDifference = assetAllocation.nAccumulatedBalanceSinceLastInterestClaim / nBlockDifference;
 	// get interest only and apply externally to this function, compound to every block to allow people to claim interest at any time per block
@@ -1065,6 +1067,13 @@ bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const boo
     oAssetAllocation.push_back(Pair("height", (int)assetallocation.nHeight));
 	oAssetAllocation.push_back(Pair("alias", stringFromVch(assetallocation.vchAlias)));
 	oAssetAllocation.push_back(Pair("balance", ValueFromAmount(assetallocation.nBalance)));
+	oAssetAllocation.push_back(Pair("interest_claim_height", assetallocation.nLastInterestClaimHeight));
+	CAmount nBalanceOverTimeDifference = assetallocation.nBalance;
+	if (assetAllocation.nLastInterestClaimHeight < assetallocation.nHeight) {
+		const int64_t &nBlockDifference = assetallocation.nHeight - assetAllocation.nLastInterestClaimHeight;
+		nBalanceOverTimeDifference = assetallocation.nAccumulatedBalanceSinceLastInterestClaim / nBlockDifference;
+	}
+	oAssetAllocation.push_back(Pair("average_balance_since_interest_claim", ValueFromAmount(nBalanceOverTimeDifference)));
 	oAssetAllocation.push_back(Pair("memo", stringFromVch(assetallocation.vchMemo)));
 	if (bGetInputs) {
 		UniValue oAssetAllocationInputsArray(UniValue::VARR);
