@@ -270,7 +270,7 @@ bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove,
 	
 }
 // calculate annual interest on an asset allocation
-CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int64_t& nHeight, string& errorMessage) {
+CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight, string& errorMessage) {
 	// need to do one more average balance calculation since the last update to this asset allocation
 	if (!AccumulateBalanceSinceLastInterestClaim(assetAllocation, nHeight)) {
 		errorMessage = _("Not enough blocks in-between interest claims");
@@ -281,7 +281,7 @@ CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & asset
 		return 0;
 	}
 	const int &nInterestBlockTerm = GetBoolArg("-unittest", false)? ONE_HOUR_IN_BLOCKS: ONE_YEAR_IN_BLOCKS;
-	const int &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
+	const float &nBlockDifference = nHeight - assetAllocation.nLastInterestClaimHeight;
 	const float &fTerms = nBlockDifference / nInterestBlockTerm;
 	// apply compound annual interest to get total interest since last time interest was collected
 	const CAmount& nBalanceOverTimeDifference = assetAllocation.nAccumulatedBalanceSinceLastInterestClaim / nBlockDifference;
