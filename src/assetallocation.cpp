@@ -424,6 +424,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 			return true;
 		}
 		theAssetAllocation = dbAssetAllocation;
+		// if we are just checking from rpcwallet then ensure that nHeight > theAssetAllocation.nHeight
+		if (dontaddtodb)
+			theAssetAllocation.nHeight--;
 		// only apply interest on PoW
 		if (!fJustCheck) {
 			string errorMessageCollection = "";
