@@ -339,7 +339,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_average_balance)
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
 	// 2 hours later send 1k more, interest accrued on 4157.625 = 4583.7815625 (2 hours @ 0.05%)
 	GenerateBlocks((10 * 10) - 1);
-	GenerateBlocks(10 * 10;
+	GenerateBlocks(10 * 10);
 
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
 	AssetSend("node1", "avgbalanceasset", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionrcveravg\\\",\\\"amount\\\":1000}]\"", "memoassetinterest");
