@@ -334,7 +334,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_every_block)
 	for (int i = 0; i < 60*10; i+=25) {
 		AssetClaimInterest("node1", "newassetcollection1", "jagassetcollectionreceiver1");
 		GenerateBlocks(24);
-		printf("Claiming interest %d of out %d...\n", i, 60 * 10;
+		printf("Claiming interest %d of out %d...\n", i, 60 * 10);
 	}
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection1 jagassetcollectionreceiver1 false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 824218093568);
