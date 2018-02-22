@@ -424,13 +424,10 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 			return true;
 		}
 		theAssetAllocation = dbAssetAllocation;
-		// if we are just checking from rpcwallet then ensure that nHeight > theAssetAllocation.nHeight
-		if (dontaddtodb)
-			theAssetAllocation.nHeight--;
 		// only apply interest on PoW
 		if (!fJustCheck) {
 			string errorMessageCollection = "";
-			if(!ApplyAssetAllocationInterest(dbAsset, theAssetAllocation, nHeight, errorMessageCollection))
+			if(!ApplyAssetAllocationInterest(dbAsset, theAssetAllocation, dontaddtodb? nHeight+1: nHeight, errorMessageCollection))
 			{
 				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2022 - " + _("You cannot collect interest on this asset: ") + errorMessageCollection;
 				return true;
