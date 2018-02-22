@@ -329,7 +329,8 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_average_balance)
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo avgbalanceasset jagassetcollectionrcveravg false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 1000 * COIN);
 	// 3 hours later send 3k more, interest accrued on 1000 = 1157.625 (3 hours @ 0.05%)
-	GenerateBlocks((30 * 10) - 1);
+	GenerateBlocks((15 * 10) - 1);
+	GenerateBlocks(15 * 10);
 
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
 	AssetSend("node1", "avgbalanceasset", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionrcveravg\\\",\\\"amount\\\":3000}]\"", "memoassetinterest");
@@ -337,7 +338,8 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_average_balance)
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 4000 * COIN);
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
 	// 2 hours later send 1k more, interest accrued on 4157.625 = 4583.7815625 (2 hours @ 0.05%)
-	GenerateBlocks((20 * 10) - 1);
+	GenerateBlocks((10 * 10) - 1);
+	GenerateBlocks(10 * 10;
 
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
 	AssetSend("node1", "avgbalanceasset", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionrcveravg\\\",\\\"amount\\\":1000}]\"", "memoassetinterest");
@@ -346,7 +348,8 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_average_balance)
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
 
 	// 1 hour later collect interest, interest accrued on 5583.7815625 = 5862.97064063 (1 hour @ 0.05%)
-	GenerateBlocks((10 * 10) - 1);
+	GenerateBlocks((5 * 10) - 1);
+	GenerateBlocks(5 * 10);
 
 	AssetClaimInterest("node1", "avgbalanceasset", "jagassetcollectionrcveravg");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo avgbalanceasset jagassetcollectionrcveravg false"));
