@@ -333,7 +333,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_every_block)
 	// calc interest expect 5000 (1 + 0.05 / 60) ^ (60(2)) = ~8242
 	for (int i = 0; i < (20*10) - 1; i++) {
 		AssetClaimInterest("node1", "newassetcollection1", "jagassetcollectionreceiver1");
-		if (i % 5) {
+		if (i % 25) {
 			printf("Claiming interest %d of out %d...\n", i, (20 * 10) - 1);
 		}
 	}
