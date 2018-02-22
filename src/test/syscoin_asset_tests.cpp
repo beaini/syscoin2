@@ -316,6 +316,42 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest)
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 824875837095);
 }
+BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_average_balance)
+{
+	UniValue r;
+	printf("Running generate_asset_collect_interest...\n");
+	GenerateBlocks(5);
+	AliasNew("node1", "jagassetcollection", "data");
+	AliasNew("node1", "jagassetcollectionreceiver", "data");
+	// setup asset with 10% interest hourly (unit test mode calculates interest hourly not annually)
+	AssetNew("node1", "newassetcollection", "jagassetcollection", "data", "10000", "-1", "false", "0.05");
+	AssetSend("node1", "newassetcollection", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionreceiver\\\",\\\"amount\\\":1000}]\"", "memoassetinterest");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 1000 * COIN);
+	// 3 hours later send 3k more, interest accrued on 1000 = 1157.625 (3 hours @ 0.05%)
+	GenerateBlocks(30 * 10);
+
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
+	AssetSend("node1", "newassetcollection", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionreceiver\\\",\\\"amount\\\":3000}]\"", "memoassetinterest");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 4000 * COIN);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
+	// 2 hours later send 1k more, interest accrued on 4157.625 = 4583.7815625 (2 hours @ 0.05%)
+	GenerateBlocks(20 * 10);
+
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
+	AssetSend("node1", "newassetcollection", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionreceiver\\\",\\\"amount\\\":1000}]\"", "memoassetinterest");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 5000 * COIN);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), find_value(r.get_obj(), "height").get_int());
+
+	// 1 hour later collect interest, interest accrued on 5583.7815625 = 5862.97064063 (1 hour @ 0.05%)
+	GenerateBlocks(10 * 10);
+
+	AssetClaimInterest("node1", "newassetcollection", "jagassetcollectionreceiver");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 586297064063);
+}
 BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_every_block)
 {
 	UniValue r;
@@ -340,6 +376,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_every_block)
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 824875837081);
 
 }
+
 BOOST_AUTO_TEST_CASE(generate_big_assetname)
 {
 	printf("Running generate_big_assetname...\n");
