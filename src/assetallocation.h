@@ -216,5 +216,5 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 bool GetAssetAllocation(const CAssetAllocationTuple& assetAllocationTuple,CAssetAllocation& txPos);
 bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const bool bGetInputs, UniValue& oName);
 bool BuildAssetAllocationIndexerJson(const CAssetAllocation& assetallocation,UniValue& oName);
-bool AccumulateInterestSinceLastClaim(CAssetAllocation & assetAllocation, const int& nHeight);
+bool AccumulateInterestSinceLastClaim(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight);
 #endif // ASSETALLOCATION_H
