@@ -192,7 +192,7 @@ void CZMQNotificationInterface::NotifyTransactionLock(const CTransaction &tx)
         }
     }
 }
-void CZMQNotificationInterface::NotifySyscoinUpdate(const string &value, const string& topic)
+void CZMQNotificationInterface::NotifySyscoinUpdate(const std::string &value, const std::string& topic)
 {
 
 	for (std::list<CZMQAbstractNotifier*>::iterator i = notifiers.begin(); i != notifiers.end(); )
