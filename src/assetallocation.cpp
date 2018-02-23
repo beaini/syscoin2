@@ -272,7 +272,7 @@ bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove,
 // calculate annual interest on an asset allocation
 CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight, string& errorMessage) {
 	// need to do one more average balance calculation since the last update to this asset allocation
-	if (!AccumulateBalanceSinceLastInterestClaim(assetAllocation, nHeight)) {
+	if (!AccumulateInterestSinceLastClaim(assetAllocation, nHeight)) {
 		errorMessage = _("Not enough blocks in-between interest claims");
 		return 0;
 	}
@@ -285,8 +285,9 @@ CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & asset
 	const double &fTerms = (double)nBlockDifference / (double)nInterestBlockTerm;
 	// apply compound annual interest to get total interest since last time interest was collected
 	const CAmount& nBalanceOverTimeDifference = assetAllocation.nAccumulatedBalanceSinceLastInterestClaim / nBlockDifference;
+	const double& fInterestOverTimeDifference = assetAllocation.fAccumulatedInterestSinceLastInterestClaim / nBlockDifference;
 	// get interest only and apply externally to this function, compound to every block to allow people to claim interest at any time per block
-	return ((nBalanceOverTimeDifference*pow((1 + ((double)asset.fInterestRate / nInterestBlockTerm)), (nInterestBlockTerm*fTerms)))) - nBalanceOverTimeDifference;
+	return ((nBalanceOverTimeDifference*pow((1 + (fInterestOverTimeDifference / nInterestBlockTerm)), (nInterestBlockTerm*fTerms)))) - nBalanceOverTimeDifference;
 }
 bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight, string& errorMessage) {
 	CAmount nInterest = GetAssetAllocationInterest(asset, assetAllocation, nHeight, errorMessage);
@@ -309,24 +310,25 @@ bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetA
 	return true;
 }
 // keep track of average balance within the interest claim period
-bool AccumulateBalanceSinceLastInterestClaim(CAssetAllocation & assetAllocation, const int& nHeight) {
+bool AccumulateInterestSinceLastClaim(CAssetAllocation & assetAllocation, const int& nHeight) {
 	const int &nBlocksSinceLastUpdate = (nHeight - assetAllocation.nHeight);
 	if (nBlocksSinceLastUpdate <= 0)
 		return false;
-	// formula is 1/N * (blocks since last update * previous balance) where N is the number of blocks in the total time period
+	// formula is 1/N * (blocks since last update * previous balance/interest rate) where N is the number of blocks in the total time period
 	assetAllocation.nAccumulatedBalanceSinceLastInterestClaim += assetAllocation.nBalance*nBlocksSinceLastUpdate;
+	assetAllocation.fAccumulatedInterestSinceLastInterestClaim += assetAllocation.fInterestRate*nBlocksSinceLastUpdate;
 	return true;
 }
 bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vchAlias,
-        bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool dontaddtodb) {
+        bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool bSanityCheck) {
 	if (!paliasdb || !passetallocationdb)
 		return false;
-	if (tx.IsCoinBase() && !fJustCheck && !dontaddtodb)
+	if (tx.IsCoinBase() && !fJustCheck && !bSanityCheck)
 	{
 		LogPrintf("*Trying to add assetallocation in coinbase transaction, skipping...");
 		return true;
 	}
-	if (fDebug && !dontaddtodb)
+	if (fDebug && !bSanityCheck)
 		LogPrintf("*** ASSET ALLOCATION %d %d %s %s\n", nHeight,
 			chainActive.Tip()->nHeight, tx.GetHash().ToString().c_str(),
 			fJustCheck ? "JUSTCHECK" : "BLOCK");
@@ -427,13 +429,13 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 		// only apply interest on PoW
 		if (!fJustCheck) {
 			string errorMessageCollection = "";
-			if(!ApplyAssetAllocationInterest(dbAsset, theAssetAllocation, dontaddtodb? nHeight+1: nHeight, errorMessageCollection))
+			if(!ApplyAssetAllocationInterest(dbAsset, theAssetAllocation, nHeight, errorMessageCollection))
 			{
 				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2022 - " + _("You cannot collect interest on this asset: ") + errorMessageCollection;
 				return true;
 			}
 		}
-		if(dontaddtodb)
+		if(bSanityCheck)
 			theAssetAllocation = dbAssetAllocation;
 		else {
 			if (fJustCheck) {
@@ -445,7 +447,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 	}
 	else if (op == OP_ASSET_ALLOCATION_SEND)
 	{
-		if (!dontaddtodb) {
+		if (!bSanityCheck) {
 			bRevert = !fJustCheck;
 			if (bRevert) {
 				if (!RevertAssetAllocation(assetAllocationTuple, tx.GetHash(), nHeight, revertedAssetAllocations))
@@ -518,13 +520,13 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 			if (theAssetAllocation.nBalance < nTotal) {
 				bBalanceOverrun = true;
 				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender balance is insufficient");
-				if (fJustCheck && !dontaddtodb) {
+				if (fJustCheck && !bSanityCheck) {
 					// add conflicting sender
 					assetAllocationConflicts.insert(assetAllocationTuple);
 					LogPrintf("CheckAssetAllocationInputs: balance overrun dbAssetAllocation.nBalance %llu vs nTotal %llu\n", dbAssetAllocation.nBalance, nTotal);
 				}
 			}
-			else if (fJustCheck && !dontaddtodb) {
+			else if (fJustCheck && !bSanityCheck) {
 				// if sender was is flagged as conflicting, add all receivers to conflict list
 				if (assetAllocationConflicts.find(assetAllocationTuple) != assetAllocationConflicts.end())
 				{
@@ -547,7 +549,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 
 				}
 
-				if (!dontaddtodb) {
+				if (!bSanityCheck) {
 					if (!GetAssetAllocation(receiverAllocationTuple, receiverAllocation)) {
 						receiverAllocation.SetNull();
 						receiverAllocation.vchAlias = receiverAllocationTuple.vchAlias;
@@ -559,9 +561,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						if (dbAsset.fInterestRate > 0) {
 							// accumulate balances as sender/receiver allocations balances are adjusted
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
 							}
-							AccumulateBalanceSinceLastInterestClaim(theAssetAllocation, nHeight);
+							AccumulateInterestSinceLastClaim(theAssetAllocation, nHeight);
 						}
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
@@ -614,13 +616,13 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 			if (dbAssetAllocation.nBalance < nTotal) {
 				bBalanceOverrun = true;
 				errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Sender balance is insufficient");
-				if (fJustCheck && !dontaddtodb) {
+				if (fJustCheck && !bSanityCheck) {
 					// add conflicting sender
 					assetAllocationConflicts.insert(assetAllocationTuple);
 					LogPrintf("CheckAssetAllocationInputs: input balance overrun dbAssetAllocation.nBalance %llu vs nTotal %llu\n", dbAssetAllocation.nBalance, nTotal);
 				}
 			}
-			else if (fJustCheck && !dontaddtodb) {
+			else if (fJustCheck && !bSanityCheck) {
 				// if sender was is flagged as conflicting, add all receivers to conflict list
 				if (assetAllocationConflicts.find(assetAllocationTuple) != assetAllocationConflicts.end())
 				{
@@ -649,7 +651,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 					errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Input not found");
 					return true;
 				}
-				if (!dontaddtodb) {
+				if (!bSanityCheck) {
 					if (!GetAssetAllocation(receiverAllocationTuple, receiverAllocation)) {
 						receiverAllocation.SetNull();
 						receiverAllocation.vchAlias = receiverAllocationTuple.vchAlias;
@@ -661,9 +663,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						if (dbAsset.fInterestRate > 0) {
 							// accumulate balances as sender/receiver allocations balances are adjusted
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
 							}
-							AccumulateBalanceSinceLastInterestClaim(theAssetAllocation, nHeight);
+							AccumulateInterestSinceLastClaim(theAssetAllocation, nHeight);
 						}
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
@@ -700,7 +702,7 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 
 	// write assetallocation  
 	// interest collection is only available on PoW
-	if (!dontaddtodb && ((op == OP_ASSET_COLLECT_INTEREST && !fJustCheck) || (op != OP_ASSET_COLLECT_INTEREST))) {
+	if (!bSanityCheck && ((op == OP_ASSET_COLLECT_INTEREST && !fJustCheck) || (op != OP_ASSET_COLLECT_INTEREST))) {
 		// set the assetallocation's txn-dependent 
 		if (!bBalanceOverrun) {
 			theAssetAllocation.nHeight = nHeight;

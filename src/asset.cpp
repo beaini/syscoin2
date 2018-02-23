@@ -299,15 +299,15 @@ bool RemoveAssetScriptPrefix(const CScript& scriptIn, CScript& scriptOut) {
 	return true;
 }
 bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias,
-        bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool dontaddtodb) {
+        bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool bSanityCheck) {
 	if (!paliasdb || !passetdb)
 		return false;
-	if (tx.IsCoinBase() && !fJustCheck && !dontaddtodb)
+	if (tx.IsCoinBase() && !fJustCheck && !bSanityCheck)
 	{
 		LogPrintf("*Trying to add asset in coinbase transaction, skipping...");
 		return true;
 	}
-	if (fDebug && !dontaddtodb)
+	if (fDebug && !bSanityCheck)
 		LogPrintf("*** ASSET %d %d %s %s\n", nHeight,
 			chainActive.Tip()->nHeight, tx.GetHash().ToString().c_str(),
 			fJustCheck ? "JUSTCHECK" : "BLOCK");
@@ -549,7 +549,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 				}
 				for (auto& amountTuple : theAssetAllocation.listSendingAllocationAmounts) {
 
-					if (!dontaddtodb) {
+					if (!bSanityCheck) {
 						CAssetAllocation receiverAllocation;
 						const CAssetAllocationTuple receiverAllocationTuple(theAssetAllocation.vchAsset, amountTuple.first);
 						// don't need to check for existance of allocation because it may not exist, may be creating it here for the first time for receiver
@@ -562,7 +562,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						receiverAllocation.txHash = tx.GetHash();
 						if (theAsset.fInterestRate > 0) {
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
 							}
 						}
 						receiverAllocation.nHeight = nHeight;
@@ -616,7 +616,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						errorMessage = "SYSCOIN_ASSET_ALLOCATION_CONSENSUS_ERROR: ERRCODE: 2025 - " + _("Input not found");
 						return true;
 					}
-					if (!dontaddtodb) {
+					if (!bSanityCheck) {
 						if (!GetAssetAllocation(receiverAllocationTuple, receiverAllocation)) {
 							receiverAllocation.SetNull();
 							receiverAllocation.vchAlias = receiverAllocationTuple.vchAlias;
@@ -627,7 +627,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						receiverAllocation.txHash = tx.GetHash();
 						if (theAsset.fInterestRate > 0) {
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateBalanceSinceLastInterestClaim(receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
 							}
 						}
 						receiverAllocation.nHeight = nHeight;
@@ -691,7 +691,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			// starting supply is the supplied balance upon init
 			theAsset.nTotalSupply = theAsset.nBalance;
 		}
-		if (!dontaddtodb) {
+		if (!bSanityCheck) {
 			if (strResponse != "") {
 				paliasdb->WriteAliasIndexTxHistory(user1, user2, user3, tx.GetHash(), nHeight, strResponseEnglish, stringFromVch(theAsset.vchAsset));
 			}
@@ -700,7 +700,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 		theAsset.nHeight = nHeight;
 		theAsset.txHash = tx.GetHash();
 		// write asset, if asset send, only write on pow since asset -> asset allocation is not 0-conf compatible
-		if (!dontaddtodb) {
+		if (!bSanityCheck) {
 			if (!passetdb->WriteAsset(theAsset, op))
 			{
 				errorMessage = "SYSCOIN_ASSET_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to write to asset DB");

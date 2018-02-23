@@ -373,15 +373,15 @@ bool RevertCert(const std::vector<unsigned char>& vchCert, const int op, const u
 
 }
 bool CheckCertInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias,
-        bool fJustCheck, int nHeight, sorted_vector<std::vector<unsigned char> > &revertedCerts, string &errorMessage, bool dontaddtodb) {
+        bool fJustCheck, int nHeight, sorted_vector<std::vector<unsigned char> > &revertedCerts, string &errorMessage, bool bSanityCheck) {
 	if (!pcertdb || !paliasdb)
 		return false;
-	if (tx.IsCoinBase() && !fJustCheck && !dontaddtodb)
+	if (tx.IsCoinBase() && !fJustCheck && !bSanityCheck)
 	{
 		LogPrintf("*Trying to add cert in coinbase transaction, skipping...");
 		return true;
 	}
-	if (fDebug && !dontaddtodb)
+	if (fDebug && !bSanityCheck)
 		LogPrintf("*** CERT %d %d %s %s\n", nHeight,
 			chainActive.Tip()->nHeight, tx.GetHash().ToString().c_str(),
 			fJustCheck ? "JUSTCHECK" : "BLOCK");
@@ -470,7 +470,7 @@ bool CheckCertInputs(const CTransaction &tx, int op, int nOut, const vector<vect
 			return error(errorMessage.c_str());
 		}
 	}
-	if (!fJustCheck && !dontaddtodb) {
+	if (!fJustCheck && !bSanityCheck) {
 		if (!RevertCert(theCert.vchCert, op, tx.GetHash(), revertedCerts))
 		{
 			errorMessage = "SYSCOIN_CERTIFICATE_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to revert cert");
@@ -558,7 +558,7 @@ bool CheckCertInputs(const CTransaction &tx, int op, int nOut, const vector<vect
 			return true;
 		}
 	}
-	if(!dontaddtodb) {
+	if(!bSanityCheck) {
 		if (strResponse != "") {
 			paliasdb->WriteAliasIndexTxHistory(user1, user2, user3, tx.GetHash(), nHeight, strResponseEnglish, stringFromVch(theCert.vchCert));
 		}
@@ -567,7 +567,7 @@ bool CheckCertInputs(const CTransaction &tx, int op, int nOut, const vector<vect
 	theCert.nHeight = nHeight;
 	theCert.txHash = tx.GetHash();
     // write cert  
-	if (!dontaddtodb) {
+	if (!bSanityCheck) {
 		int64_t ms = INT64_MAX;
 		if (fJustCheck) {
 			ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();

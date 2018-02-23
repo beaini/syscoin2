@@ -515,7 +515,7 @@ bool RemoveEscrowScriptPrefix(const CScript& scriptIn, CScript& scriptOut) {
 	scriptOut = CScript(pc, scriptIn.end());
 	return true;
 }
-bool ValidateExternalPayment(const CEscrow& theEscrow, const bool &dontaddtodb, string& errorMessage)
+bool ValidateExternalPayment(const CEscrow& theEscrow, const bool &bSanityCheck, string& errorMessage)
 {
 
 	if(!theEscrow.extTxId.IsNull())
@@ -525,7 +525,7 @@ bool ValidateExternalPayment(const CEscrow& theEscrow, const bool &dontaddtodb, 
 			errorMessage = _("External Transaction ID specified was already used to pay for an offer");
 			return true;
 		}
-		if (!dontaddtodb && !pofferdb->WriteExtTXID(theEscrow.extTxId))
+		if (!bSanityCheck && !pofferdb->WriteExtTXID(theEscrow.extTxId))
 		{
 			errorMessage = _("Failed to External Transaction ID to DB");
 			return false;
@@ -533,15 +533,15 @@ bool ValidateExternalPayment(const CEscrow& theEscrow, const bool &dontaddtodb, 
 	}
 	return true;
 }
-bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<std::vector<unsigned char> > &vvchAliasArgs, bool fJustCheck, int nHeight, string &errorMessage, bool dontaddtodb) {
+bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<std::vector<unsigned char> > &vvchAliasArgs, bool fJustCheck, int nHeight, string &errorMessage, bool bSanityCheck) {
 	if (!pescrowdb || !paliasdb)
 		return false;
-	if (tx.IsCoinBase() && !fJustCheck && !dontaddtodb)
+	if (tx.IsCoinBase() && !fJustCheck && !bSanityCheck)
 	{
 		LogPrintf("*Trying to add escrow in coinbase transaction, skipping...");
 		return true;
 	}
-	if (fDebug && !dontaddtodb)
+	if (fDebug && !bSanityCheck)
 		LogPrintf("*** ESCROW %d %d %s %s\n", nHeight,
 			chainActive.Tip()->nHeight, tx.GetHash().ToString().c_str(),
 			fJustCheck ? "JUSTCHECK" : "BLOCK");
@@ -881,7 +881,7 @@ bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<ve
 				theEscrow.txHash = tx.GetHash();
 				theEscrow.nHeight = nHeight;
 				// write escrow bid
-				if (!dontaddtodb)
+				if (!bSanityCheck)
 				{
 					pescrowdb->WriteEscrowBid(theEscrow);
 				}
@@ -996,7 +996,7 @@ bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<ve
 				}
 				theEscrow.role = serializedEscrow.role;
 				// if this escrow was actually a series of bids, set the bid status to 'refunded' in escrow bid collection
-				if (!dontaddtodb && !theEscrow.bBuyNow) {
+				if (!bSanityCheck && !theEscrow.bBuyNow) {
 					pescrowdb->RefundEscrowBid(theEscrow.vchEscrow);
 				}
 			}
@@ -1129,7 +1129,7 @@ bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<ve
 				serializedEscrow.txHash = tx.GetHash();
 				serializedEscrow.nHeight = nHeight;
 				serializedEscrow.vchOffer = theEscrow.vchOffer;
-				if (!dontaddtodb) {
+				if (!bSanityCheck) {
 					pescrowdb->WriteEscrowFeedbackIndex(serializedEscrow);
 				}
 			}
@@ -1213,7 +1213,7 @@ bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<ve
 			}
 			if (theEscrow.nPaymentOption != PAYMENTOPTION_SYS)
 			{
-				bool noError = ValidateExternalPayment(theEscrow, dontaddtodb, errorMessage);
+				bool noError = ValidateExternalPayment(theEscrow, bSanityCheck, errorMessage);
 				if (!errorMessage.empty())
 				{
 					errorMessage = "SYSCOIN_ESCROW_CONSENSUS_ERROR: ERRCODE: 4079 - " + errorMessage;
@@ -1225,7 +1225,7 @@ bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<ve
 			}
 		}
 
-		if (!dontaddtodb) {
+		if (!bSanityCheck) {
 			if (strResponse != "") {
 				user1 = stringFromVch(theEscrow.vchBuyerAlias);
 				user2 = stringFromVch(theEscrow.vchSellerAlias);
@@ -1238,7 +1238,7 @@ bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<ve
 		theEscrow.txHash = tx.GetHash();
 		theEscrow.nHeight = nHeight;
 		// write escrow
-		if (!dontaddtodb) {
+		if (!bSanityCheck) {
 			if (!pescrowdb->WriteEscrow(vvchArgs, theEscrow))
 			{
 				errorMessage = "SYSCOIN_ESCROW_CONSENSUS_ERROR: ERRCODE: 4080 - " + _("Failed to write to escrow DB");

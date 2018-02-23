@@ -338,16 +338,16 @@ bool RevertOffer(const std::vector<unsigned char>& vchOffer, const int op, const
 	return true;
 
 }
-bool CheckOfferInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<std::vector<unsigned char> > &revertedOffers, string &errorMessage, bool dontaddtodb) {
+bool CheckOfferInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<std::vector<unsigned char> > &revertedOffers, string &errorMessage, bool bSanityCheck) {
 	if (!pofferdb || !paliasdb)
 		return false;
-	if (tx.IsCoinBase() && !fJustCheck && !dontaddtodb)
+	if (tx.IsCoinBase() && !fJustCheck && !bSanityCheck)
 	{
 		LogPrintf("*Trying to add offer in coinbase transaction, skipping...");
 		return true;
 	}
 	const uint64_t &nTime = chainActive.Tip()->GetMedianTimePast();
-	if (fDebug && !dontaddtodb)
+	if (fDebug && !bSanityCheck)
 		LogPrintf("*** OFFER %d %d %s %s %s %d\n", nHeight,
 			chainActive.Tip()->nHeight, tx.GetHash().ToString().c_str(),
 			fJustCheck ? "JUSTCHECK" : "BLOCK", " VVCH SIZE: ", vvchArgs.size());
@@ -522,7 +522,7 @@ bool CheckOfferInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			return error(errorMessage.c_str());
 		}
 	}
-	if (!fJustCheck && !dontaddtodb) {
+	if (!fJustCheck && !bSanityCheck) {
 		if (!RevertOffer(theOffer.vchOffer, op, tx.GetHash(), revertedOffers))
 		{
 			errorMessage = "SYSCOIN_OFFER_CONSENSUS_ERROR: ERRCODE: 2028 - " + _("Failed to revert offer");
@@ -674,7 +674,7 @@ bool CheckOfferInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			theOffer.auctionOffer = linkOffer.auctionOffer;
 		}
 	}
-	if(!dontaddtodb) {
+	if(!bSanityCheck) {
 		if (strResponse != "") {
 			paliasdb->WriteAliasIndexTxHistory(user1, user2, user3, tx.GetHash(), nHeight, strResponseEnglish, stringFromVch(theOffer.vchOffer));
 		}
@@ -682,7 +682,7 @@ bool CheckOfferInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 	theOffer.nHeight = nHeight;
 	theOffer.txHash = tx.GetHash();
 	// write offer
-	if (!dontaddtodb) {
+	if (!bSanityCheck) {
 		int64_t ms = INT64_MAX;
 		if (fJustCheck) {
 			ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();

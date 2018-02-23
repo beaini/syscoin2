@@ -303,7 +303,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest)
 	GenerateBlocks(5);
 	AliasNew("node1", "jagassetcollection", "data");
 	AliasNew("node1", "jagassetcollectionreceiver", "data");
-	// setup asset with 10% interest hourly (unit test mode calculates interest hourly not annually)
+	// setup asset with 5% interest hourly (unit test mode calculates interest hourly not annually)
 	AssetNew("node1", "newassetcollection", "jagassetcollection", "data", "10000", "-1", "false", "0.05");
 	AssetSend("node1", "newassetcollection", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionreceiver\\\",\\\"amount\\\":5000}]\"", "memoassetinterest");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
@@ -323,7 +323,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_average_balance)
 	GenerateBlocks(5);
 	AliasNew("node1", "jagassetcollectionavg", "data");
 	AliasNew("node1", "jagassetcollectionrcveravg", "data");
-	// setup asset with 10% interest hourly (unit test mode calculates interest hourly not annually)
+	// setup asset with 5% interest hourly (unit test mode calculates interest hourly not annually)
 	AssetNew("node1", "avgbalanceasset", "jagassetcollection", "data", "10000", "-1", "false", "0.05");
 	AssetSend("node1", "avgbalanceasset", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionrcveravg\\\",\\\"amount\\\":1000}]\"", "memoassetinterest");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo avgbalanceasset jagassetcollectionrcveravg false"));
@@ -355,6 +355,52 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_average_balance)
 	AssetClaimInterest("node1", "avgbalanceasset", "jagassetcollectionrcveravg");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo avgbalanceasset jagassetcollectionrcveravg false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 593250716124);
+}
+BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_update_with_average_balance)
+{
+	UniValue r;
+	printf("Running generate_asset_collect_interest_update_with_average_balance...\n");
+	GenerateBlocks(5);
+	AliasNew("node1", "jagassetcollectionavg", "data");
+	AliasNew("node1", "jagassetcollectionrcveravg", "data");
+	// setup asset with 5% interest hourly (unit test mode calculates interest hourly not annually), can adjust the rate
+	AssetNew("node1", "avgbalanceassetu", "jagassetcollection", "data", "10000", "-1", "false", "0.05", "true");
+	AssetSend("node1", "avgbalanceassetu", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionrcveravg\\\",\\\"amount\\\":1000}]\"", "memoassetinterest");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo avgbalanceassetu jagassetcollectionrcveravg false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 1000 * COIN);
+	int claimheight = find_value(r.get_obj(), "height").get_int();
+	// 3 hours later send 1k more
+	GenerateBlocks((60 * 3) - 1);
+	// update interest rate to 10%
+	AssetUpdate("node1", "avgbalanceassetu", "pub", "0", "0.1");
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), claimheight);
+	AssetSend("node1", "avgbalanceasset", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionrcveravg\\\",\\\"amount\\\":3000}]\"", "memoassetinterest");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo avgbalanceassetu jagassetcollectionrcveravg false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 4000 * COIN);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), claimheight);
+	// 2 hours later send 3k more
+	GenerateBlocks((60 * 2) - 11);
+
+	// interest rate to back to 5%
+	AssetUpdate("node1", "avgbalanceassetu", "pub", "0", "0.05");
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), claimheight);
+	AssetSend("node1", "avgbalanceasset", "\"[{\\\"aliasto\\\":\\\"jagassetcollectionrcveravg\\\",\\\"amount\\\":1000}]\"", "memoassetinterest");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo avgbalanceassetu jagassetcollectionrcveravg false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 5000 * COIN);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), claimheight);
+
+	// 1 hour later send 1k more
+	GenerateBlocks((60 * 1) - 11);
+
+	// at the end set rate to 50% but this shouldn't affect the result since we set this rate recently
+	AssetUpdate("node1", "avgbalanceassetu", "pub", "0", "0.5");
+	// total interest (1000*180 + 4000*120 + 5000*60) / 360 = 2666.67 - average balance over 6hrs, calculate interest on that balance and apply it to 5k
+	// total interest rate (0.05*180 + 0.1*120 + 0.05*60) / 360 = 0.0667$ - average interest over 6hrs
+	// formula is  ((averagebalance*pow((1 + ((double)asset.fInterestRate / 60)), (60*6)))) - averagebalance;
+	//  ((2666.67*pow((1 + (0.0667 / 60)), (60*6)))) - 2666.67 = 932.5 interest (total 5932.5 balance after interest)
+	AssetClaimInterest("node1", "avgbalanceassetu", "jagassetcollectionrcveravg");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo avgbalanceassetu jagassetcollectionrcveravg false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 6311.44553393);
 }
 BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_every_block)
 {

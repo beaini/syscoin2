@@ -281,15 +281,15 @@ bool IsSyscoinDataOutput(const CTxOut& out) {
 }
 
 
-bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, bool fJustCheck, int nHeight, string &errorMessage, bool &bDestCheckFailed, bool dontaddtodb) {
+bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, bool fJustCheck, int nHeight, string &errorMessage, bool &bDestCheckFailed, bool bSanityCheck) {
 	if (!paliasdb)
 		return false;
-	if (tx.IsCoinBase() && !fJustCheck && !dontaddtodb)
+	if (tx.IsCoinBase() && !fJustCheck && !bSanityCheck)
 	{
 		LogPrintf("*Trying to add alias in coinbase transaction, skipping...");
 		return true;
 	}
-	if (fDebug && !dontaddtodb)
+	if (fDebug && !bSanityCheck)
 		LogPrintf("*** ALIAS %d %d op=%s %s nOut=%d %s\n", nHeight, chainActive.Tip()->nHeight, aliasFromOp(op).c_str(), tx.GetHash().ToString().c_str(), nOut, fJustCheck ? "JUSTCHECK" : "BLOCK");
 	// alias registration has args size of 1 we don't care to validate it until the activation comes in with args size of 4
 	if (vvchArgs.size() < 4)
@@ -581,7 +581,7 @@ bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 							theAlias = dbAlias;
 						}
 						// let old address be re-occupied by a new alias
-						if (!dontaddtodb && errorMessage.empty())
+						if (!bSanityCheck && errorMessage.empty())
 						{
 							paliasdb->EraseAddress(dbAlias.vchAddress);
 						}
@@ -665,7 +665,7 @@ bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 		}
 		if (!theAliasNull)
 		{
-			if (!dontaddtodb) {
+			if (!bSanityCheck) {
 				if (strResponse != "") {
 					paliasdb->WriteAliasIndexTxHistory(user1, user2, user3, tx.GetHash(), nHeight, strResponseEnglish, strName);
 				}
@@ -676,7 +676,7 @@ bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 			CAliasUnprunable aliasUnprunable;
 			aliasUnprunable.vchGUID = theAlias.vchGUID;
 			aliasUnprunable.nExpireTime = theAlias.nExpireTime;
-			if (!dontaddtodb) {
+			if (!bSanityCheck) {
 				if (!paliasdb->WriteAlias(aliasUnprunable, theAlias.vchAddress, theAlias, op))
 				{
 					errorMessage = "SYSCOIN_ALIAS_CONSENSUS_ERROR: ERRCODE: 5034 - " + _("Failed to write to alias DB");
