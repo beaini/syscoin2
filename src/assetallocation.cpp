@@ -310,13 +310,13 @@ bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetA
 	return true;
 }
 // keep track of average balance within the interest claim period
-bool AccumulateInterestSinceLastClaim(CAssetAllocation & assetAllocation, const int& nHeight) {
+bool AccumulateInterestSinceLastClaim(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight) {
 	const int &nBlocksSinceLastUpdate = (nHeight - assetAllocation.nHeight);
 	if (nBlocksSinceLastUpdate <= 0)
 		return false;
 	// formula is 1/N * (blocks since last update * previous balance/interest rate) where N is the number of blocks in the total time period
 	assetAllocation.nAccumulatedBalanceSinceLastInterestClaim += assetAllocation.nBalance*nBlocksSinceLastUpdate;
-	assetAllocation.fAccumulatedInterestSinceLastInterestClaim += assetAllocation.fInterestRate*nBlocksSinceLastUpdate;
+	assetAllocation.fAccumulatedInterestSinceLastInterestClaim += asset.fInterestRate*nBlocksSinceLastUpdate;
 	return true;
 }
 bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vchAlias,
@@ -561,9 +561,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						if (dbAsset.fInterestRate > 0) {
 							// accumulate balances as sender/receiver allocations balances are adjusted
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(dbAsset, receiverAllocation, nHeight);
 							}
-							AccumulateInterestSinceLastClaim(theAssetAllocation, nHeight);
+							AccumulateInterestSinceLastClaim(dbAsset, theAssetAllocation, nHeight);
 						}
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
@@ -663,9 +663,9 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						if (dbAsset.fInterestRate > 0) {
 							// accumulate balances as sender/receiver allocations balances are adjusted
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(dbAsset, receiverAllocation, nHeight);
 							}
-							AccumulateInterestSinceLastClaim(theAssetAllocation, nHeight);
+							AccumulateInterestSinceLastClaim(dbAsset, theAssetAllocation, nHeight);
 						}
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;

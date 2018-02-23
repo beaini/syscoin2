@@ -562,7 +562,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						receiverAllocation.txHash = tx.GetHash();
 						if (theAsset.fInterestRate > 0) {
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(theAsset, receiverAllocation, nHeight);
 							}
 						}
 						receiverAllocation.nHeight = nHeight;
@@ -627,7 +627,7 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						receiverAllocation.txHash = tx.GetHash();
 						if (theAsset.fInterestRate > 0) {
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(theAsset, receiverAllocation, nHeight);
 							}
 						}
 						receiverAllocation.nHeight = nHeight;
