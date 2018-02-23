@@ -67,6 +67,6 @@ public:
 class CZMQPublishRawSyscoinNotifier : public CZMQAbstractPublishNotifier
 {
 public:
-	bool NotifySyscoinUpdate(const std::string &value);
+	bool NotifySyscoinUpdate(const std::string &value, const std::string & topic);
 };
 #endif // SYSCOIN_ZMQ_ZMQPUBLISHNOTIFIER_H

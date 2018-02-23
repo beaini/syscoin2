@@ -202,7 +202,7 @@ void CZMQNotificationInterface::NotifySyscoinUpdate(const string &value, const s
 		if (notifier->GetType() != topic)
 			continue;
 
-		if (notifier->NotifySyscoinUpdate(value))
+		if (notifier->NotifySyscoinUpdate(value, topic))
 		{
 			i++;
 		}
