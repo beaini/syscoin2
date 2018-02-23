@@ -372,7 +372,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_update_with_average_balance
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 1000 * COIN);
 	int claimheight = find_value(r.get_obj(), "height").get_int();
 	// 3 hours later send 1k more
-	GenerateBlocks((60 * 3) - 1);
+	GenerateBlocks((60 * 3) - 11);
 	// update interest rate to 10%
 	AssetUpdate("node1", "avgbalanceassetu", "pub", "0", "0.1");
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), claimheight);
