@@ -305,8 +305,9 @@ bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetA
 	}
 	assetAllocation.nBalance += nInterest;
 	assetAllocation.nLastInterestClaimHeight = nHeight;
-	// average balance from 0 again since we have claimed
+	// set accumulators to 0 again since we have claimed
 	assetAllocation.nAccumulatedBalanceSinceLastInterestClaim = 0;
+	assetAllocation.fAccumulatedInterestSinceLastInterestClaim = 0;
 	return true;
 }
 // keep track of average balance within the interest claim period
