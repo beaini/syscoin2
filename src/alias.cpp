@@ -1736,6 +1736,9 @@ void CAliasDB::WriteAliasIndexTxHistory(const string &user1, const string &user2
 	mongoc_update_flags_t update_flags;
 	update_flags = (mongoc_update_flags_t)(MONGOC_UPDATE_NO_VALIDATE | MONGOC_UPDATE_UPSERT);
 	BuildAliasIndexerTxHistoryJson(user1, user2, user3, txHash, nHeight, type, guid, oName);
+
+	GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubaliastxhistory");
+
 	insert = bson_new_from_json((unsigned char *)oName.write().c_str(), -1, &error);
 	if (!insert || !mongoc_collection_update(aliastxhistory_collection, update_flags, selector, insert, write_concern, &error)) {
 		LogPrintf("MONGODB ALIAS TX HISTORY ERROR: %s\n", error.message);

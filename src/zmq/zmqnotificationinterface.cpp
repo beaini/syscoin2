@@ -42,6 +42,18 @@ CZMQNotificationInterface* CZMQNotificationInterface::CreateWithArguments(const 
     factories["pubrawblock"] = CZMQAbstractNotifier::Create<CZMQPublishRawBlockNotifier>;
     factories["pubrawtx"] = CZMQAbstractNotifier::Create<CZMQPublishRawTransactionNotifier>;
     factories["pubrawtxlock"] = CZMQAbstractNotifier::Create<CZMQPublishRawTransactionLockNotifier>;
+	factories["pubalias"] = CZMQAbstractNotifier::Create<CZMQPublishRawSyscoinNotifier>;
+	factories["pubaliashistory"] = CZMQAbstractNotifier::Create<CZMQPublishRawSyscoinNotifier>;
+	factories["pubaliastxhistory"] = CZMQAbstractNotifier::Create<CZMQPublishRawSyscoinNotifier>;
+	factories["puboffer"] = CZMQAbstractNotifier::Create<CZMQPublishRawSyscoinNotifier>;
+	factories["pubofferhistory"] = CZMQAbstractNotifier::Create<CZMQPublishRawSyscoinNotifier>;
+	factories["pubescrow"] = CZMQAbstractNotifier::Create<CZMQPublishRawSyscoinNotifier>;
+	factories["pubfeedback"] = CZMQAbstractNotifier::Create<CZMQPublishRawSyscoinNotifier>;
+	factories["pubcert"] = CZMQAbstractNotifier::Create<CZMQPublishRawSyscoinNotifier>;
+	factories["pubcerthistory"] = CZMQAbstractNotifier::Create<CZMQPublishRawSyscoinNotifier>;
+	factories["pubasset"] = CZMQAbstractNotifier::Create<CZMQPublishRawSyscoinNotifier>;
+	factories["pubassethistory"] = CZMQAbstractNotifier::Create<CZMQPublishRawSyscoinNotifier>;
+	factories["pubassetallocation"] = CZMQAbstractNotifier::Create<CZMQPublishRawSyscoinNotifier>;
 
     for (std::map<std::string, CZMQNotifierFactory>::const_iterator i=factories.begin(); i!=factories.end(); ++i)
     {
@@ -179,4 +191,25 @@ void CZMQNotificationInterface::NotifyTransactionLock(const CTransaction &tx)
             i = notifiers.erase(i);
         }
     }
+}
+void CZMQNotificationInterface::NotifySyscoinUpdate(const string &value, const string& topic)
+{
+
+	for (std::list<CZMQAbstractNotifier*>::iterator i = notifiers.begin(); i != notifiers.end(); )
+	{
+		CZMQAbstractNotifier *notifier = *i;
+		// look for topic in notifier list, if finds it, sends an update
+		if (notifier->GetType() != topic)
+			continue;
+
+		if (notifier->NotifySyscoinUpdate(value))
+		{
+			i++;
+		}
+		else
+		{
+			notifier->Shutdown();
+			i = notifiers.erase(i);
+		}
+	}
 }
