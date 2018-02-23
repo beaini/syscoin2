@@ -238,17 +238,6 @@ int getFeePerByte(const uint64_t &paymentOptionMask)
 		return 25;
 	return 25;
 }
-void PutToAliasList(std::vector<CAliasIndex> &aliasList, CAliasIndex& index) {
-	int i = aliasList.size() - 1;
-	BOOST_REVERSE_FOREACH(CAliasIndex &o, aliasList) {
-        if(!o.txHash.IsNull() && o.txHash == index.txHash) {
-        	aliasList[i] = index;
-            return;
-        }
-        i--;
-	}
-    aliasList.push_back(index);
-}
 
 bool IsAliasOp(int op) {
 		return op == OP_ALIAS_ACTIVATE

@@ -313,6 +313,8 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest)
 	GenerateBlocks(60 * 10);
 	// calc interest expect 5000 (1 + 0.05 / 60) ^ (60(10)) = ~8248
 	AssetClaimInterest("node1", "newassetcollection", "jagassetcollectionreceiver");
+	// cannot collect interest in same block
+	BOOST_CHECK_THROW(CallRPC("node1", "assetallocationcollectinterest newassetcollection jagassetcollectionreceiver ''"), runtime_error);
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 824875837095);
 }
