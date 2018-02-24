@@ -1,4 +1,4 @@
-DIST_SUBDIRS = secp256k1 univalue mongodb
+DIST_SUBDIRS = secp256k1 univalue
 
 AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS)
 AM_CXXFLAGS = $(HARDENED_CXXFLAGS)
@@ -17,7 +17,7 @@ endif
 SYSCOIN_CONFIG_INCLUDES=-I$(builddir)/config
 SYSCOIN_INCLUDES=-I$(builddir) -I$(builddir)/obj $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS)
 
-SYSCOIN_INCLUDES += -I$(srcdir)/secp256k1/include -I$(srcdir)/mongodb/src/mongoc -I$(srcdir)/mongodb/src/libbson/src/bson
+SYSCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
 SYSCOIN_INCLUDES += $(UNIVALUE_CFLAGS)
 
 LIBSYSCOIN_SERVER=libsyscoin_server.a
@@ -28,16 +28,8 @@ LIBSYSCOIN_UTIL=libsyscoin_util.a
 LIBSYSCOIN_CRYPTO=crypto/libsyscoin_crypto.a
 LIBSYSCOINQT=qt/libsyscoinqt.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
-LIBMONGODB=mongodb/libmongoc.la
-LIBBSON=mongodb/src/libbson/libbson-1.0.la
 
 $(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)
-	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
-
-$(LIBBSON):
-	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
-
-$(LIBMONGODB):
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 
 # Make is not made aware of per-object dependencies to avoid limiting building parallelization
@@ -435,9 +427,7 @@ syscoind_LDADD = \
   $(LIBSYSCOIN_CRYPTO) \
   $(LIBLEVELDB) \
   $(LIBMEMENV) \
-  $(LIBSECP256K1) \
-  $(LIBBSON) \
-  $(LIBMONGODB)
+  $(LIBSECP256K1)
 
 if ENABLE_ZMQ
 syscoind_LDADD += $(LIBSYSCOIN_ZMQ) $(ZMQ_LIBS)

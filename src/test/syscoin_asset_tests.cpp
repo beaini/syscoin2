@@ -656,7 +656,7 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 	StopNode("node2");
 	AssetNew("node1", "jagprune1", "jagprunealias1", "pubdata");
 	// we can find it as normal first
-	BOOST_CHECK_EQUAL(AssetFilter("node1", "jagprune1"), true);
+	BOOST_CHECK_NO_THROW(CallRPC("node1", "aliasinfo jagprune1"));
 	// make sure our offer alias doesn't expire
 	AssetUpdate("node1", "jagprune1");
 	GenerateBlocks(5, "node1");
@@ -664,7 +664,7 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 	StartNode("node2");
 	GenerateBlocks(5, "node2");
 
-	BOOST_CHECK_EQUAL(AssetFilter("node1", "jagprune1"), true);
+	BOOST_CHECK_NO_THROW(CallRPC("node1", "aliasinfo jagprune1"));
 
 	// shouldn't be pruned
 	BOOST_CHECK_NO_THROW(CallRPC("node2", "assetinfo jagprune1 false"));
@@ -682,7 +682,7 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 
 	BOOST_CHECK_NO_THROW(CallRPC("node1", "assetinfo jagprune1 false"));
 
-	BOOST_CHECK_EQUAL(AssetFilter("node1", "jagprune1"), true);
+	BOOST_CHECK_NO_THROW(CallRPC("node1", "aliasinfo jagprune1"));
 
 	// try to create asset with same name
 	BOOST_CHECK_THROW(CallRPC("node1", "assetnew jagprune1 jagprunealias1 pubdata assets 1 1 false 0 false ''"), runtime_error);

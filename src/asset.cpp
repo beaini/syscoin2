@@ -22,12 +22,9 @@
 #include <boost/thread.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/range/adaptor/reversed.hpp>
-#include <mongoc.h>
 #include <chrono>
 using namespace std::chrono;
 using namespace std;
-extern mongoc_collection_t *asset_collection;
-extern mongoc_collection_t *assethistory_collection;
 extern void SendMoneySyscoin(const vector<unsigned char> &vchAlias, const vector<unsigned char> &vchWitness, const CRecipient &aliasRecipient, CRecipient &aliasPaymentRecipient, vector<CRecipient> &vecSend, CWalletTx& wtxNew, CCoinControl* coinControl, bool fUseInstantSend=false, bool transferAlias=false);
 bool IsAssetOp(int op) {
     return op == OP_ASSET_ACTIVATE
@@ -97,113 +94,18 @@ void CAsset::Serialize( vector<unsigned char> &vchData) {
 
 }
 void CAssetDB::WriteAssetIndex(const CAsset& asset, const int& op) {
-	if (!asset_collection)
-		return;
-	bson_error_t error;
-	bson_t *update = NULL;
-	bson_t *selector = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
 	UniValue oName(UniValue::VOBJ);
-
-	mongoc_update_flags_t update_flags;
-	update_flags = (mongoc_update_flags_t)(MONGOC_UPDATE_NO_VALIDATE | MONGOC_UPDATE_UPSERT);
-	selector = BCON_NEW("_id", BCON_UTF8(stringFromVch(asset.vchAsset).c_str()));
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
 	if (BuildAssetIndexerJson(asset, oName)) {
-		update = bson_new_from_json((unsigned char *)oName.write().c_str(), -1, &error);
-		if (!update || !mongoc_collection_update(asset_collection, update_flags, selector, update, write_concern, &error)) {
-			LogPrintf("MONGODB ASSET UPDATE ERROR: %s\n", error.message);
-		}
+		GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubasset");
 	}
-	if (update)
-		bson_destroy(update);
-	if (selector)
-		bson_destroy(selector);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
 	WriteAssetIndexHistory(asset, op);
 }
 void CAssetDB::WriteAssetIndexHistory(const CAsset& asset, const int &op) {
-	if (!assethistory_collection)
-		return;
-	bson_error_t error;
-	bson_t *insert = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
 	UniValue oName(UniValue::VOBJ);
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
 	if (BuildAssetIndexerHistoryJson(asset, oName)) {
 		oName.push_back(Pair("op", assetFromOp(op)));
-		insert = bson_new_from_json((unsigned char *)oName.write().c_str(), -1, &error);
-		if (!insert || !mongoc_collection_insert(assethistory_collection, (mongoc_insert_flags_t)MONGOC_INSERT_NO_VALIDATE, insert, write_concern, &error)) {
-			LogPrintf("MONGODB ASSET HISTORY ERROR: %s\n", error.message);
-		}
+		GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubassethistory");
 	}
-
-	if (insert)
-		bson_destroy(insert);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
-}
-void CAssetDB::EraseAssetIndexHistory(const std::vector<unsigned char>& vchAsset, bool cleanup) {
-	if (!assethistory_collection)
-		return;
-	bson_error_t error;
-	bson_t *selector = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
-	mongoc_remove_flags_t remove_flags;
-	remove_flags = (mongoc_remove_flags_t)(MONGOC_REMOVE_NONE);
-	selector = BCON_NEW("asset", BCON_UTF8(stringFromVch(vchAsset).c_str()));
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
-	if (!mongoc_collection_remove(assethistory_collection, remove_flags, selector, cleanup ? NULL : write_concern, &error)) {
-		LogPrintf("MONGODB ASSET HISTORY REMOVE ERROR: %s\n", error.message);
-	}
-	if (selector)
-		bson_destroy(selector);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
-}
-void CAssetDB::EraseAssetIndexHistory(const std::string& id) {
-	if (!assethistory_collection)
-		return;
-	bson_error_t error;
-	bson_t *selector = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
-	mongoc_remove_flags_t remove_flags;
-	remove_flags = (mongoc_remove_flags_t)(MONGOC_REMOVE_NONE);
-	selector = BCON_NEW("_id", BCON_UTF8(id.c_str()));
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
-	if (!mongoc_collection_remove(assethistory_collection, remove_flags, selector, write_concern, &error)) {
-		LogPrintf("MONGODB ASSET HISTORY REMOVE ERROR: %s\n", error.message);
-	}
-	if (selector)
-		bson_destroy(selector);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
-}
-void CAssetDB::EraseAssetIndex(const std::vector<unsigned char>& vchAsset, bool cleanup) {
-	if (!asset_collection)
-		return;
-	bson_error_t error;
-	bson_t *selector = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
-	mongoc_remove_flags_t remove_flags;
-	remove_flags = (mongoc_remove_flags_t)(MONGOC_REMOVE_NONE);
-	selector = BCON_NEW("_id", BCON_UTF8(stringFromVch(vchAsset).c_str()));
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
-	if (!mongoc_collection_remove(asset_collection, remove_flags, selector, cleanup ? NULL : write_concern, &error)) {
-		LogPrintf("MONGODB ASSET REMOVE ERROR: %s\n", error.message);
-	}
-	
-	if (selector)
-		bson_destroy(selector);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
-	EraseAssetIndexHistory(vchAsset, cleanup);
 }
 bool GetAsset(const vector<unsigned char> &vchAsset,
         CAsset& txPos) {

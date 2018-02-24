@@ -314,8 +314,6 @@ extern UniValue aliasclearwhitelist(const UniValue& params, bool fHelp);
 extern UniValue aliaswhitelist(const UniValue& params, bool fHelp);
 extern UniValue syscoinsendrawtransaction(const UniValue& params, bool fHelp);
 extern UniValue syscoindecoderawtransaction(const UniValue& params, bool fHelp);
-extern UniValue syscoinquery(const UniValue& params, bool fHelp);
-
 extern UniValue offernew(const UniValue& params, bool fHelp);
 extern UniValue offerupdate(const UniValue& params, bool fHelp);
 extern UniValue offerlink(const UniValue& params, bool fHelp);

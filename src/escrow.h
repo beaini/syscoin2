@@ -166,11 +166,8 @@ public:
 		WriteEscrowIndex(escrow, vvchArgs);
         return writeState;
     }
-	void WriteEscrowBid(const CEscrow& escrow) {
-		WriteEscrowBidIndex(escrow, "valid");
-	}
-	void RefundEscrowBid(const std::vector<unsigned char> &vchEscrow) {
-		RefundEscrowBidIndex(vchEscrow, "refunded");
+	void WriteEscrowBid(const CEscrow& escrow, const std::string& status) {
+		WriteEscrowBidIndex(escrow, status);
 	}
     bool EraseEscrow(const std::vector<unsigned char>& vchEscrow, bool cleanup = false) {
 		bool eraseState = Erase(make_pair(std::string("escrowi"), vchEscrow));

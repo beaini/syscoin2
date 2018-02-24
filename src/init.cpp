@@ -379,7 +379,6 @@ void Shutdown()
 #endif
 	globalVerifyHandle.reset();
 	ECC_Stop();
-	stopMongoDB();
 	LogPrintf("%s: done\n", __func__);
 }
 
@@ -1647,7 +1646,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 				passetdb = new CAssetDB(nCoinCacheUsage * 2, false, fReindex);
 				passetallocationdb = new CAssetAllocationDB(nCoinCacheUsage * 2, false, fReindex);
 				pescrowdb = new CEscrowDB(nCoinCacheUsage * 2, false, fReindex);
-				startMongoDB();
+				
 				if (fReindex) {
 					pblocktree->WriteReindexing(true);
 					//If we're reindexing in prune mode, wipe away unusable block files and all undo data files

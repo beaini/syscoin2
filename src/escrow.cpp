@@ -25,11 +25,7 @@
 #include <boost/thread.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/range/adaptor/reversed.hpp>
-#include <mongoc.h>
 using namespace std;
-extern mongoc_collection_t *escrow_collection;
-extern mongoc_collection_t *escrowbid_collection;
-extern mongoc_collection_t *feedback_collection;
 extern CScript _createmultisig_redeemScript(const UniValue& params);
 extern void SendMoneySyscoin(const vector<unsigned char> &vchAlias, const vector<unsigned char> &vchWitness, const CRecipient &aliasRecipient, CRecipient &aliasPaymentRecipient, vector<CRecipient> &vecSend, CWalletTx& wtxNew, CCoinControl* coinControl, bool fUseInstantSend=false, bool transferAlias=false);
 void PutToEscrowList(std::vector<CEscrow> &escrowList, CEscrow& index) {
@@ -206,192 +202,22 @@ void CEscrow::Serialize(vector<unsigned char>& vchData) {
 
 }
 void CEscrowDB::WriteEscrowIndex(const CEscrow& escrow, const std::vector<std::vector<unsigned char> > &vvchArgs) {
-	if (!escrow_collection)
-		return;
-	bson_error_t error;
-	bson_t *update = NULL;
-	bson_t *selector = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
 	UniValue oName(UniValue::VOBJ);
-	mongoc_update_flags_t update_flags;
-	update_flags = (mongoc_update_flags_t)(MONGOC_UPDATE_NO_VALIDATE | MONGOC_UPDATE_UPSERT);
-	selector = BCON_NEW("_id", BCON_UTF8(stringFromVch(escrow.vchEscrow).c_str()));
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
 	if (BuildEscrowIndexerJson(escrow, oName)) {
-		update = bson_new_from_json((unsigned char *)oName.write().c_str(), -1, &error);
-		if (!update || !mongoc_collection_update(escrow_collection, update_flags, selector, update, write_concern, &error)) {
-			LogPrintf("MONGODB ESCROW UPDATE ERROR: %s\n", error.message);
-		}
+		GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubescrow");
 	}
-	if (update)
-		bson_destroy(update);
-	if (selector)
-		bson_destroy(selector);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
-}
-void CEscrowDB::EraseEscrowIndex(const std::vector<unsigned char>& vchEscrow, bool cleanup) {
-	if (!escrow_collection)
-		return;
-	bson_error_t error;
-	bson_t *selector = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
-	mongoc_remove_flags_t remove_flags;
-	remove_flags = (mongoc_remove_flags_t)(MONGOC_REMOVE_NONE);
-	selector = BCON_NEW("_id", BCON_UTF8(stringFromVch(vchEscrow).c_str()));
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
-	if (!mongoc_collection_remove(escrow_collection, remove_flags, selector, cleanup ? NULL : write_concern, &error)) {
-		LogPrintf("MONGODB ESCROW REMOVE ERROR: %s\n", error.message);
-	}
-	if (selector)
-		bson_destroy(selector);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
 }
 void CEscrowDB::WriteEscrowFeedbackIndex(const CEscrow& escrow) {
-	if (!feedback_collection)
-		return;
-	bson_error_t error;
-	bson_t *insert = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
 	UniValue oName(UniValue::VOBJ);
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
 	BuildFeedbackJson(escrow, oName);
-	insert = bson_new_from_json((unsigned char *)oName.write().c_str(), -1, &error);
-	if (!insert || !mongoc_collection_insert(feedback_collection, (mongoc_insert_flags_t)MONGOC_INSERT_NO_VALIDATE, insert, write_concern, &error)) {
-		LogPrintf("MONGODB ESCROW FEEDBACK ERROR: %s\n", error.message);
-	}
-
-	if (insert)
-		bson_destroy(insert);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
-}
-void CEscrowDB::EraseEscrowFeedbackIndex(const std::vector<unsigned char>& vchEscrow, bool cleanup) {
-	if (!feedback_collection)
-		return;
-	bson_error_t error;
-	bson_t *selector = NULL;
-	string id;
-	mongoc_write_concern_t* write_concern = NULL;
-	mongoc_remove_flags_t remove_flags;
-	remove_flags = (mongoc_remove_flags_t)(MONGOC_REMOVE_NONE);
-	id = stringFromVch(vchEscrow);
-	selector = BCON_NEW("escrow", BCON_UTF8(id.c_str()));
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
-	if (!mongoc_collection_remove(feedback_collection, remove_flags, selector, cleanup ? NULL : write_concern, &error)) {
-		LogPrintf("MONGODB ESCROW FEEDBACK REMOVE ERROR: %s\n", error.message);
-	}
-	if (selector)
-		bson_destroy(selector);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
-}
-void CEscrowDB::EraseEscrowFeedbackIndex(const std::string& id) {
-	if (!feedback_collection)
-		return;
-	bson_error_t error;
-	bson_t *selector = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
-	mongoc_remove_flags_t remove_flags;
-	remove_flags = (mongoc_remove_flags_t)(MONGOC_REMOVE_NONE);
-	selector = BCON_NEW("_id", BCON_UTF8(id.c_str()));
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
-	if (!mongoc_collection_remove(feedback_collection, remove_flags, selector, write_concern, &error)) {
-		LogPrintf("MONGODB ESCROW FEEDBACK REMOVE ERROR: %s\n", error.message);
-	}
-	if (selector)
-		bson_destroy(selector);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
+	GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubfeedback");
 }
 void CEscrowDB::WriteEscrowBidIndex(const CEscrow& escrow, const string& status) {
-	if (!escrowbid_collection || escrow.op != OP_ESCROW_ACTIVATE)
+	if (escrow.op != OP_ESCROW_ACTIVATE)
 		return;
-	bson_error_t error;
-	bson_t *insert = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
 	UniValue oName(UniValue::VOBJ);
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
 	BuildEscrowBidJson(escrow, status, oName);
-	insert = bson_new_from_json((unsigned char *)oName.write().c_str(), -1, &error);
-	if (!insert || !mongoc_collection_insert(escrowbid_collection, (mongoc_insert_flags_t)MONGOC_INSERT_NO_VALIDATE, insert, write_concern, &error)) {
-		LogPrintf("MONGODB ESCROW BID ERROR: %s\n", error.message);
-	}
-
-	if (insert)
-		bson_destroy(insert);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
-}
-void CEscrowDB::RefundEscrowBidIndex(const std::vector<unsigned char>& vchEscrow, const string& status) {
-	if (!escrowbid_collection)
-		return;
-	bson_error_t error;
-	bson_t *selector = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
-	UniValue oName(UniValue::VOBJ);
-	mongoc_update_flags_t update_flags;
-	update_flags = (mongoc_update_flags_t)(MONGOC_UPDATE_NO_VALIDATE | MONGOC_UPDATE_MULTI_UPDATE);
-	selector = BCON_NEW("escrow", BCON_UTF8(stringFromVch(vchEscrow).c_str()));
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
-	bson_t *update = BCON_NEW("$set", "{",
-		"status", BCON_UTF8(status.c_str()),
-		"}");
-	if (!update || !mongoc_collection_update(escrowbid_collection, update_flags, selector, update, write_concern, &error)) {
-		LogPrintf("MONGODB ESCROW BID REFUND ERROR: %s\n", error.message);
-	}
-	if (update)
-		bson_destroy(update);
-	if (selector)
-		bson_destroy(selector);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
-}
-void CEscrowDB::EraseEscrowBidIndex(const std::vector<unsigned char>& vchEscrow, bool cleanup) {
-	if (!escrowbid_collection)
-		return;
-	bson_error_t error;
-	bson_t *selector = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
-	mongoc_remove_flags_t remove_flags;
-	remove_flags = (mongoc_remove_flags_t)(MONGOC_REMOVE_NONE);
-	selector = BCON_NEW("escrow", BCON_UTF8(stringFromVch(vchEscrow).c_str()));
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
-	if (!mongoc_collection_remove(escrow_collection, remove_flags, selector, cleanup ? NULL : write_concern, &error)) {
-		LogPrintf("MONGODB ESCROW BID REMOVE ERROR: %s\n", error.message);
-	}
-	if (selector)
-		bson_destroy(selector);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
-}
-void CEscrowDB::EraseEscrowBidIndex(const std::string& id) {
-	if (!escrowbid_collection)
-		return;
-	bson_error_t error;
-	bson_t *selector = NULL;
-	mongoc_write_concern_t* write_concern = NULL;
-	mongoc_remove_flags_t remove_flags;
-	remove_flags = (mongoc_remove_flags_t)(MONGOC_REMOVE_NONE);
-	selector = BCON_NEW("_id", BCON_UTF8(id.c_str()));
-	write_concern = mongoc_write_concern_new();
-	mongoc_write_concern_set_w(write_concern, MONGOC_WRITE_CONCERN_W_UNACKNOWLEDGED);
-	if (!mongoc_collection_remove(escrow_collection, remove_flags, selector, write_concern, &error)) {
-		LogPrintf("MONGODB ESCROW BID REMOVE ERROR: %s\n", error.message);
-	}
-	if (selector)
-		bson_destroy(selector);
-	if (write_concern)
-		mongoc_write_concern_destroy(write_concern);
+	GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubescrowbid");
 }
 bool CEscrowDB::CleanupDatabase(int &servicesCleaned)
 {
@@ -883,7 +709,7 @@ bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<ve
 				// write escrow bid
 				if (!bSanityCheck)
 				{
-					pescrowdb->WriteEscrowBid(theEscrow);
+					pescrowdb->WriteEscrowBid(theEscrow, "valid");
 				}
 			}
 			else if (op == OP_ESCROW_ADD_SHIPPING) {
@@ -997,7 +823,7 @@ bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<ve
 				theEscrow.role = serializedEscrow.role;
 				// if this escrow was actually a series of bids, set the bid status to 'refunded' in escrow bid collection
 				if (!bSanityCheck && !theEscrow.bBuyNow) {
-					pescrowdb->RefundEscrowBid(theEscrow.vchEscrow);
+					pescrowdb->WriteEscrowBid(theEscrow, "refunded");
 				}
 			}
 			else if (op == OP_ESCROW_REFUND_COMPLETE)
