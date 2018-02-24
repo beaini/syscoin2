@@ -680,7 +680,7 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 	StartNode("node1");
 	GenerateBlocks(5, "node1");
 
-	BOOST_CHECK_NO_THROW(CallRPC("node1", "assetinfo jagprunealias1 false"));
+	BOOST_CHECK_NO_THROW(CallRPC("node1", "assetinfo jagprune1 false"));
 
 	BOOST_CHECK_NO_THROW(CallRPC("node1", "aliasinfo jagprunealias1"));
 
