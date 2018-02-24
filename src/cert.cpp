@@ -247,7 +247,6 @@ bool RemoveCertScriptPrefix(const CScript& scriptIn, CScript& scriptOut) {
 	return true;
 }
 bool RevertCert(const std::vector<unsigned char>& vchCert, const int op, const uint256 &txHash, sorted_vector<std::vector<unsigned char> > &revertedCerts) {
-	paliasdb->EraseAliasIndexTxHistory(txHash.GetHex() + "-" + stringFromVch(vchCert));
 	// only revert cert once
 	if (revertedCerts.find(vchCert) != revertedCerts.end())
 		return true;

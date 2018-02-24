@@ -226,8 +226,6 @@ public:
 	bool EraseOffer(const std::vector<unsigned char>& vchOffer, bool cleanup = false) {
 		bool eraseState = Erase(make_pair(std::string("offeri"), vchOffer));
 		Erase(make_pair(std::string("offerp"), vchOffer));
-		EraseOfferIndex(vchOffer, cleanup);
-		EraseOfferIndexHistory(vchOffer, cleanup);
 		EraseISArrivalTimes(vchOffer);
 	    return eraseState;
 	}
@@ -255,10 +253,7 @@ public:
 	}
 	bool CleanupDatabase(int &servicesCleaned);
 	void WriteOfferIndex(const COffer& offer, const int &op);
-	void EraseOfferIndex(const std::vector<unsigned char>& vchOffer, bool cleanup);
 	void WriteOfferIndexHistory(const COffer& offer, const int &op);
-	void EraseOfferIndexHistory(const std::vector<unsigned char>& vchOffer, bool cleanup);
-	void EraseOfferIndexHistory(const std::string& id);
 
 };
 bool GetOffer(const std::vector<unsigned char> &vchOffer, COffer& txPos);

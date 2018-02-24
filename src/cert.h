@@ -117,8 +117,6 @@ public:
 		bool eraseState = Erase(make_pair(std::string("certi"), vchCert));
 		Erase(make_pair(std::string("certp"), vchCert));
 		Erase(make_pair(std::string("certf"), vchCert));
-		EraseCertIndex(vchCert, cleanup);
-		EraseCertIndexHistory(vchCert, cleanup);
 		EraseISArrivalTimes(vchCert);
         return eraseState;
     }
@@ -140,10 +138,7 @@ public:
 	}
 	bool CleanupDatabase(int &servicesCleaned);
 	void WriteCertIndex(const CCert& cert, const int &op);
-	void EraseCertIndex(const std::vector<unsigned char>& vchCert, bool cleanup);
 	void WriteCertIndexHistory(const CCert& cert, const int &op);
-	void EraseCertIndexHistory(const std::vector<unsigned char>& vchCert, bool cleanup);
-	void EraseCertIndexHistory(const std::string& id);
 
 };
 bool GetCert(const std::vector<unsigned char> &vchCert,CCert& txPos);

@@ -183,7 +183,6 @@ public:
 		bool eraseState = Erase(make_pair(std::string("assetallocationi"), assetAllocationTuple));
 		Erase(make_pair(std::string("assetp"), assetAllocationTuple));
 		EraseISArrivalTimes(assetAllocationTuple);
-		EraseAssetAllocationIndex(assetAllocationTuple, cleanup);
 		return eraseState;
 	}
     bool ReadAssetAllocation(const CAssetAllocationTuple& assetAllocationTuple, CAssetAllocation& assetallocation) {
@@ -210,7 +209,6 @@ public:
 		return Erase(make_pair(std::string("assetallocationa"), assetAllocationTuple));
 	}
 	void WriteAssetAllocationIndex(const CAssetAllocation& assetAllocationTuple);
-	void EraseAssetAllocationIndex(const CAssetAllocationTuple& assetAllocationTuple, bool cleanup=false);
 
 };
 bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const std::vector<std::vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, std::string &errorMessage, bool bSanityCheck = false);

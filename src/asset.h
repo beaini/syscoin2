@@ -124,18 +124,13 @@ public:
     }
 	bool EraseAsset(const std::vector<unsigned char>& vchAsset, bool cleanup = false) {
 		bool eraseState = Erase(make_pair(std::string("asseti"), vchAsset));
-		EraseAssetIndex(vchAsset, cleanup);
-		EraseAssetIndexHistory(vchAsset, cleanup);
 		return eraseState;
 	}
     bool ReadAsset(const std::vector<unsigned char>& vchAsset, CAsset& asset) {
         return Read(make_pair(std::string("asseti"), vchAsset), asset);
     }
 	void WriteAssetIndex(const CAsset& asset, const int &op);
-	void EraseAssetIndex(const std::vector<unsigned char>& vchAsset, bool cleanup);
 	void WriteAssetIndexHistory(const CAsset& asset, const int &op);
-	void EraseAssetIndexHistory(const std::vector<unsigned char>& vchAsset, bool cleanup);
-	void EraseAssetIndexHistory(const std::string& id);
 
 };
 bool GetAsset(const std::vector<unsigned char> &vchAsset,CAsset& txPos);

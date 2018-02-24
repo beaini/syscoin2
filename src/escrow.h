@@ -171,9 +171,6 @@ public:
 	}
     bool EraseEscrow(const std::vector<unsigned char>& vchEscrow, bool cleanup = false) {
 		bool eraseState = Erase(make_pair(std::string("escrowi"), vchEscrow));
-		EraseEscrowIndex(vchEscrow, cleanup);
-		EraseEscrowFeedbackIndex(vchEscrow, cleanup);
-		EraseEscrowBidIndex(vchEscrow, cleanup);
         return eraseState;
     }
     bool ReadEscrow(const std::vector<unsigned char>& vchEscrow, CEscrow& escrow) {
@@ -184,14 +181,9 @@ public:
 	}
 	bool CleanupDatabase(int &servicesCleaned);
 	void WriteEscrowIndex(const CEscrow& escrow, const std::vector<std::vector<unsigned char> > &vvchArgs);
-	void EraseEscrowIndex(const std::vector<unsigned char>& vchEscrow, bool cleanup);
 	void WriteEscrowFeedbackIndex(const CEscrow& escrow);
-	void EraseEscrowFeedbackIndex(const std::vector<unsigned char>& vchEscrow, bool cleanup);
-	void EraseEscrowFeedbackIndex(const std::string& id);
 	void WriteEscrowBidIndex(const CEscrow& escrow, const std::string& status);
 	void RefundEscrowBidIndex(const std::vector<unsigned char>& vchEscrow, const std::string& status);
-	void EraseEscrowBidIndex(const std::vector<unsigned char>& vchEscrow, bool cleanup);
-	void EraseEscrowBidIndex(const std::string& id);
 };
 
 bool GetEscrow(const std::vector<unsigned char> &vchEscrow, CEscrow& txPos);

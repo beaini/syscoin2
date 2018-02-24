@@ -191,7 +191,6 @@ bool RemoveAssetAllocationScriptPrefix(const CScript& scriptIn, CScript& scriptO
 }
 // revert allocation to previous state and remove 
 bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove, const uint256 &txHash, const int& nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations) {
-	paliasdb->EraseAliasIndexTxHistory(txHash.GetHex() + "-" + assetAllocationToRemove.ToString());
 	// only revert asset allocation once
 	if (revertedAssetAllocations.find(assetAllocationToRemove) != revertedAssetAllocations.end())
 		return true;
