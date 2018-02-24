@@ -1714,7 +1714,7 @@ void EscrowBid(const string& node, const string& buyeralias, const string& escro
 
 	GenerateBlocks(5, node);
 
-
+	CAmount bidPaymentOption = AmountFromValue(bid_in_payment_option1);
 
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "escrowinfo " + escrowguid));
 
