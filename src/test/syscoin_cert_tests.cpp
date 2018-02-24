@@ -108,8 +108,6 @@ BOOST_AUTO_TEST_CASE (generate_certpruning)
 	StartNode("node2");
 	GenerateBlocks(5, "node2");
 
-	BOOST_CHECK_EQUAL(CertFilter("node1", guid), true);
-
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "certinfo " + guid));
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "expired").get_bool(), true);
 
