@@ -125,8 +125,6 @@ static const bool DEFAULT_TXINDEX = true;
 static const bool DEFAULT_ADDRESSINDEX = true;
 static const bool DEFAULT_TIMESTAMPINDEX = false;
 static const bool DEFAULT_SPENTINDEX = false;
-// SYSCOIN
-static const bool DEFAULT_INDEXPORT = 0;
 static const unsigned int DEFAULT_BANSCORE_THRESHOLD = 100;
 
 static const bool DEFAULT_TESTSAFEMODE = false;
