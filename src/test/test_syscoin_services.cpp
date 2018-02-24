@@ -809,10 +809,6 @@ string AliasTransfer(const string& node, const string& aliasname, const string& 
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "encryption_publickey").get_str() , encryptionkey);
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "encryption_privatekey").get_str() , encryptionprivkey);
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "address").get_str() , aliasAddress.ToString());
-	txHistoryResult = AliasTxHistoryFilter(tonode, txid + "-" + aliasname);
-	BOOST_CHECK(!txHistoryResult.empty());
-	BOOST_CHECK(ret.read(txHistoryResult[0].get_str()));
-	historyResultObj = ret.get_obj();
 	return "";
 }
 string AliasUpdate(const string& node, const string& aliasname, const string& pubdata, string addressStr, string witness)
@@ -863,14 +859,6 @@ string AliasUpdate(const string& node, const string& aliasname, const string& pu
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "encryption_privatekey").get_str() , encryptionprivkey);
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "expired").get_bool(), false);
 
-	UniValue txHistoryResult = AliasTxHistoryFilter(node, txid + "-" + aliasname);
-	BOOST_CHECK(!txHistoryResult.empty());
-	UniValue ret;
-	BOOST_CHECK(ret.read(txHistoryResult[0].get_str()));
-	UniValue historyResultObj = ret.get_obj();
-	BOOST_CHECK_EQUAL(find_value(historyResultObj, "user1").get_str(), aliasname);
-	BOOST_CHECK_EQUAL(find_value(historyResultObj, "_id").get_str(), txid + "-" + aliasname);
-	BOOST_CHECK_EQUAL(find_value(historyResultObj, "type").get_str(), "Alias Updated");
 	if(!otherNode1.empty())
 	{
 		BOOST_CHECK_NO_THROW(r = CallRPC(otherNode1, "aliasinfo " + aliasname));
@@ -879,10 +867,6 @@ string AliasUpdate(const string& node, const string& aliasname, const string& pu
 		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "expired").get_bool(), false);
 		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "publicvalue").get_str() , newpubdata);
 		BOOST_CHECK_EQUAL(find_value(r.get_obj(), "encryption_publickey").get_str() , encryptionkey);
-		txHistoryResult = AliasTxHistoryFilter(otherNode1, txid + "-" + aliasname);
-		BOOST_CHECK(!txHistoryResult.empty());
-		BOOST_CHECK(ret.read(txHistoryResult[0].get_str()));
-		historyResultObj = ret.get_obj();
 
 	}
 	if(!otherNode2.empty())
