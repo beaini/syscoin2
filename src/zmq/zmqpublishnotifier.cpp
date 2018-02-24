@@ -215,7 +215,5 @@ bool CZMQPublishRawTransactionLockNotifier::NotifyTransactionLock(const CTransac
 bool CZMQPublishRawSyscoinNotifier::NotifySyscoinUpdate(const std::string &value, const std::string & topic)
 {
 	LogPrint("zmq", "zmq: Publish raw syscoin payload for topic %s: %s\n", topic, value);
-	CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-	ss << value;
-	return SendMessage(topic.c_str(), &(*ss.begin()), ss.size());
+	return SendMessage(topic.c_str(), value.c_str(), value.size());
 }
