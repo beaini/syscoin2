@@ -90,7 +90,7 @@ void CAssetAllocation::Serialize( vector<unsigned char> &vchData) {
 void CAssetAllocationDB::WriteAssetAllocationIndex(const CAssetAllocation& assetallocation) {
 	UniValue oName(UniValue::VOBJ);
 	if (BuildAssetAllocationIndexerJson(assetallocation, oName)) {
-		GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubassetallocation");
+		GetMainSignals().NotifySyscoinUpdate(oName.write().c_str(), "pubassetallocation");
 	}
 
 }

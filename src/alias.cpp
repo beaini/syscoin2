@@ -1085,14 +1085,14 @@ void CAliasDB::WriteAliasIndex(const CAliasIndex& alias, const int &op) {
 	UniValue oName(UniValue::VOBJ);
 	oName.push_back(Pair("_id", stringFromVch(alias.vchAlias)));
 	oName.push_back(Pair("address", EncodeBase58(alias.vchAddress)));
-	GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubalias");
+	GetMainSignals().NotifySyscoinUpdate(oName.write().c_str(), "pubalias");
 	WriteAliasIndexHistory(alias, op);
 }
 void CAliasDB::WriteAliasIndexHistory(const CAliasIndex& alias, const int &op) {
 	UniValue oName(UniValue::VOBJ);
 	BuildAliasIndexerHistoryJson(alias, oName);
 	oName.push_back(Pair("op", aliasFromOp(op)));
-	GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubaliashistory");
+	GetMainSignals().NotifySyscoinUpdate(oName.write().c_str(), "pubaliashistory");
 }
 bool BuildAliasIndexerTxHistoryJson(const string &user1, const string &user2, const string &user3, const uint256 &txHash, const unsigned int& nHeight, const string &type, const string &guid, UniValue& oName)
 {
@@ -1115,7 +1115,7 @@ bool BuildAliasIndexerTxHistoryJson(const string &user1, const string &user2, co
 void CAliasDB::WriteAliasIndexTxHistory(const string &user1, const string &user2, const string &user3, const uint256 &txHash, const unsigned int& nHeight, const string &type, const string &guid) {
 	UniValue oName(UniValue::VOBJ);
 	BuildAliasIndexerTxHistoryJson(user1, user2, user3, txHash, nHeight, type, guid, oName);
-	GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubaliastxhistory");
+	GetMainSignals().NotifySyscoinUpdate(oName.write().c_str(), "pubaliastxhistory");
 }
 
 UniValue aliasnew(const UniValue& params, bool fHelp) {

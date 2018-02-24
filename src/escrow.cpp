@@ -204,20 +204,20 @@ void CEscrow::Serialize(vector<unsigned char>& vchData) {
 void CEscrowDB::WriteEscrowIndex(const CEscrow& escrow, const std::vector<std::vector<unsigned char> > &vvchArgs) {
 	UniValue oName(UniValue::VOBJ);
 	if (BuildEscrowIndexerJson(escrow, oName)) {
-		GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubescrow");
+		GetMainSignals().NotifySyscoinUpdate(oName.write().c_str(), "pubescrow");
 	}
 }
 void CEscrowDB::WriteEscrowFeedbackIndex(const CEscrow& escrow) {
 	UniValue oName(UniValue::VOBJ);
 	BuildFeedbackJson(escrow, oName);
-	GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubfeedback");
+	GetMainSignals().NotifySyscoinUpdate(oName.write().c_str(), "pubfeedback");
 }
 void CEscrowDB::WriteEscrowBidIndex(const CEscrow& escrow, const string& status) {
 	if (escrow.op != OP_ESCROW_ACTIVATE)
 		return;
 	UniValue oName(UniValue::VOBJ);
 	BuildEscrowBidJson(escrow, status, oName);
-	GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubescrowbid");
+	GetMainSignals().NotifySyscoinUpdate(oName.write().c_str(), "pubescrowbid");
 }
 bool CEscrowDB::CleanupDatabase(int &servicesCleaned)
 {

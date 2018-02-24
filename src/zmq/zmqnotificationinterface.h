@@ -28,7 +28,7 @@ protected:
     void SyncTransaction(const CTransaction &tx, const CBlock *pblock);
     void UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockIndex *pindexFork, bool fInitialDownload);
     void NotifyTransactionLock(const CTransaction &tx);
-	void NotifySyscoinUpdate(const std::string &value, const std::string &topic);
+	void NotifySyscoinUpdate(const char *value, const char *topic);
 
 private:
     CZMQNotificationInterface();

@@ -192,14 +192,15 @@ void CZMQNotificationInterface::NotifyTransactionLock(const CTransaction &tx)
         }
     }
 }
-void CZMQNotificationInterface::NotifySyscoinUpdate(const std::string &value, const std::string& topic)
+void CZMQNotificationInterface::NotifySyscoinUpdate(const char *value, const char *topic)
 {
 
 	for (std::list<CZMQAbstractNotifier*>::iterator i = notifiers.begin(); i != notifiers.end(); )
 	{
 		CZMQAbstractNotifier *notifier = *i;
+		std::string strTopic(topic);
 		// look for topic in notifier list, if finds it, sends an update
-		if (notifier->GetType() != topic)
+		if (notifier->GetType() != strTopic)
 			continue;
 
 		if (notifier->NotifySyscoinUpdate(value, topic))
