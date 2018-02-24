@@ -17,7 +17,7 @@ static const char *MSG_HASHTXLOCK = "hashtxlock";
 static const char *MSG_RAWBLOCK   = "rawblock";
 static const char *MSG_RAWTX      = "rawtx";
 static const char *MSG_RAWTXLOCK = "rawtxlock";
-static const char *MSG_SYSCOINUPDATE = "syscoinupdate";
+
 // Internal function to send multipart message
 static int zmq_send_multipart(void *sock, const void* data, size_t size, ...)
 {
@@ -217,5 +217,5 @@ bool CZMQPublishRawSyscoinNotifier::NotifySyscoinUpdate(const std::string &value
 	LogPrint("zmq", "zmq: Publish raw syscoin payload for topic %s: %s\n", topic, value);
 	CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
 	ss << value;
-	return SendMessage(MSG_SYSCOINUPDATE, &(*ss.begin()), ss.size());
+	return SendMessage(topic.c_str(), &(*ss.begin()), ss.size());
 }
