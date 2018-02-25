@@ -227,9 +227,9 @@ bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove,
 	
 }
 // calculate annual interest on an asset allocation
-CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight, string& errorMessage) {
+CAmount GetAssetAllocationInterest(CAssetAllocation & assetAllocation, const int& nHeight, string& errorMessage) {
 	// need to do one more average balance calculation since the last update to this asset allocation
-	if (!AccumulateInterestSinceLastClaim(asset, assetAllocation, nHeight)) {
+	if (!AccumulateInterestSinceLastClaim(assetAllocation, nHeight)) {
 		errorMessage = _("Not enough blocks in-between interest claims");
 		return 0;
 	}
@@ -268,13 +268,13 @@ bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetA
 	return true;
 }
 // keep track of average balance within the interest claim period
-bool AccumulateInterestSinceLastClaim(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight) {
+bool AccumulateInterestSinceLastClaim(CAssetAllocation & assetAllocation, const int& nHeight) {
 	const int &nBlocksSinceLastUpdate = (nHeight - assetAllocation.nHeight);
 	if (nBlocksSinceLastUpdate <= 0)
 		return false;
 	// formula is 1/N * (blocks since last update * previous balance/interest rate) where N is the number of blocks in the total time period
 	assetAllocation.nAccumulatedBalanceSinceLastInterestClaim += assetAllocation.nBalance*nBlocksSinceLastUpdate;
-	assetAllocation.fAccumulatedInterestSinceLastInterestClaim += asset.fInterestRate*nBlocksSinceLastUpdate;
+	assetAllocation.fAccumulatedInterestSinceLastInterestClaim += assetAllocation.fInterestRate*nBlocksSinceLastUpdate;
 	return true;
 }
 bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vchAlias,
@@ -519,10 +519,11 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						if (dbAsset.fInterestRate > 0) {
 							// accumulate balances as sender/receiver allocations balances are adjusted
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateInterestSinceLastClaim(dbAsset, receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
 							}
-							AccumulateInterestSinceLastClaim(dbAsset, theAssetAllocation, nHeight);
+							AccumulateInterestSinceLastClaim(theAssetAllocation, nHeight);
 						}
+						receiverAllocation.fInterestRate = dbAsset.fInterestRate;
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
 						receiverAllocation.nBalance += amountTuple.second;
@@ -621,10 +622,11 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						if (dbAsset.fInterestRate > 0) {
 							// accumulate balances as sender/receiver allocations balances are adjusted
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateInterestSinceLastClaim(dbAsset, receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
 							}
-							AccumulateInterestSinceLastClaim(dbAsset, theAssetAllocation, nHeight);
+							AccumulateInterestSinceLastClaim(theAssetAllocation, nHeight);
 						}
+						receiverAllocation.fInterestRate = dbAsset.fInterestRate;
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
 						// figure out receivers added ranges and balance
