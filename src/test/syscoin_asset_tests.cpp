@@ -665,7 +665,7 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 	BOOST_CHECK_NO_THROW(CallRPC("node1", "aliasinfo jagprunealias1"));
 
 	// shouldn't be pruned
-	BOOST_CHECK_NO_THROW(CallRPC("node2", "assetinfo jagprunealias1 false"));
+	BOOST_CHECK_NO_THROW(CallRPC("node2", "assetinfo jagprune1 false"));
 
 	// stop node3
 	StopNode("node3");
