@@ -315,12 +315,6 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest)
 	AssetClaimInterest("node1", "newassetcollection", "jagassetcollectionreceiver");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 824875837095);
-
-	// cannot collect interest in same block
-	AssetClaimInterest("node1", "newassetcollection", "jagassetcollectionreceiver");
-	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
-	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 824875837095);
-
 }
 BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_average_balance)
 {
@@ -425,7 +419,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_every_block)
 	// calc interest expect 5000 (1 + 0.05 / 60) ^ (60(10)) = ~8248
 	for (int i = 0; i <= 60*10; i+=25) {
 		AssetClaimInterest("node1", "newassetcollection1", "jagassetcollectionreceiver1");
-		GenerateBlocks(25);
+		GenerateBlocks(24);
 		printf("Claiming interest %d of out %d...\n", i, 60 * 10);
 	}
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection1 jagassetcollectionreceiver1 false"));
