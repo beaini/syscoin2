@@ -247,7 +247,7 @@ CAmount GetAssetAllocationInterest(CAssetAllocation & assetAllocation, const int
 	return ((nBalanceOverTimeDifference*pow((1 + (fInterestOverTimeDifference / nInterestBlockTerm)), (nInterestBlockTerm*fTerms)))) - nBalanceOverTimeDifference;
 }
 bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight, string& errorMessage) {
-	CAmount nInterest = GetAssetAllocationInterest(asset, assetAllocation, nHeight, errorMessage);
+	CAmount nInterest = GetAssetAllocationInterest(assetAllocation, nHeight, errorMessage);
 	if (nInterest <= 0) {
 		return false;
 	}
