@@ -397,12 +397,12 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_update_with_average_balance
 	// at the end set rate to 50% but this shouldn't affect the result since we set this rate recently
 	AssetUpdate("node1", "avgbalanceassetu", "pub", "0", "0.5");
 	// total interest (1000*180 + 4000*120 + 5000*60) / 360 = 2666.67 - average balance over 6hrs, calculate interest on that balance and apply it to 5k
-	// total interest rate (0.05*180 + 0.1*120 + 0.05*50 + 0.5*10) / 360 = 0.0792% - average interest over 6hrs
+	// total interest rate (0.05*180 + 0.1*120 + 0.05*60) / 360 = 0.0667% - average interest over 6hrs
 	// formula is  ((averagebalance*pow((1 + ((double)asset.fInterestRate / 60)), (60*6)))) - averagebalance;
-	//  ((2666.67*pow((1 + (0.0792 / 60)), (60*6)))) - 2666.67 = 1620.02 interest (total 6620.02 balance after interest)
+	//  ((2666.67*pow((1 + (0.0667 / 60)), (60*6)))) - 2666.67 = 1311.45 interest (total about 6311.45 balance after interest)
 	AssetClaimInterest("node1", "avgbalanceassetu", "jagassetcollectionrcveravgu");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo avgbalanceassetu jagassetcollectionrcveravgu false"));
-	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 6620.02);
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 6311.445533929);
 }
 BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_every_block)
 {
