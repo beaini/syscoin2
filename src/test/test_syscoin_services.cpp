@@ -1111,8 +1111,6 @@ void AssetClaimInterest(const string& node, const string& name, const string& al
 	string hex_str = find_value(r.get_obj(), "hex").get_str();
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinsendrawtransaction " + hex_str));
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
-
-	GenerateBlocks(1, node);
 	
 }
 void AssetSend(const string& node, const string& name, const string& inputs, const string& memo, const string& witness)
