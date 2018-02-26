@@ -96,7 +96,7 @@ void CAsset::Serialize( vector<unsigned char> &vchData) {
 void CAssetDB::WriteAssetIndex(const CAsset& asset, const int& op) {
 	UniValue oName(UniValue::VOBJ);
 	if (BuildAssetIndexerJson(asset, oName)) {
-		GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubasset");
+		GetMainSignals().NotifySyscoinUpdate(oName.write().c_str(), "asset");
 	}
 	WriteAssetIndexHistory(asset, op);
 }
@@ -104,7 +104,7 @@ void CAssetDB::WriteAssetIndexHistory(const CAsset& asset, const int &op) {
 	UniValue oName(UniValue::VOBJ);
 	if (BuildAssetIndexerHistoryJson(asset, oName)) {
 		oName.push_back(Pair("op", assetFromOp(op)));
-		GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubassethistory");
+		GetMainSignals().NotifySyscoinUpdate(oName.write().c_str(), "assethistory");
 	}
 }
 bool GetAsset(const vector<unsigned char> &vchAsset,
@@ -464,9 +464,10 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						receiverAllocation.txHash = tx.GetHash();
 						if (theAsset.fInterestRate > 0) {
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateInterestSinceLastClaim(theAsset, receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
 							}
 						}
+						receiverAllocation.fInterestRate = theAsset.fInterestRate;
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
 						receiverAllocation.nBalance += amountTuple.second;
@@ -529,9 +530,10 @@ bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vec
 						receiverAllocation.txHash = tx.GetHash();
 						if (theAsset.fInterestRate > 0) {
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateInterestSinceLastClaim(theAsset, receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
 							}
 						}
+						receiverAllocation.fInterestRate = theAsset.fInterestRate;
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
 						// figure out receivers added ranges and balance

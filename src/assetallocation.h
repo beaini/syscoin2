@@ -102,6 +102,7 @@ public:
 	CAmount nBalance;
 	uint64_t nAccumulatedBalanceSinceLastInterestClaim;
 	float fAccumulatedInterestSinceLastInterestClaim;
+	float fInterestRate;
 	std::vector<unsigned char> vchMemo;
 	CAssetAllocation() {
 		SetNull();
@@ -125,6 +126,7 @@ public:
 		READWRITE(nBalance);
 		READWRITE(VARINT(nAccumulatedBalanceSinceLastInterestClaim));
 		READWRITE(fAccumulatedInterestSinceLastInterestClaim);
+		READWRITE(fInterestRate);
 		READWRITE(vchMemo);
 	}
 	inline friend bool operator==(const CAssetAllocation &a, const CAssetAllocation &b) {
@@ -145,13 +147,14 @@ public:
 		nAccumulatedBalanceSinceLastInterestClaim = b.nAccumulatedBalanceSinceLastInterestClaim;
 		fAccumulatedInterestSinceLastInterestClaim = b.fAccumulatedInterestSinceLastInterestClaim;
 		vchMemo = b.vchMemo;
+		fInterestRate = b.fInterestRate;
 		return *this;
 	}
 
 	inline friend bool operator!=(const CAssetAllocation &a, const CAssetAllocation &b) {
 		return !(a == b);
 	}
-	inline void SetNull() { fAccumulatedInterestSinceLastInterestClaim = 0; nAccumulatedBalanceSinceLastInterestClaim = 0; vchMemo.clear(); nLastInterestClaimHeight = 0; nBalance = 0; listSendingAllocationAmounts.clear();  listSendingAllocationInputs.clear(); listAllocationInputs.clear(); vchAsset.clear(); nHeight = 0; txHash.SetNull(); vchAlias.clear(); }
+	inline void SetNull() { fInterestRate = 0; fAccumulatedInterestSinceLastInterestClaim = 0; nAccumulatedBalanceSinceLastInterestClaim = 0; vchMemo.clear(); nLastInterestClaimHeight = 0; nBalance = 0; listSendingAllocationAmounts.clear();  listSendingAllocationInputs.clear(); listAllocationInputs.clear(); vchAsset.clear(); nHeight = 0; txHash.SetNull(); vchAlias.clear(); }
 	inline bool IsNull() const { return (vchAsset.empty()); }
 	bool UnserializeFromTx(const CTransaction &tx);
 	bool UnserializeFromData(const std::vector<unsigned char> &vchData, const std::vector<unsigned char> &vchHash);
@@ -215,5 +218,5 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 bool GetAssetAllocation(const CAssetAllocationTuple& assetAllocationTuple,CAssetAllocation& txPos);
 bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const bool bGetInputs, UniValue& oName);
 bool BuildAssetAllocationIndexerJson(const CAssetAllocation& assetallocation,UniValue& oName);
-bool AccumulateInterestSinceLastClaim(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight);
+bool AccumulateInterestSinceLastClaim(CAssetAllocation & assetAllocation, const int& nHeight);
 #endif // ASSETALLOCATION_H

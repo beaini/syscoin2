@@ -1179,7 +1179,7 @@ UniValue offerupdate(const UniValue& params, bool fHelp) {
 void COfferDB::WriteOfferIndex(const COffer& offer, const int &op) {
 	UniValue oName(UniValue::VOBJ);
 	if (BuildOfferIndexerJson(offer, oName)) {
-		GetMainSignals().NotifySyscoinUpdate(oName.write(), "puboffer");
+		GetMainSignals().NotifySyscoinUpdate(oName.write().c_str(), "offer");
 	}
 	WriteOfferIndexHistory(offer, op);
 }
@@ -1193,7 +1193,7 @@ void COfferDB::WriteOfferIndexHistory(const COffer& offer, const int &op) {
 
 	if (BuildOfferIndexerHistoryJson(offer, oName)) {
 		oName.push_back(Pair("op", serviceFromOp));
-		GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubofferhistory");
+		GetMainSignals().NotifySyscoinUpdate(oName.write().c_str(), "offerhistory");
 	}
 }
 UniValue offerinfo(const UniValue& params, bool fHelp) {

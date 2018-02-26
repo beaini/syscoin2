@@ -90,7 +90,7 @@ void CAssetAllocation::Serialize( vector<unsigned char> &vchData) {
 void CAssetAllocationDB::WriteAssetAllocationIndex(const CAssetAllocation& assetallocation) {
 	UniValue oName(UniValue::VOBJ);
 	if (BuildAssetAllocationIndexerJson(assetallocation, oName)) {
-		GetMainSignals().NotifySyscoinUpdate(oName.write(), "pubassetallocation");
+		GetMainSignals().NotifySyscoinUpdate(oName.write().c_str(), "assetallocation");
 	}
 
 }
@@ -227,9 +227,9 @@ bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove,
 	
 }
 // calculate annual interest on an asset allocation
-CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight, string& errorMessage) {
+CAmount GetAssetAllocationInterest(CAssetAllocation & assetAllocation, const int& nHeight, string& errorMessage) {
 	// need to do one more average balance calculation since the last update to this asset allocation
-	if (!AccumulateInterestSinceLastClaim(asset, assetAllocation, nHeight)) {
+	if (!AccumulateInterestSinceLastClaim(assetAllocation, nHeight)) {
 		errorMessage = _("Not enough blocks in-between interest claims");
 		return 0;
 	}
@@ -247,7 +247,7 @@ CAmount GetAssetAllocationInterest(const CAsset& asset, CAssetAllocation & asset
 	return ((nBalanceOverTimeDifference*pow((1 + (fInterestOverTimeDifference / nInterestBlockTerm)), (nInterestBlockTerm*fTerms)))) - nBalanceOverTimeDifference;
 }
 bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight, string& errorMessage) {
-	CAmount nInterest = GetAssetAllocationInterest(asset, assetAllocation, nHeight, errorMessage);
+	CAmount nInterest = GetAssetAllocationInterest(assetAllocation, nHeight, errorMessage);
 	if (nInterest <= 0) {
 		return false;
 	}
@@ -268,13 +268,13 @@ bool ApplyAssetAllocationInterest(const CAsset& asset, CAssetAllocation & assetA
 	return true;
 }
 // keep track of average balance within the interest claim period
-bool AccumulateInterestSinceLastClaim(const CAsset& asset, CAssetAllocation & assetAllocation, const int& nHeight) {
+bool AccumulateInterestSinceLastClaim(CAssetAllocation & assetAllocation, const int& nHeight) {
 	const int &nBlocksSinceLastUpdate = (nHeight - assetAllocation.nHeight);
 	if (nBlocksSinceLastUpdate <= 0)
 		return false;
 	// formula is 1/N * (blocks since last update * previous balance/interest rate) where N is the number of blocks in the total time period
 	assetAllocation.nAccumulatedBalanceSinceLastInterestClaim += assetAllocation.nBalance*nBlocksSinceLastUpdate;
-	assetAllocation.fAccumulatedInterestSinceLastInterestClaim += asset.fInterestRate*nBlocksSinceLastUpdate;
+	assetAllocation.fAccumulatedInterestSinceLastInterestClaim += assetAllocation.fInterestRate*nBlocksSinceLastUpdate;
 	return true;
 }
 bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vchAlias,
@@ -519,10 +519,11 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						if (dbAsset.fInterestRate > 0) {
 							// accumulate balances as sender/receiver allocations balances are adjusted
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateInterestSinceLastClaim(dbAsset, receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
 							}
-							AccumulateInterestSinceLastClaim(dbAsset, theAssetAllocation, nHeight);
+							AccumulateInterestSinceLastClaim(theAssetAllocation, nHeight);
 						}
+						receiverAllocation.fInterestRate = dbAsset.fInterestRate;
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
 						receiverAllocation.nBalance += amountTuple.second;
@@ -621,10 +622,11 @@ bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const 
 						if (dbAsset.fInterestRate > 0) {
 							// accumulate balances as sender/receiver allocations balances are adjusted
 							if (receiverAllocation.nHeight > 0) {
-								AccumulateInterestSinceLastClaim(dbAsset, receiverAllocation, nHeight);
+								AccumulateInterestSinceLastClaim(receiverAllocation, nHeight);
 							}
-							AccumulateInterestSinceLastClaim(dbAsset, theAssetAllocation, nHeight);
+							AccumulateInterestSinceLastClaim(theAssetAllocation, nHeight);
 						}
+						receiverAllocation.fInterestRate = dbAsset.fInterestRate;
 						receiverAllocation.nHeight = nHeight;
 						receiverAllocation.vchMemo = theAssetAllocation.vchMemo;
 						// figure out receivers added ranges and balance
@@ -781,10 +783,13 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	// check to see if a transaction for this asset/alias tuple has arrived before minimum latency period
 	ArrivalTimesMap arrivalTimes;
 	passetallocationdb->ReadISArrivalTimes(assetAllocationTuple, arrivalTimes);
-	const int64_t & nNow = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+	const int64_t & nNow = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	for (auto& arrivalTime : arrivalTimes) {
+		int minLatency = ZDAG_MINIMUM_LATENCY_SECONDS*1000;
+		if (GetBoolArg("-unittest", false))
+			minLatency = 1000;
 		// if this tx arrived within the minimum latency period flag it as potentially conflicting
-		if ((nNow - (arrivalTime.second / 1000)) < GetBoolArg("-unittest", false)? 0.5: ZDAG_MINIMUM_LATENCY_SECONDS) {
+		if ((nNow - arrivalTime.second) < minLatency) {
 			throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2510 - " + _("Please wait a few more seconds and try again..."));
 		}
 	}
@@ -920,7 +925,7 @@ UniValue assetallocationinfo(const UniValue& params, bool fHelp) {
 		oAssetAllocation.clear();
     return oAssetAllocation;
 }
-int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& assetAllocationTupleSender, const CAssetAllocationTuple& assetAllocationTupleReceiver) {
+int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& assetAllocationTupleSender, const uint256& lookForTxHash) {
 	CAssetAllocation dbAssetAllocation;
 	ArrivalTimesMap arrivalTimes;
 	// get last POW asset allocation balance to ensure we use POW balance to check for potential conflicts in mempool (real-time balances).
@@ -954,7 +959,24 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 	// go through arrival times and check that balances don't overrun the POW balance
 	CAmount nRealtimeBalanceRequired = 0;
 	pair<uint256, int64_t> lastArrivalTime;
+	lastArrivalTime.second = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	map<vector<unsigned char>, CAmount> mapBalances;
+	// first check if any of the txs arrived within the latency threshold time period
+	for (auto& arrivalTime : arrivalTimesSet)
+	{
+		CTransaction tx;
+		// ensure mempool has this transaction and it is not yet mined, get the transaction in question
+		if (!mempool.lookup(arrivalTime.first, tx))
+			continue;
+		int minLatency = ZDAG_MINIMUM_LATENCY_SECONDS * 1000;
+		if (GetBoolArg("-unittest", false))
+			minLatency = 1000;
+		// if this tx arrived within the minimum latency period flag it as potentially conflicting
+		if (abs(arrivalTime.second - lastArrivalTime.second) < minLatency) {
+			return ZDAG_MINOR_CONFLICT_OK;
+		}
+	}
+	// next check sender balances are not overrun
 	// init sender balance, track balances by alias
 	// this is important because asset allocations can be sent/received within blocks and will overrun balances prematurely if not tracked properly, for example pow balance 3, sender sends 3, gets 2 sends 2 (total send 3+2=5 > balance of 3 from last stored state, this is a valid scenario and shouldn't be flagged)
 	CAmount &senderBalance = mapBalances[assetAllocationTupleSender.vchAlias];
@@ -965,12 +987,7 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 		// ensure mempool has this transaction and it is not yet mined, get the transaction in question
 		if (!mempool.lookup(arrivalTime.first, tx))
 			continue;
-
-		// if this tx arrived within the minimum latency period flag it as potentially conflicting
-		if ((arrivalTime.second - lastArrivalTime.second) < (ZDAG_MINIMUM_LATENCY_SECONDS*1000)) {
-			return ZDAG_MINOR_CONFLICT_OK;
-		}
-		lastArrivalTime = arrivalTime;
+		const uint256& txHash = tx.GetHash();
 		// get asset allocation object from this tx, if for some reason it doesn't have it, just skip (shouldn't happen)
 		CAssetAllocation assetallocation(tx);
 		if (assetallocation.IsNull())
@@ -978,7 +995,6 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 
 		if (!assetallocation.listSendingAllocationAmounts.empty()) {
 			for (auto& amountTuple : assetallocation.listSendingAllocationAmounts) {
-				const CAssetAllocationTuple assetAllocation(assetAllocationTupleReceiver.vchAsset, amountTuple.first);
 				senderBalance -= amountTuple.second;
 				mapBalances[amountTuple.first] += amountTuple.second;
 				// if running balance overruns the stored balance then we have a potential conflict
@@ -986,14 +1002,13 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 					return ZDAG_MINOR_CONFLICT_OK;
 				}
 				// even if the sender may be flagged, the order of events suggests that this receiver should get his money confirmed upon pow because real-time balance is sufficient for this receiver
-				else if(assetAllocation == assetAllocationTupleReceiver) {
+				else if(txHash == lookForTxHash) {
 					return ZDAG_STATUS_OK;
 				}
 			}
 		}
 		else if (!assetallocation.listSendingAllocationInputs.empty()) {
 			for (auto& inputTuple : assetallocation.listSendingAllocationInputs) {
-				const CAssetAllocationTuple assetAllocation(assetAllocationTupleReceiver.vchAsset, inputTuple.first);
 				const unsigned int rangeCount = validateRangesAndGetCount(inputTuple.second);
 				if (rangeCount == 0)
 					continue;
@@ -1004,7 +1019,7 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 					return ZDAG_MINOR_CONFLICT_OK;
 				}
 				// even if the sender may be flagged, the order of events suggests that this receiver should get his money confirmed upon pow because real-time balance is sufficient for this receiver
-				else if(assetAllocation == assetAllocationTupleReceiver) {
+				else if (txHash == lookForTxHash) {
 					return ZDAG_STATUS_OK;
 				}
 			}
@@ -1014,8 +1029,8 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 }
 UniValue assetallocationsenderstatus(const UniValue& params, bool fHelp) {
 	if (fHelp || 3 != params.size())
-		throw runtime_error("assetallocationsenderstatus <asset> <sender> <receiver>\n"
-			"Show status as it pertains to any current Z-DAG conflicts or warnings related to a sender or sender/receiver combination of an asset allocation transfer. Leave receiver empty if you are not checking for a specific sender/reciever transfer.\n"
+		throw runtime_error("assetallocationsenderstatus <asset> <sender> <txid>\n"
+			"Show status as it pertains to any current Z-DAG conflicts or warnings related to a sender or sender/txid combination of an asset allocation transfer. Leave txid empty if you are not checking for a specific transfer.\n"
 			"Return value is in the status field and can represent 3 levels(0, 1 or 2)\n"
 			"Level 0 means OK.\n"
 			"Level 1 means warning (checked that in the mempool there are more spending balances than current POW sender balance). An active stance should be taken and perhaps a deeper analysis as to potential conflicts related to the sender.\n"
@@ -1023,16 +1038,18 @@ UniValue assetallocationsenderstatus(const UniValue& params, bool fHelp) {
 
 	vector<unsigned char> vchAsset = vchFromValue(params[0]);
 	vector<unsigned char> vchAliasSender = vchFromValue(params[1]);
-	vector<unsigned char> vchAliasReceiver = vchFromValue(params[1]);
+	uint256 txid;
+	txid.SetNull();
+	if(!params[2].get_str().empty())
+		txid.SetHex(params[2].get_str());
 	UniValue oAssetAllocationStatus(UniValue::VOBJ);
 
 	CAssetAllocationTuple assetAllocationTupleSender(vchAsset, vchAliasSender);
-	CAssetAllocationTuple assetAllocationTupleReceiver(vchAsset, vchAliasReceiver);
 	int nStatus = ZDAG_STATUS_OK;
 	if (assetAllocationConflicts.find(assetAllocationTupleSender) != assetAllocationConflicts.end())
 		nStatus = ZDAG_MAJOR_CONFLICT_OK;
 	else {
-		nStatus = DetectPotentialAssetAllocationSenderConflicts(assetAllocationTupleSender, assetAllocationTupleReceiver);
+		nStatus = DetectPotentialAssetAllocationSenderConflicts(assetAllocationTupleSender, txid);
 	}
 	oAssetAllocationStatus.push_back(Pair("status", nStatus));
 	return oAssetAllocationStatus;

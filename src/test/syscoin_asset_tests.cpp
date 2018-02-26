@@ -313,8 +313,6 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest)
 	GenerateBlocks(60 * 10);
 	// calc interest expect 5000 (1 + 0.05 / 60) ^ (60(10)) = ~8248
 	AssetClaimInterest("node1", "newassetcollection", "jagassetcollectionreceiver");
-	// cannot collect interest in same block
-	BOOST_CHECK_THROW(CallRPC("node1", "assetallocationcollectinterest newassetcollection jagassetcollectionreceiver ''"), runtime_error);
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetcollection jagassetcollectionreceiver false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 824875837095);
 }
@@ -372,7 +370,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_update_with_average_balance
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 1000 * COIN);
 	int claimheight = find_value(r.get_obj(), "height").get_int();
 	// 3 hours later send 1k more
-	GenerateBlocks((60 * 3) - 11);
+	GenerateBlocks((60 * 3)-11);
 	// update interest rate to 10%
 	AssetUpdate("node1", "avgbalanceassetu", "pub", "0", "0.1");
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "interest_claim_height").get_int(), claimheight);
@@ -397,12 +395,12 @@ BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_update_with_average_balance
 	// at the end set rate to 50% but this shouldn't affect the result since we set this rate recently
 	AssetUpdate("node1", "avgbalanceassetu", "pub", "0", "0.5");
 	// total interest (1000*180 + 4000*120 + 5000*60) / 360 = 2666.67 - average balance over 6hrs, calculate interest on that balance and apply it to 5k
-	// total interest rate (0.05*180 + 0.1*120 + 0.05*60) / 360 = 0.0667$ - average interest over 6hrs
+	// total interest rate (0.05*180 + 0.1*120 + 0.05*60) / 360 = 0.0667% - average interest over 6hrs
 	// formula is  ((averagebalance*pow((1 + ((double)asset.fInterestRate / 60)), (60*6)))) - averagebalance;
-	//  ((2666.67*pow((1 + (0.0667 / 60)), (60*6)))) - 2666.67 = 932.5 interest (total 5932.5 balance after interest)
+	//  ((2666.67*pow((1 + (0.0667 / 60)), (60*6)))) - 2666.67 = 1310.65 interest (total about 6310.65 balance after interest)
 	AssetClaimInterest("node1", "avgbalanceassetu", "jagassetcollectionrcveravgu");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo avgbalanceassetu jagassetcollectionrcveravgu false"));
-	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 6311.44553393);
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 631064931803);
 }
 BOOST_AUTO_TEST_CASE(generate_asset_collect_interest_every_block)
 {
@@ -537,7 +535,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend)
 BOOST_AUTO_TEST_CASE(generate_assetsend_ranges)
 {
 	UniValue r;
-	printf("Running generate_assetsend...\n");
+	printf("Running generate_assetsend_ranges...\n");
 	AliasNew("node1", "jagassetsendranges", "data");
 	AliasNew("node2", "jagassetsendranges1", "data");
 	// if use input ranges update supply and ensure adds to end of allocation, ensure balance gets updated properly
@@ -667,7 +665,7 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 	BOOST_CHECK_NO_THROW(CallRPC("node1", "aliasinfo jagprunealias1"));
 
 	// shouldn't be pruned
-	BOOST_CHECK_NO_THROW(CallRPC("node2", "assetinfo jagprunealias1 false"));
+	BOOST_CHECK_NO_THROW(CallRPC("node2", "assetinfo jagprune1 false"));
 
 	// stop node3
 	StopNode("node3");
@@ -680,12 +678,12 @@ BOOST_AUTO_TEST_CASE(generate_assetpruning)
 	StartNode("node1");
 	GenerateBlocks(5, "node1");
 
-	BOOST_CHECK_NO_THROW(CallRPC("node1", "assetinfo jagprunealias1 false"));
+	BOOST_CHECK_NO_THROW(CallRPC("node1", "assetinfo jagprune1 false"));
 
 	BOOST_CHECK_NO_THROW(CallRPC("node1", "aliasinfo jagprunealias1"));
 
 	// try to create asset with same name
 	BOOST_CHECK_THROW(CallRPC("node1", "assetnew jagprune1 jagprunealias1 pubdata assets 1 1 false 0 false ''"), runtime_error);
-	
+	StartNode("node3");
 }
 BOOST_AUTO_TEST_SUITE_END ()

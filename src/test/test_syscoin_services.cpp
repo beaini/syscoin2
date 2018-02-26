@@ -31,7 +31,6 @@
 static int node1LastBlock=0;
 static int node2LastBlock=0;
 static int node3LastBlock=0;
-static int node4LastBlock=0;
 static bool node1Online = false;
 static bool node2Online = false;
 static bool node3Online = false;
@@ -43,23 +42,17 @@ void StartNodes()
 	node1LastBlock=0;
 	node2LastBlock=0;
 	node3LastBlock=0;
-	node4LastBlock=0;
 	if(boost::filesystem::exists(boost::filesystem::system_complete("node1/wallet.dat")))
 		boost::filesystem::remove(boost::filesystem::system_complete("node1//wallet.dat"));
 	if(boost::filesystem::exists(boost::filesystem::system_complete("node2/wallet.dat")))
 		boost::filesystem::remove(boost::filesystem::system_complete("node2//wallet.dat"));
 	if(boost::filesystem::exists(boost::filesystem::system_complete("node3/wallet.dat")))
 		boost::filesystem::remove(boost::filesystem::system_complete("node3//wallet.dat"));
-	if(boost::filesystem::exists(boost::filesystem::system_complete("node4/wallet.dat")))
-		boost::filesystem::remove(boost::filesystem::system_complete("node4//wallet.dat"));
-	StopMainNetNodes();
-	printf("Starting 4 nodes in a regtest setup...\n");
+	//StopMainNetNodes();
+	printf("Starting 3 nodes in a regtest setup...\n");
 	StartNode("node1");
 	StartNode("node2");
 	StartNode("node3");
-	StartNode("node4", true, "-txindex");
-	StopNode("node4");
-	StartNode("node4", true, "-txindex");
 	SelectParams(CBaseChainParams::REGTEST);
 
 }
@@ -85,7 +78,6 @@ void StopNodes()
 	StopNode("node1");
 	StopNode("node2");
 	StopNode("node3");
-	StopNode("node4");
 	printf("Done!\n");
 }
 void StartNode(const string &dataDir, bool regTest, const string& extraArgs)
@@ -103,8 +95,6 @@ void StartNode(const string &dataDir, bool regTest, const string& extraArgs)
 		nodePath += string(" -regtest -debug -addressindex -unittest");
 	if(!extraArgs.empty())
 		nodePath += string(" ") + extraArgs;
-	if (!boost::filesystem::exists(boost::filesystem::system_complete(dataDir + "/db")))
-		boost::filesystem::create_directory(boost::filesystem::system_complete(dataDir + "/db"));
 
     boost::thread t(runCommand, nodePath);
 	printf("Launching %s, waiting 1 second before trying to ping...\n", nodePath.c_str());
@@ -148,16 +138,6 @@ void StartNode(const string &dataDir, bool regTest, const string& extraArgs)
 				node3Online = true;
 				node3LastBlock = 0;
 			}
-			else if(dataDir == "node4")
-			{
-				if(node4LastBlock > find_value(r.get_obj(), "blocks").get_int())
-				{
-					printf("Waiting for %s to catch up, current block number %d vs total blocks %d...\n", dataDir.c_str(), find_value(r.get_obj(), "blocks").get_int(), node4LastBlock);
-					MilliSleep(500);
-					continue;
-				}
-				node4LastBlock = 0;
-			}
 			MilliSleep(500);
 			CallRPC(dataDir, "prunesyscoinservices", regTest);
 			MilliSleep(500);
@@ -186,8 +166,6 @@ void StopNode (const string &dataDir) {
 				node2LastBlock = find_value(r.get_obj(), "blocks").get_int();
 			else if(dataDir == "node3")
 				node3LastBlock = find_value(r.get_obj(), "blocks").get_int();
-			else if(dataDir == "node4")
-				node4LastBlock = find_value(r.get_obj(), "blocks").get_int();
 		}
 	}
 	catch(const runtime_error& error)
@@ -227,12 +205,6 @@ void StopNode (const string &dataDir) {
 		boost::filesystem::copy_file(boost::filesystem::system_complete(dataDir + "/regtest/wallet.dat"),boost::filesystem::system_complete(dataDir + "/wallet.dat"),boost::filesystem::copy_option::overwrite_if_exists);
 	if(boost::filesystem::exists(boost::filesystem::system_complete(dataDir + "/regtest")))
 		boost::filesystem::remove_all(boost::filesystem::system_complete(dataDir + "/regtest"));
-	try {
-		if (boost::filesystem::exists(boost::filesystem::system_complete(dataDir + "/db")))
-			boost::filesystem::remove_all(boost::filesystem::system_complete(dataDir + "/db"));
-	}
-	catch (...) {
-	}
 }
 
 UniValue CallRPC(const string &dataDir, const string& commandWithArgs, bool regTest, bool readJson)
@@ -1119,9 +1091,74 @@ void AssetClaimInterest(const string& node, const string& name, const string& al
 	string hex_str = find_value(r.get_obj(), "hex").get_str();
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinsendrawtransaction " + hex_str));
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
-
-	GenerateBlocks(1, node);
+	GenerateBlocks(1);
 	
+}
+void AssetAllocationSend(const bool usezdag, const string& node, const string& name, const string& fromalias, const string& inputs, const string& memo, const string& witness) {
+	CAssetAllocation theAssetAllocation;
+	UniValue valueTo;
+	string inputsTmp = inputs;
+	boost::replace_all(inputsTmp, "\\\"", "\"");
+	boost::replace_all(inputsTmp, "\"[", "[");
+	boost::replace_all(inputsTmp, "]\"", "]");
+	BOOST_CHECK(valueTo.read(inputsTmp));
+	BOOST_CHECK(valueTo.isArray());
+	UniValue receivers = valueTo.get_array();
+	CAmount inputamount = 0;
+	for (unsigned int idx = 0; idx < receivers.size(); idx++) {
+		const UniValue& receiver = receivers[idx];
+		BOOST_CHECK(receiver.isObject());
+
+
+		UniValue receiverObj = receiver.get_obj();
+		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "aliasto"));
+
+		UniValue inputRangeObj = find_value(receiverObj, "ranges");
+		UniValue amountObj = find_value(receiverObj, "amount");
+		if (inputRangeObj.isArray()) {
+			UniValue inputRanges = inputRangeObj.get_array();
+			vector<CRange> vectorOfRanges;
+			for (unsigned int rangeIndex = 0; rangeIndex < inputRanges.size(); rangeIndex++) {
+				const UniValue& inputRangeObj = inputRanges[rangeIndex];
+				BOOST_CHECK(inputRangeObj.isObject());
+				UniValue startRangeObj = find_value(inputRangeObj, "start");
+				UniValue endRangeObj = find_value(inputRangeObj, "end");
+				BOOST_CHECK(startRangeObj.isNum());
+				BOOST_CHECK(endRangeObj.isNum());
+				vectorOfRanges.push_back(CRange(startRangeObj.get_int(), endRangeObj.get_int()));
+			}
+			const unsigned int rangeTotal = validateRangesAndGetCount(vectorOfRanges);
+			BOOST_CHECK(rangeTotal > 0);
+			inputamount += rangeTotal*COIN;
+			theAssetAllocation.listSendingAllocationInputs.push_back(make_pair(vchAliasTo, vectorOfRanges));
+		}
+		else if (amountObj.isNum()) {
+			const CAmount &amount = AssetAmountFromValue(amountObj);
+			inputamount += amount;
+			BOOST_CHECK(amount > 0);
+			theAssetAllocation.listSendingAllocationAmounts.push_back(make_pair(vchAliasTo, amount));
+		}
+
+
+	}
+
+	string otherNode1, otherNode2;
+	GetOtherNodes(node, otherNode1, otherNode2);
+	UniValue r;
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetallocationinfo " + name + " " + fromalias + " false"));
+	CAmount newfromamount = AssetAmountFromValue(find_value(r.get_obj(), "balance")) - inputamount;
+
+	// "assetallocationsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [memo] [witness]\n"
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetallocationsend " + name + " " + fromalias + " " + inputs + " " + memo + " " + witness));
+	UniValue arr = r.get_array();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "signrawtransaction " + arr[0].get_str()));
+	string hex_str = find_value(r.get_obj(), "hex").get_str();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinsendrawtransaction " + hex_str));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
+	if(!usezdag)
+		GenerateBlocks(1, node);
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetallocationinfo " + name + " " + fromalias + " false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), newfromamount);
 }
 void AssetSend(const string& node, const string& name, const string& inputs, const string& memo, const string& witness)
 {
@@ -2460,9 +2497,9 @@ SyscoinTestingSetup::~SyscoinTestingSetup()
 }
 SyscoinMainNetSetup::SyscoinMainNetSetup()
 {
-	StartMainNetNodes();
+	//StartMainNetNodes();
 }
 SyscoinMainNetSetup::~SyscoinMainNetSetup()
 {
-	StopMainNetNodes();
+	//StopMainNetNodes();
 }

@@ -26,7 +26,7 @@ bool CZMQAbstractNotifier::NotifyTransactionLock(const CTransaction &/*transacti
 {
     return true;
 }
-bool CZMQAbstractNotifier::NotifySyscoinUpdate(const std::string &, const std::string &)
+bool CZMQAbstractNotifier::NotifySyscoinUpdate(const char *, const char *)
 {
 	return true;
 }
