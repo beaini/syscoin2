@@ -31,7 +31,6 @@
 static int node1LastBlock=0;
 static int node2LastBlock=0;
 static int node3LastBlock=0;
-static int node4LastBlock=0;
 static bool node1Online = false;
 static bool node2Online = false;
 static bool node3Online = false;
@@ -43,23 +42,17 @@ void StartNodes()
 	node1LastBlock=0;
 	node2LastBlock=0;
 	node3LastBlock=0;
-	node4LastBlock=0;
 	if(boost::filesystem::exists(boost::filesystem::system_complete("node1/wallet.dat")))
 		boost::filesystem::remove(boost::filesystem::system_complete("node1//wallet.dat"));
 	if(boost::filesystem::exists(boost::filesystem::system_complete("node2/wallet.dat")))
 		boost::filesystem::remove(boost::filesystem::system_complete("node2//wallet.dat"));
 	if(boost::filesystem::exists(boost::filesystem::system_complete("node3/wallet.dat")))
 		boost::filesystem::remove(boost::filesystem::system_complete("node3//wallet.dat"));
-	if(boost::filesystem::exists(boost::filesystem::system_complete("node4/wallet.dat")))
-		boost::filesystem::remove(boost::filesystem::system_complete("node4//wallet.dat"));
-	StopMainNetNodes();
-	printf("Starting 4 nodes in a regtest setup...\n");
+	//StopMainNetNodes();
+	printf("Starting 3 nodes in a regtest setup...\n");
 	StartNode("node1");
 	StartNode("node2");
 	StartNode("node3");
-	StartNode("node4", true, "-txindex");
-	StopNode("node4");
-	StartNode("node4", true, "-txindex");
 	SelectParams(CBaseChainParams::REGTEST);
 
 }
@@ -85,7 +78,6 @@ void StopNodes()
 	StopNode("node1");
 	StopNode("node2");
 	StopNode("node3");
-	StopNode("node4");
 	printf("Done!\n");
 }
 void StartNode(const string &dataDir, bool regTest, const string& extraArgs)
@@ -146,16 +138,6 @@ void StartNode(const string &dataDir, bool regTest, const string& extraArgs)
 				node3Online = true;
 				node3LastBlock = 0;
 			}
-			else if(dataDir == "node4")
-			{
-				if(node4LastBlock > find_value(r.get_obj(), "blocks").get_int())
-				{
-					printf("Waiting for %s to catch up, current block number %d vs total blocks %d...\n", dataDir.c_str(), find_value(r.get_obj(), "blocks").get_int(), node4LastBlock);
-					MilliSleep(500);
-					continue;
-				}
-				node4LastBlock = 0;
-			}
 			MilliSleep(500);
 			CallRPC(dataDir, "prunesyscoinservices", regTest);
 			MilliSleep(500);
@@ -184,8 +166,6 @@ void StopNode (const string &dataDir) {
 				node2LastBlock = find_value(r.get_obj(), "blocks").get_int();
 			else if(dataDir == "node3")
 				node3LastBlock = find_value(r.get_obj(), "blocks").get_int();
-			else if(dataDir == "node4")
-				node4LastBlock = find_value(r.get_obj(), "blocks").get_int();
 		}
 	}
 	catch(const runtime_error& error)
@@ -2451,9 +2431,9 @@ SyscoinTestingSetup::~SyscoinTestingSetup()
 }
 SyscoinMainNetSetup::SyscoinMainNetSetup()
 {
-	StartMainNetNodes();
+	//StartMainNetNodes();
 }
 SyscoinMainNetSetup::~SyscoinMainNetSetup()
 {
-	StopMainNetNodes();
+	//StopMainNetNodes();
 }
