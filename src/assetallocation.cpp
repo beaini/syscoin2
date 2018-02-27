@@ -783,7 +783,7 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	// check to see if a transaction for this asset/alias tuple has arrived before minimum latency period
 	ArrivalTimesMap arrivalTimes;
 	passetallocationdb->ReadISArrivalTimes(assetAllocationTuple, arrivalTimes);
-	const int64_t & nNow = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+	const int64_t & nNow = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	for (auto& arrivalTime : arrivalTimes) {
 		int minLatency = ZDAG_MINIMUM_LATENCY_SECONDS*1000;
 		if (GetBoolArg("-unittest", false))
