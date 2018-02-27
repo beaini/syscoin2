@@ -113,5 +113,34 @@ BOOST_AUTO_TEST_CASE(generate_asset_allocation_send)
 	BOOST_CHECK_NO_THROW(r = CallRPC("node3", "assetallocationsenderstatus newassetsend jagassetallocationsend1 ''"));
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_STATUS_OK);
 
+	GenerateBlocks(1);
+
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid0));
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+	BOOST_CHECK_NO_THROW(r = CallRPC("node2", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid0));
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+	BOOST_CHECK_NO_THROW(r = CallRPC("node3", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid0));
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid1));
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+	BOOST_CHECK_NO_THROW(r = CallRPC("node2", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid1));
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+	BOOST_CHECK_NO_THROW(r = CallRPC("node3", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid1));
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid2));
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+	BOOST_CHECK_NO_THROW(r = CallRPC("node2", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid2));
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+	BOOST_CHECK_NO_THROW(r = CallRPC("node3", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid2));
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+
+	// check just sender as well
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 ''"));
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+	BOOST_CHECK_NO_THROW(r = CallRPC("node2", "assetallocationsenderstatus newassetsend jagassetallocationsend1 ''"));
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+	BOOST_CHECK_NO_THROW(r = CallRPC("node3", "assetallocationsenderstatus newassetsend jagassetallocationsend1 ''"));
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
 }
 BOOST_AUTO_TEST_SUITE_END ()
