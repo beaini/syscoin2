@@ -535,7 +535,7 @@ BOOST_AUTO_TEST_CASE(generate_assetsend)
 BOOST_AUTO_TEST_CASE(generate_assetsend_ranges)
 {
 	UniValue r;
-	printf("Running generate_assetsend...\n");
+	printf("Running generate_assetsend_ranges...\n");
 	AliasNew("node1", "jagassetsendranges", "data");
 	AliasNew("node2", "jagassetsendranges1", "data");
 	// if use input ranges update supply and ensure adds to end of allocation, ensure balance gets updated properly
