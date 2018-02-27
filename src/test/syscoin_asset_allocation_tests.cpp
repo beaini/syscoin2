@@ -34,12 +34,12 @@ BOOST_AUTO_TEST_CASE(generate_asset_allocation_send)
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetsend jagassetallocationsend1 false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 1 * COIN);
 
-	const string txid0 = AssetAllocationTransfer(false, "node1", "newassetsend", "jagassetallocationsend1", "\"[{\\\"aliasto\\\":\\\"jagassetallocationsend2\\\",\\\"amount\\\":0.1}]\"", "allocationsendmemo");
+	string txid0 = AssetAllocationTransfer(false, "node1", "newassetsend", "jagassetallocationsend1", "\"[{\\\"aliasto\\\":\\\"jagassetallocationsend2\\\",\\\"amount\\\":0.1}]\"", "allocationsendmemo");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetsend jagassetallocationsend2 false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")),0.1 * COIN);
 
 	// send using zdag
-	const string txid1 = AssetAllocationTransfer(true, "node1", "newassetsend", "jagassetallocationsend1", "\"[{\\\"aliasto\\\":\\\"jagassetallocationsend2\\\",\\\"amount\\\":0.1}]\"", "allocationsendmemo");
+	string txid1 = AssetAllocationTransfer(true, "node1", "newassetsend", "jagassetallocationsend1", "\"[{\\\"aliasto\\\":\\\"jagassetallocationsend2\\\",\\\"amount\\\":0.1}]\"", "allocationsendmemo");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetsend jagassetallocationsend2 false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 0.2 * COIN);
 
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_allocation_send)
 	MilliSleep(1000);
 
 	// second send
-	const string txid2 = AssetAllocationTransfer(true, "node1", "newassetsend", "jagassetallocationsend1", "\"[{\\\"aliasto\\\":\\\"jagassetallocationsend2\\\",\\\"amount\\\":0.1}]\"", "allocationsendmemo");
+	string txid2 = AssetAllocationTransfer(true, "node1", "newassetsend", "jagassetallocationsend1", "\"[{\\\"aliasto\\\":\\\"jagassetallocationsend2\\\",\\\"amount\\\":0.1}]\"", "allocationsendmemo");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetsend jagassetallocationsend2 false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 0.3 * COIN);
 	
