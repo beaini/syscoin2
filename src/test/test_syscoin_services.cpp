@@ -1094,7 +1094,7 @@ void AssetClaimInterest(const string& node, const string& name, const string& al
 	GenerateBlocks(1);
 	
 }
-void AssetAllocationSend(const string& node, const string& name, const string& inputs, const string& memo, const string& witness) {
+void AssetAllocationSend(const string& node, const string& name, const string& fromalias, const string& inputs, const string& memo, const string& witness) {
 	CAssetAllocation theAssetAllocation;
 	UniValue valueTo;
 	string inputsTmp = inputs;
@@ -1145,9 +1145,7 @@ void AssetAllocationSend(const string& node, const string& name, const string& i
 	string otherNode1, otherNode2;
 	GetOtherNodes(node, otherNode1, otherNode2);
 	UniValue r;
-	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name + " false"));
-	string fromalias = find_value(r.get_obj(), "alias").get_str();
-	string fromsupply = find_value(r.get_obj(), "total_supply").write();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetallocationinfo " + name + " " + fromalias + " false"));
 	CAmount newfromamount = AssetAmountFromValue(find_value(r.get_obj(), "balance")) - inputamount;
 
 	// "assetallocationsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [memo] [witness]\n"
