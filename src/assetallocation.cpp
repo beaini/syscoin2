@@ -956,6 +956,7 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 	// go through arrival times and check that balances don't overrun the POW balance
 	CAmount nRealtimeBalanceRequired = 0;
 	pair<uint256, int64_t> lastArrivalTime;
+	lastArrivalTime.second = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	map<vector<unsigned char>, CAmount> mapBalances;
 	// init sender balance, track balances by alias
 	// this is important because asset allocations can be sent/received within blocks and will overrun balances prematurely if not tracked properly, for example pow balance 3, sender sends 3, gets 2 sends 2 (total send 3+2=5 > balance of 3 from last stored state, this is a valid scenario and shouldn't be flagged)
