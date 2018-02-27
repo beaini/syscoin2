@@ -64,9 +64,9 @@ BOOST_AUTO_TEST_CASE(generate_asset_allocation_send)
 	
 	// first ones now OK
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid0));
-	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), assetallocationsenderstatus);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_STATUS_OK);
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid1));
-	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), assetallocationsenderstatus);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_STATUS_OK);
 
 	// second one hasn't waited enough time yet
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid2));
