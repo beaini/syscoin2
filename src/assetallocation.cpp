@@ -965,15 +965,15 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 	// this is important because asset allocations can be sent/received within blocks and will overrun balances prematurely if not tracked properly, for example pow balance 3, sender sends 3, gets 2 sends 2 (total send 3+2=5 > balance of 3 from last stored state, this is a valid scenario and shouldn't be flagged)
 	CAmount &senderBalance = mapBalances[assetAllocationTupleSender.vchAlias];
 	senderBalance = dbAssetAllocation.nBalance;
-	for(auto& arrivalTime: arrivalTimesSet)
+	int minLatency = ZDAG_MINIMUM_LATENCY_SECONDS * 1000;
+	if (GetBoolArg("-unittest", false))
+		minLatency = 1000;
+	for (auto& arrivalTime : arrivalTimesSet)
 	{
 		CTransaction tx;
 		// ensure mempool has this transaction and it is not yet mined, get the transaction in question
 		if (!mempool.lookup(arrivalTime.first, tx))
 			continue;
-		int minLatency = ZDAG_MINIMUM_LATENCY_SECONDS * 1000;
-		if (GetBoolArg("-unittest", false))
-			minLatency = 1000;
 		// if this tx arrived within the minimum latency period flag it as potentially conflicting
 		if (abs(arrivalTime.second - lastArrivalTime.second) < minLatency) {
 			return ZDAG_MINOR_CONFLICT_OK;
@@ -993,7 +993,7 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 					return ZDAG_MINOR_CONFLICT_OK;
 				}
 				// even if the sender may be flagged, the order of events suggests that this receiver should get his money confirmed upon pow because real-time balance is sufficient for this receiver
-				else if(txHash == lookForTxHash) {
+				else if (txHash == lookForTxHash) {
 					return ZDAG_STATUS_OK;
 				}
 			}
