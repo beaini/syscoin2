@@ -23,7 +23,8 @@ BOOST_GLOBAL_FIXTURE( SyscoinTestingSetup );
 BOOST_FIXTURE_TEST_SUITE(syscoin_asset_allocation_tests, BasicSyscoinTestingSetup)
 BOOST_AUTO_TEST_CASE(generate_asset_allocation_send)
 {
-	printf("Running generate_asset_send...\n");
+	UniValue r;
+	printf("Running generate_asset_allocation_send...\n");
 	GenerateBlocks(5);
 	AliasNew("node1", "jagassetallocationsend1", "data");
 	AliasNew("node2", "jagassetallocationsend2", "data");
