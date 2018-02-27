@@ -1038,7 +1038,7 @@ UniValue assetallocationsenderstatus(const UniValue& params, bool fHelp) {
 
 	vector<unsigned char> vchAsset = vchFromValue(params[0]);
 	vector<unsigned char> vchAliasSender = vchFromValue(params[1]);
-	uint256 txid = 0;
+	uint256 txid = uint256(0);
 	if(!params[2].get_str().empty())
 		txid.SetHex(params[2].get_str());
 	UniValue oAssetAllocationStatus(UniValue::VOBJ);
