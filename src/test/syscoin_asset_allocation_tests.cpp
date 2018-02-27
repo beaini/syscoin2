@@ -25,9 +25,17 @@ BOOST_AUTO_TEST_CASE(generate_asset_allocation_send)
 {
 	printf("Running generate_asset_send...\n");
 	GenerateBlocks(5);
-	AliasNew("node1", "jagassetsend", "data");
-	//const string& supply = "1", const string& maxsupply = "10", const string& useinputranges = "false", const string& interestrate = "0", const string& canadjustinterest = "false", const string& witness = "''");
-	AssetNew("node1", "newassetsend", "jagassetsend", "data", "1", "-1", "false", "0.1");
-	
+	AliasNew("node1", "jagassetallocationsend1", "data");
+	AliasNew("node2", "jagassetallocationsend2", "data");
+	AssetNew("node1", "newassetsend", "jagassetallocationsend1", "data", "1", "-1");
+
+	AssetSend("node1", "newassetsend", "\"[{\\\"aliasto\\\":\\\"jagassetallocationsend1\\\",\\\"amount\\\":1}]\"", "assetallocationsend");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetsend jagassetallocationsend1 false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 1 * COIN);
+
+	AssetAllocationSend("node1", "newassetsend", "jagassetallocationsend1", "\"[{\\\"aliasto\\\":\\\"jagassetallocationsend2\\\",\\\"amount\\\":0.1}]\"", "allocationsendmemo");
+	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetsend jagassetallocationsend2 false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")),0.1 * COIN);
+
 }
 BOOST_AUTO_TEST_SUITE_END ()

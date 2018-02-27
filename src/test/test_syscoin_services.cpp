@@ -1094,6 +1094,74 @@ void AssetClaimInterest(const string& node, const string& name, const string& al
 	GenerateBlocks(1);
 	
 }
+void AssetAllocationSend(const string& node, const string& name, const string& inputs, const string& memo, const string& witness) {
+	CAssetAllocation theAssetAllocation;
+	UniValue valueTo;
+	string inputsTmp = inputs;
+	boost::replace_all(inputsTmp, "\\\"", "\"");
+	boost::replace_all(inputsTmp, "\"[", "[");
+	boost::replace_all(inputsTmp, "]\"", "]");
+	BOOST_CHECK(valueTo.read(inputsTmp));
+	BOOST_CHECK(valueTo.isArray());
+	UniValue receivers = valueTo.get_array();
+	CAmount inputamount = 0;
+	for (unsigned int idx = 0; idx < receivers.size(); idx++) {
+		const UniValue& receiver = receivers[idx];
+		BOOST_CHECK(receiver.isObject());
+
+
+		UniValue receiverObj = receiver.get_obj();
+		vector<unsigned char> vchAliasTo = vchFromValue(find_value(receiverObj, "aliasto"));
+
+		UniValue inputRangeObj = find_value(receiverObj, "ranges");
+		UniValue amountObj = find_value(receiverObj, "amount");
+		if (inputRangeObj.isArray()) {
+			UniValue inputRanges = inputRangeObj.get_array();
+			vector<CRange> vectorOfRanges;
+			for (unsigned int rangeIndex = 0; rangeIndex < inputRanges.size(); rangeIndex++) {
+				const UniValue& inputRangeObj = inputRanges[rangeIndex];
+				BOOST_CHECK(inputRangeObj.isObject());
+				UniValue startRangeObj = find_value(inputRangeObj, "start");
+				UniValue endRangeObj = find_value(inputRangeObj, "end");
+				BOOST_CHECK(startRangeObj.isNum());
+				BOOST_CHECK(endRangeObj.isNum());
+				vectorOfRanges.push_back(CRange(startRangeObj.get_int(), endRangeObj.get_int()));
+			}
+			const unsigned int rangeTotal = validateRangesAndGetCount(vectorOfRanges);
+			BOOST_CHECK(rangeTotal > 0);
+			inputamount += rangeTotal*COIN;
+			theAssetAllocation.listSendingAllocationInputs.push_back(make_pair(vchAliasTo, vectorOfRanges));
+		}
+		else if (amountObj.isNum()) {
+			const CAmount &amount = AssetAmountFromValue(amountObj);
+			inputamount += amount;
+			BOOST_CHECK(amount > 0);
+			theAssetAllocation.listSendingAllocationAmounts.push_back(make_pair(vchAliasTo, amount));
+		}
+
+
+	}
+
+	string otherNode1, otherNode2;
+	GetOtherNodes(node, otherNode1, otherNode2);
+	UniValue r;
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetinfo " + name + " false"));
+	string fromalias = find_value(r.get_obj(), "alias").get_str();
+	string fromsupply = find_value(r.get_obj(), "total_supply").write();
+	CAmount newfromamount = AssetAmountFromValue(find_value(r.get_obj(), "balance")) - inputamount;
+
+	// "assetallocationsend [asset] [aliasfrom] ( [{\"alias\":\"aliasname\",\"amount\":amount},...] or [{\"alias\":\"aliasname\",\"ranges\":[{\"start\":index,\"end\":index},...]},...] ) [memo] [witness]\n"
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetallocationsend " + name + " " + fromalias + " " + inputs + " " + memo + " " + witness));
+	UniValue arr = r.get_array();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "signrawtransaction " + arr[0].get_str()));
+	string hex_str = find_value(r.get_obj(), "hex").get_str();
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinsendrawtransaction " + hex_str));
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
+
+	GenerateBlocks(1, node);
+	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetallocationinfo " + name + " " + fromalias + " false"));
+	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), newfromamount);
+}
 void AssetSend(const string& node, const string& name, const string& inputs, const string& memo, const string& witness)
 {
 	CAssetAllocation theAssetAllocation;
