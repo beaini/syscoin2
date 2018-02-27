@@ -47,20 +47,19 @@ BOOST_AUTO_TEST_CASE(generate_asset_allocation_send)
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 jagassetallocationsend2"));
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_MINOR_CONFLICT_OK);
 
-	// wait for 0.6 second as required by unit test
-	MilliSleep(600);
+	// wait for 1 second as required by unit test
+	MilliSleep(1000);
 
 	// second send
 	AssetAllocationSend(true, "node1", "newassetsend", "jagassetallocationsend1", "\"[{\\\"aliasto\\\":\\\"jagassetallocationsend2\\\",\\\"amount\\\":0.1}]\"", "allocationsendmemo");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetsend jagassetallocationsend2 false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 0.3 * COIN);
 	
-	// for 0.5 seconds it should be flagged as a warning because assetallocationsend checks for 0.5 sec delay and assetallocationsenderstatus checks for 1 sec for minor warning
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 jagassetallocationsend2"));
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_MINOR_CONFLICT_OK);
 
-	// wait for 1.5 second to clear minor warning status
-	MilliSleep(1500);
+	// wait for 1 second to clear minor warning status
+	MilliSleep(1000);
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 jagassetallocationsend2"));
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_STATUS_OK);
 	BOOST_CHECK_NO_THROW(r = CallRPC("node2", "assetallocationsenderstatus newassetsend jagassetallocationsend1 jagassetallocationsend2"));
