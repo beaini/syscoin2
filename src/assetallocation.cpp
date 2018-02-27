@@ -925,7 +925,7 @@ UniValue assetallocationinfo(const UniValue& params, bool fHelp) {
 		oAssetAllocation.clear();
     return oAssetAllocation;
 }
-int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& assetAllocationTupleSender, const CAssetAllocationTuple& assetAllocationTupleReceiver) {
+int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& assetAllocationTupleSender, const uint256& lookForTxHash) {
 	CAssetAllocation dbAssetAllocation;
 	ArrivalTimesMap arrivalTimes;
 	// get last POW asset allocation balance to ensure we use POW balance to check for potential conflicts in mempool (real-time balances).
@@ -987,6 +987,7 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 		// ensure mempool has this transaction and it is not yet mined, get the transaction in question
 		if (!mempool.lookup(arrivalTime.first, tx))
 			continue;
+		const uint256& txHash = tx.GetHash();
 		// get asset allocation object from this tx, if for some reason it doesn't have it, just skip (shouldn't happen)
 		CAssetAllocation assetallocation(tx);
 		if (assetallocation.IsNull())
@@ -994,7 +995,6 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 
 		if (!assetallocation.listSendingAllocationAmounts.empty()) {
 			for (auto& amountTuple : assetallocation.listSendingAllocationAmounts) {
-				const CAssetAllocationTuple assetAllocation(assetAllocationTupleReceiver.vchAsset, amountTuple.first);
 				senderBalance -= amountTuple.second;
 				mapBalances[amountTuple.first] += amountTuple.second;
 				// if running balance overruns the stored balance then we have a potential conflict
@@ -1002,14 +1002,13 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 					return ZDAG_MINOR_CONFLICT_OK;
 				}
 				// even if the sender may be flagged, the order of events suggests that this receiver should get his money confirmed upon pow because real-time balance is sufficient for this receiver
-				else if(assetAllocation == assetAllocationTupleReceiver) {
+				else if(txHash == lookForTxHash) {
 					return ZDAG_STATUS_OK;
 				}
 			}
 		}
 		else if (!assetallocation.listSendingAllocationInputs.empty()) {
 			for (auto& inputTuple : assetallocation.listSendingAllocationInputs) {
-				const CAssetAllocationTuple assetAllocation(assetAllocationTupleReceiver.vchAsset, inputTuple.first);
 				const unsigned int rangeCount = validateRangesAndGetCount(inputTuple.second);
 				if (rangeCount == 0)
 					continue;
@@ -1020,7 +1019,7 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 					return ZDAG_MINOR_CONFLICT_OK;
 				}
 				// even if the sender may be flagged, the order of events suggests that this receiver should get his money confirmed upon pow because real-time balance is sufficient for this receiver
-				else if(assetAllocation == assetAllocationTupleReceiver) {
+				else if (txHash == lookForTxHash) {
 					return ZDAG_STATUS_OK;
 				}
 			}
@@ -1030,8 +1029,8 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 }
 UniValue assetallocationsenderstatus(const UniValue& params, bool fHelp) {
 	if (fHelp || 3 != params.size())
-		throw runtime_error("assetallocationsenderstatus <asset> <sender> <receiver>\n"
-			"Show status as it pertains to any current Z-DAG conflicts or warnings related to a sender or sender/receiver combination of an asset allocation transfer. Leave receiver empty if you are not checking for a specific sender/reciever transfer.\n"
+		throw runtime_error("assetallocationsenderstatus <asset> <sender> <txid>\n"
+			"Show status as it pertains to any current Z-DAG conflicts or warnings related to a sender or sender/txid combination of an asset allocation transfer. Leave txid empty if you are not checking for a specific transfer.\n"
 			"Return value is in the status field and can represent 3 levels(0, 1 or 2)\n"
 			"Level 0 means OK.\n"
 			"Level 1 means warning (checked that in the mempool there are more spending balances than current POW sender balance). An active stance should be taken and perhaps a deeper analysis as to potential conflicts related to the sender.\n"
@@ -1039,7 +1038,9 @@ UniValue assetallocationsenderstatus(const UniValue& params, bool fHelp) {
 
 	vector<unsigned char> vchAsset = vchFromValue(params[0]);
 	vector<unsigned char> vchAliasSender = vchFromValue(params[1]);
-	vector<unsigned char> vchAliasReceiver = vchFromValue(params[1]);
+	uint256 txid = 0;
+	if(!params[2].get_str().empty())
+		txid.SetHex(params[2].get_str());
 	UniValue oAssetAllocationStatus(UniValue::VOBJ);
 
 	CAssetAllocationTuple assetAllocationTupleSender(vchAsset, vchAliasSender);
@@ -1048,7 +1049,7 @@ UniValue assetallocationsenderstatus(const UniValue& params, bool fHelp) {
 	if (assetAllocationConflicts.find(assetAllocationTupleSender) != assetAllocationConflicts.end())
 		nStatus = ZDAG_MAJOR_CONFLICT_OK;
 	else {
-		nStatus = DetectPotentialAssetAllocationSenderConflicts(assetAllocationTupleSender, assetAllocationTupleReceiver);
+		nStatus = DetectPotentialAssetAllocationSenderConflicts(assetAllocationTupleSender, txid);
 	}
 	oAssetAllocationStatus.push_back(Pair("status", nStatus));
 	return oAssetAllocationStatus;
