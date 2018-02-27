@@ -59,8 +59,8 @@ BOOST_AUTO_TEST_CASE(generate_asset_allocation_send)
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 jagassetallocationsend2"));
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_MINOR_CONFLICT_OK);
 
-	// wait for 0.6 second to clear minor warning status
-	MilliSleep(600);
+	// wait for 1 second to clear minor warning status
+	MilliSleep(1000);
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 jagassetallocationsend2"));
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_STATUS_OK);
 	BOOST_CHECK_NO_THROW(r = CallRPC("node2", "assetallocationsenderstatus newassetsend jagassetallocationsend1 jagassetallocationsend2"));
