@@ -39,16 +39,16 @@ BOOST_AUTO_TEST_CASE(generate_asset_allocation_send)
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")),0.1 * COIN);
 
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid0));
-	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_STATUS_OK);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
 
 	// send using zdag
 	string txid1 = AssetAllocationTransfer(true, "node1", "newassetsend", "jagassetallocationsend1", "\"[{\\\"aliasto\\\":\\\"jagassetallocationsend2\\\",\\\"amount\\\":0.1}]\"", "allocationsendmemo");
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetsend jagassetallocationsend2 false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 0.2 * COIN);
 
-	// non zdag cannot be found since it was already mined
+	// non zdag cannot be found since it was already mined, but ends up briefly in conflict state because sender is conflicted
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid0));
-	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_MINOR_CONFLICT_OK);
 
 	// first tx should have to wait 1 sec for good status
 
@@ -67,11 +67,11 @@ BOOST_AUTO_TEST_CASE(generate_asset_allocation_send)
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationinfo newassetsend jagassetallocationsend2 false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), 0.3 * COIN);
 	
-	
+	// sender is conflicted so txid0 is conflicted by extension even if its not found
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid0));
-	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_NOT_FOUND);
+	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_MINOR_CONFLICT_OK);
 
-	// first ones now OK
+	// first ones now OK because it was found explicitely
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid1));
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_STATUS_OK);
 
@@ -113,6 +113,7 @@ BOOST_AUTO_TEST_CASE(generate_asset_allocation_send)
 	BOOST_CHECK_NO_THROW(r = CallRPC("node3", "assetallocationsenderstatus newassetsend jagassetallocationsend1 ''"));
 	BOOST_CHECK_EQUAL(find_value(r.get_obj(), "status").get_int(), ZDAG_STATUS_OK);
 
+	// after pow, should get not found on all of them
 	GenerateBlocks(1);
 
 	BOOST_CHECK_NO_THROW(r = CallRPC("node1", "assetallocationsenderstatus newassetsend jagassetallocationsend1 " + txid0));
