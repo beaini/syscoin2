@@ -1094,7 +1094,7 @@ void AssetClaimInterest(const string& node, const string& name, const string& al
 	GenerateBlocks(1);
 	
 }
-void AssetAllocationSend(const string& node, const string& name, const string& fromalias, const string& inputs, const string& memo, const string& witness) {
+void AssetAllocationSend(const bool usezdag, const string& node, const string& name, const string& fromalias, const string& inputs, const string& memo, const string& witness) {
 	CAssetAllocation theAssetAllocation;
 	UniValue valueTo;
 	string inputsTmp = inputs;
@@ -1155,8 +1155,8 @@ void AssetAllocationSend(const string& node, const string& name, const string& f
 	string hex_str = find_value(r.get_obj(), "hex").get_str();
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "syscoinsendrawtransaction " + hex_str));
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "decoderawtransaction " + hex_str));
-
-	GenerateBlocks(1, node);
+	if(!usezdag)
+		GenerateBlocks(1, node);
 	BOOST_CHECK_NO_THROW(r = CallRPC(node, "assetallocationinfo " + name + " " + fromalias + " false"));
 	BOOST_CHECK_EQUAL(AssetAmountFromValue(find_value(r.get_obj(), "balance")), newfromamount);
 }
