@@ -961,8 +961,11 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 	pair<uint256, int64_t> lastArrivalTime;
 	lastArrivalTime.second = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	map<vector<unsigned char>, CAmount> mapBalances;
-	// first check if any of the txs arrived within the latency threshold time period
-	for (auto& arrivalTime : arrivalTimesSet)
+	// init sender balance, track balances by alias
+	// this is important because asset allocations can be sent/received within blocks and will overrun balances prematurely if not tracked properly, for example pow balance 3, sender sends 3, gets 2 sends 2 (total send 3+2=5 > balance of 3 from last stored state, this is a valid scenario and shouldn't be flagged)
+	CAmount &senderBalance = mapBalances[assetAllocationTupleSender.vchAlias];
+	senderBalance = dbAssetAllocation.nBalance;
+	for(auto& arrivalTime: arrivalTimesSet)
 	{
 		CTransaction tx;
 		// ensure mempool has this transaction and it is not yet mined, get the transaction in question
@@ -975,18 +978,6 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 		if (abs(arrivalTime.second - lastArrivalTime.second) < minLatency) {
 			return ZDAG_MINOR_CONFLICT_OK;
 		}
-	}
-	// next check sender balances are not overrun
-	// init sender balance, track balances by alias
-	// this is important because asset allocations can be sent/received within blocks and will overrun balances prematurely if not tracked properly, for example pow balance 3, sender sends 3, gets 2 sends 2 (total send 3+2=5 > balance of 3 from last stored state, this is a valid scenario and shouldn't be flagged)
-	CAmount &senderBalance = mapBalances[assetAllocationTupleSender.vchAlias];
-	senderBalance = dbAssetAllocation.nBalance;
-	for(auto& arrivalTime: arrivalTimesSet)
-	{
-		CTransaction tx;
-		// ensure mempool has this transaction and it is not yet mined, get the transaction in question
-		if (!mempool.lookup(arrivalTime.first, tx))
-			continue;
 		const uint256& txHash = tx.GetHash();
 		// get asset allocation object from this tx, if for some reason it doesn't have it, just skip (shouldn't happen)
 		CAssetAllocation assetallocation(tx);
