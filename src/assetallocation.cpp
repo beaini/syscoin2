@@ -785,8 +785,11 @@ UniValue assetallocationsend(const UniValue& params, bool fHelp) {
 	passetallocationdb->ReadISArrivalTimes(assetAllocationTuple, arrivalTimes);
 	const int64_t & nNow = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
 	for (auto& arrivalTime : arrivalTimes) {
+		int minLatency = ZDAG_MINIMUM_LATENCY_SECONDS*1000;
+		if (GetBoolArg("-unittest", false))
+			minLatency = 0.5*1000;
 		// if this tx arrived within the minimum latency period flag it as potentially conflicting
-		if ((nNow - (arrivalTime.second / 1000)) < GetBoolArg("-unittest", false)? 0.5: ZDAG_MINIMUM_LATENCY_SECONDS) {
+		if ((nNow - arrivalTime.second) < minLatency) {
 			throw runtime_error("SYSCOIN_ASSET_ALLOCATION_RPC_ERROR: ERRCODE: 2510 - " + _("Please wait a few more seconds and try again..."));
 		}
 	}
@@ -968,9 +971,11 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 		// ensure mempool has this transaction and it is not yet mined, get the transaction in question
 		if (!mempool.lookup(arrivalTime.first, tx))
 			continue;
-
+		int minLatency = ZDAG_MINIMUM_LATENCY_SECONDS * 1000;
+		if (GetBoolArg("-unittest", false))
+			minLatency = 1000;
 		// if this tx arrived within the minimum latency period flag it as potentially conflicting
-		if ((arrivalTime.second - lastArrivalTime.second) < (GetBoolArg("-unittest", false) ? 1*1000 : ZDAG_MINIMUM_LATENCY_SECONDS*1000)) {
+		if ((arrivalTime.second - lastArrivalTime.second) < minLatency) {
 			return ZDAG_MINOR_CONFLICT_OK;
 		}
 		lastArrivalTime = arrivalTime;
