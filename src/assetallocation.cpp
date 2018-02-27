@@ -1044,7 +1044,6 @@ UniValue assetallocationsenderstatus(const UniValue& params, bool fHelp) {
 	UniValue oAssetAllocationStatus(UniValue::VOBJ);
 
 	CAssetAllocationTuple assetAllocationTupleSender(vchAsset, vchAliasSender);
-	CAssetAllocationTuple assetAllocationTupleReceiver(vchAsset, vchAliasReceiver);
 	int nStatus = ZDAG_STATUS_OK;
 	if (assetAllocationConflicts.find(assetAllocationTupleSender) != assetAllocationConflicts.end())
 		nStatus = ZDAG_MAJOR_CONFLICT_OK;
