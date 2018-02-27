@@ -1016,7 +1016,7 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 			}
 		}
 	}
-	return ZDAG_STATUS_OK;
+	return lookForTxHash.IsNull()? ZDAG_STATUS_OK: ZDAG_NOT_FOUND;
 }
 UniValue assetallocationsenderstatus(const UniValue& params, bool fHelp) {
 	if (fHelp || 3 != params.size())

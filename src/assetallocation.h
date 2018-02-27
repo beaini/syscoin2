@@ -83,6 +83,7 @@ static const int ONE_YEAR_IN_BLOCKS = 525600;
 static const int ONE_HOUR_IN_BLOCKS = 60;
 static sorted_vector<CAssetAllocationTuple> assetAllocationConflicts;
 enum {
+	ZDAG_NOT_FOUND = -1,
 	ZDAG_STATUS_OK = 0,
 	ZDAG_MINOR_CONFLICT_OK,
 	ZDAG_MAJOR_CONFLICT_OK
