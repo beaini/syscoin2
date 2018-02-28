@@ -938,7 +938,8 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 	// ensure that this transaction exists in the arrivalTimes DB (which is the running stored lists of all real-time asset allocation sends not in POW)
 	// the arrivalTimes DB is only added to for valid asset allocation sends that happen in real-time and it is removed once there is POW on that transaction
 	passetallocationdb->ReadISArrivalTimes(assetAllocationTupleSender, arrivalTimes);
-	
+	if(arrivalTimes.empty())
+		return ZDAG_NOT_FOUND;
 	// sort the arrivalTimesMap ascending based on arrival time value
 
 	// Declaring the type of Predicate for comparing arrivalTimesMap
