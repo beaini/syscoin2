@@ -201,7 +201,7 @@ bool RemoveAssetScriptPrefix(const CScript& scriptIn, CScript& scriptOut) {
 	return true;
 }
 bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias,
-        bool fJustCheck, int nHeight, string &errorMessage, bool bSanityCheck) {
+        bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool bSanityCheck) {
 	if (!paliasdb || !passetdb)
 		return false;
 	if (tx.IsCoinBase() && !fJustCheck && !bSanityCheck)

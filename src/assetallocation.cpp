@@ -190,9 +190,9 @@ bool RemoveAssetAllocationScriptPrefix(const CScript& scriptIn, CScript& scriptO
 	return true;
 }
 // revert allocation to previous state and remove 
-bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove, const uint256 &txHash, const int& nHeight, sorted_vector<uint256> &revertedAssetAllocations) {
+bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove, const uint256 &txHash, const int& nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations) {
 	// only revert asset allocation once
-	if (revertedAssetAllocations.find(txHash) != revertedAssetAllocations.end())
+	if (revertedAssetAllocations.find(assetAllocationToRemove) != revertedAssetAllocations.end())
 		return true;
 
 	string errorMessage = "";
@@ -214,7 +214,7 @@ bool RevertAssetAllocation(const CAssetAllocationTuple &assetAllocationToRemove,
 	// remove the sender arrival time from this tx
 	passetallocationdb->EraseISArrivalTime(assetAllocationToRemove, txHash);
 
-	revertedAssetAllocations.insert(txHash);
+	revertedAssetAllocations.insert(assetAllocationToRemove);
 
 	// remove the conflict once we revert since it is assumed to be resolved on POW
 	sorted_vector<CAssetAllocationTuple>::const_iterator it = assetAllocationConflicts.find(assetAllocationToRemove);

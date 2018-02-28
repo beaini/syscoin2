@@ -22,7 +22,7 @@ class CBlock;
 class CAliasIndex;
 class COfferLinkWhitelistEntry;
 
-bool CheckOfferInputs(const CTransaction &tx, int op, int nOut, const std::vector<std::vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<uint256> &revertedOffers, std::string &errorMessage, bool bSanityCheck=false);
+bool CheckOfferInputs(const CTransaction &tx, int op, int nOut, const std::vector<std::vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<std::vector<unsigned char> > &revertedOffers, std::string &errorMessage, bool bSanityCheck=false);
 
 
 bool DecodeOfferTx(const CTransaction& tx, int& op, int& nOut, std::vector<std::vector<unsigned char> >& vvch);
