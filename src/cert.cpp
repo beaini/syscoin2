@@ -246,9 +246,9 @@ bool RemoveCertScriptPrefix(const CScript& scriptIn, CScript& scriptOut) {
 	scriptOut = CScript(pc, scriptIn.end());
 	return true;
 }
-bool RevertCert(const std::vector<unsigned char>& vchCert, const int op, const uint256 &txHash, sorted_vector<std::vector<unsigned char> > &revertedCerts) {
+bool RevertCert(const std::vector<unsigned char>& vchCert, const int op, const uint256 &txHash, sorted_vector<uint256> &revertedCerts) {
 	// only revert cert once
-	if (revertedCerts.find(vchCert) != revertedCerts.end())
+	if (revertedCerts.find(txHash) != revertedCerts.end())
 		return true;
 
 	string errorMessage = "";
@@ -269,12 +269,12 @@ bool RevertCert(const std::vector<unsigned char>& vchCert, const int op, const u
 		return error(errorMessage.c_str());
 	}
 	pcertdb->EraseISArrivalTimes(vchCert);
-	revertedCerts.insert(vchCert);
+	revertedCerts.insert(txHash);
 	return true;
 
 }
 bool CheckCertInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias,
-        bool fJustCheck, int nHeight, sorted_vector<std::vector<unsigned char> > &revertedCerts, string &errorMessage, bool bSanityCheck) {
+        bool fJustCheck, int nHeight, sorted_vector<uint256> &revertedCerts, string &errorMessage, bool bSanityCheck) {
 	if (!pcertdb || !paliasdb)
 		return false;
 	if (tx.IsCoinBase() && !fJustCheck && !bSanityCheck)

@@ -42,12 +42,12 @@ extern bool DecodeAssetTx(const CTransaction& tx, int& op, int& nOut, vector<vec
 extern bool DecodeAssetAllocationTx(const CTransaction& tx, int& op, int& nOut, vector<vector<unsigned char> >& vvch);
 extern bool DecodeEscrowTx(const CTransaction& tx, int& op, int& nOut, vector<vector<unsigned char> >& vvch);
 extern bool CheckAliasInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, bool fJustCheck, int nHeight, string &errorMessage, bool &bDestCheckFailed, bool bSanityCheck);
-extern bool CheckOfferInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<std::vector<unsigned char> > &revertedOffers, string &errorMessage, bool bSanityCheck);
-extern bool CheckCertInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<std::vector<unsigned char> > &revertedCerts, string &errorMessage, bool bSanityCheck);
+extern bool CheckOfferInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<uint256> &revertedOffers, string &errorMessage, bool bSanityCheck);
+extern bool CheckCertInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<uint256> &revertedCerts, string &errorMessage, bool bSanityCheck);
 extern bool CheckEscrowInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<std::vector<unsigned char> > &vvchAliasArgs, bool fJustCheck, int nHeight, string &errorMessage, bool bSanityCheck);
 extern bool DecodeAliasScript(const CScript& script, int& op, vector<vector<unsigned char> > &vvch);
-extern bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool bSanityCheck);
-extern bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, string &errorMessage, bool bSanityCheck);
+extern bool CheckAssetInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, string &errorMessage, bool bSanityCheck);
+extern bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<uint256> &revertedAssetAllocations, string &errorMessage, bool bSanityCheck);
 extern int aliasunspent(const vector<unsigned char> &vchAlias, COutPoint& outPoint);
 extern std::string stringFromVch(const std::vector<unsigned char> &vch);
 extern std::vector<unsigned char> vchFromString(const std::string &str);
@@ -592,9 +592,9 @@ void SendMoneySyscoin(const vector<unsigned char> &vchAlias, const vector<unsign
 	bool fJustCheck = true;
 	string errorMessage = "";
 	bool bCheckDestError = false;
-	sorted_vector<CAssetAllocationTuple> revertedAssetAllocations;
-	sorted_vector<vector<unsigned char> > revertedOffers;
-	sorted_vector<vector<unsigned char> > revertedCerts;
+	sorted_vector<uint256> revertedAssetAllocations;
+	sorted_vector<uint256> revertedOffers;
+	sorted_vector<uint256> revertedCerts;
 	if (wtxNew.nVersion == SYSCOIN_TX_VERSION) {
 		if (DecodeAliasTx(wtxNew, op, nOut, vvchAlias))
 		{

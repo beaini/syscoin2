@@ -550,9 +550,9 @@ bool CheckSyscoinInputs(const CTransaction& tx, bool fJustCheck, int nHeight, co
 {
 	vector<vector<unsigned char> > vvchArgs;
 	vector<vector<unsigned char> > vvchAliasArgs;
-	sorted_vector<CAssetAllocationTuple> revertedAssetAllocations;
-	sorted_vector<vector<unsigned char> > revertedOffers;
-	sorted_vector<vector<unsigned char> > revertedCerts;
+	sorted_vector<uint256> revertedAssetAllocations;
+	sorted_vector<uint256> revertedOffers;
+	sorted_vector<uint256> revertedCerts;
 	int op;
 	int nOut;
 	if (nHeight == 0)

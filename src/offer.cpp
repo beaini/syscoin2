@@ -307,9 +307,9 @@ bool RemoveOfferScriptPrefix(const CScript& scriptIn, CScript& scriptOut) {
 	scriptOut = CScript(pc, scriptIn.end());
 	return true;
 }
-bool RevertOffer(const std::vector<unsigned char>& vchOffer, const int op, const uint256 &txHash, sorted_vector<std::vector<unsigned char> > &revertedOffers) {
+bool RevertOffer(const std::vector<unsigned char>& vchOffer, const int op, const uint256 &txHash, sorted_vector<uint256> &revertedOffers) {
 	// only revert offer once
-	if (revertedOffers.find(vchOffer) != revertedOffers.end())
+	if (revertedOffers.find(txHash) != revertedOffers.end())
 		return true;
 
 	string errorMessage = "";
@@ -330,11 +330,11 @@ bool RevertOffer(const std::vector<unsigned char>& vchOffer, const int op, const
 		return error(errorMessage.c_str());
 	}
 	pofferdb->EraseISArrivalTimes(vchOffer);
-	revertedOffers.insert(vchOffer);
+	revertedOffers.insert(txHash);
 	return true;
 
 }
-bool CheckOfferInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<std::vector<unsigned char> > &revertedOffers, string &errorMessage, bool bSanityCheck) {
+bool CheckOfferInputs(const CTransaction &tx, int op, int nOut, const vector<vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<uint256> &revertedOffers, string &errorMessage, bool bSanityCheck) {
 	if (!pofferdb || !paliasdb)
 		return false;
 	if (tx.IsCoinBase() && !fJustCheck && !bSanityCheck)

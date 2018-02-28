@@ -215,7 +215,7 @@ public:
 	void WriteAssetAllocationIndex(const CAssetAllocation& assetAllocationTuple);
 
 };
-bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const std::vector<std::vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<CAssetAllocationTuple> &revertedAssetAllocations, std::string &errorMessage, bool bSanityCheck = false);
+bool CheckAssetAllocationInputs(const CTransaction &tx, int op, int nOut, const std::vector<std::vector<unsigned char> > &vvchArgs, const std::vector<unsigned char> &vvchAlias, bool fJustCheck, int nHeight, sorted_vector<uint256> &revertedAssetAllocations, std::string &errorMessage, bool bSanityCheck = false);
 bool GetAssetAllocation(const CAssetAllocationTuple& assetAllocationTuple,CAssetAllocation& txPos);
 bool BuildAssetAllocationJson(const CAssetAllocation& assetallocation, const bool bGetInputs, UniValue& oName);
 bool BuildAssetAllocationIndexerJson(const CAssetAllocation& assetallocation,UniValue& oName);
