@@ -937,8 +937,7 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 
 	// ensure that this transaction exists in the arrivalTimes DB (which is the running stored lists of all real-time asset allocation sends not in POW)
 	// the arrivalTimes DB is only added to for valid asset allocation sends that happen in real-time and it is removed once there is POW on that transaction
-	passetallocationdb->ReadISArrivalTimes(assetAllocationTupleSender, arrivalTimes);
-	if(arrivalTimes.empty())
+	if(!passetallocationdb->ReadISArrivalTimes(assetAllocationTupleSender, arrivalTimes))
 		return ZDAG_NOT_FOUND;
 	// sort the arrivalTimesMap ascending based on arrival time value
 
@@ -1017,6 +1016,8 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 			}
 		}
 	}
+	if (senderBalance != dbAssetAllocation.nBalance)
+		return ZDAG_NOT_FOUND;
 	return lookForTxHash.IsNull()? ZDAG_STATUS_OK: ZDAG_NOT_FOUND;
 }
 UniValue assetallocationsenderstatus(const UniValue& params, bool fHelp) {
