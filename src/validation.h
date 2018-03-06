@@ -55,8 +55,8 @@ static const bool DEFAULT_WHITELISTRELAY = true;
 /** Default for DEFAULT_WHITELISTFORCERELAY. */
 static const bool DEFAULT_WHITELISTFORCERELAY = true;
 /** Default for -minrelaytxfee, minimum relay fee for transactions
- * We are ~100 times smaller then syscoin now (2016-03-01), set minRelayTxFee only 10 times higher
- * so it's still 10 times lower comparing to syscoin.
+ * We are ~100 times smaller then bitcoin now (2016-03-01), set minRelayTxFee only 10 times higher
+ * so it's still 10 times lower comparing to bitcoin.
  * 2017-07: we are 10x smaller now, let's lower defaults 10x via the same BIP9 bit as DIP0001
  */
 static const unsigned int DEFAULT_LEGACY_MIN_RELAY_TX_FEE = 1000;
