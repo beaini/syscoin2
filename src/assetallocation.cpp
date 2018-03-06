@@ -926,13 +926,16 @@ UniValue assetallocationinfo(const UniValue& params, bool fHelp) {
     return oAssetAllocation;
 }
 int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& assetAllocationTupleSender, const uint256& lookForTxHash) {
-	CAssetAllocation dbAssetAllocation;
+	CAssetAllocation dbLastAssetAllocation, dbAssetAllocation;
 	ArrivalTimesMap arrivalTimes;
 	// get last POW asset allocation balance to ensure we use POW balance to check for potential conflicts in mempool (real-time balances).
 	// The idea is that real-time spending amounts can in some cases overrun the POW balance safely whereas in some cases some of the spends are 
 	// put in another block due to not using enough fees or for other reasons that miners don't mine them.
 	// We just want to flag them as level 1 so it warrants deeper investigation on receiver side if desired (if fund amounts being transferred are not negligible)
-	if (!passetallocationdb || !passetallocationdb->ReadLastAssetAllocation(assetAllocationTupleSender, dbAssetAllocation))
+	if (!passetallocationdb || !passetallocationdb->ReadLastAssetAllocation(assetAllocationTupleSender, dbLastAssetAllocation))
+		return ZDAG_NOT_FOUND;
+
+	if (!passetallocationdb || !passetallocationdb->ReadAssetAllocation(assetAllocationTupleSender, dbAssetAllocation))
 		return ZDAG_NOT_FOUND;
 
 	// ensure that this transaction exists in the arrivalTimes DB (which is the running stored lists of all real-time asset allocation sends not in POW)
@@ -964,7 +967,7 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 	// init sender balance, track balances by alias
 	// this is important because asset allocations can be sent/received within blocks and will overrun balances prematurely if not tracked properly, for example pow balance 3, sender sends 3, gets 2 sends 2 (total send 3+2=5 > balance of 3 from last stored state, this is a valid scenario and shouldn't be flagged)
 	CAmount &senderBalance = mapBalances[assetAllocationTupleSender.vchAlias];
-	senderBalance = dbAssetAllocation.nBalance;
+	senderBalance = dbLastAssetAllocation.nBalance;
 	int minLatency = ZDAG_MINIMUM_LATENCY_SECONDS * 1000;
 	if (GetBoolArg("-unittest", false))
 		minLatency = 1000;
@@ -1016,6 +1019,7 @@ int DetectPotentialAssetAllocationSenderConflicts(const CAssetAllocationTuple& a
 			}
 		}
 	}
+	// ensure that prev state balance -+ realtime balances == the current realtime balance
 	if (senderBalance != dbAssetAllocation.nBalance)
 		return ZDAG_NOT_FOUND;
 	return lookForTxHash.IsNull()? ZDAG_STATUS_OK: ZDAG_NOT_FOUND;
